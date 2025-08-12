@@ -59,17 +59,78 @@ enum FeeHeadType {
   LIBRARY
   ACTIVITY
 }
+enum Permission {
+  // School
+  CREATE_SCHOOL
+  VIEW_SCHOOL
+  EDIT_SCHOOL
+  DELETE_SCHOOL
+
+  // Branch
+  CREATE_BRANCH
+  VIEW_BRANCH
+  EDIT_BRANCH
+  DELETE_BRANCH
+
+  // Class
+  CREATE_CLASS
+  VIEW_CLASS
+  EDIT_CLASS
+  DELETE_CLASS
+
+  // Student
+  CREATE_STUDENT
+  VIEW_STUDENT
+  EDIT_STUDENT
+  DELETE_STUDENT
+  BULK_UPLOAD_STUDENTS
+
+  // Parent
+  CREATE_PARENT
+  VIEW_PARENT
+  EDIT_PARENT
+  DELETE_PARENT
+
+  // Fees
+  CREATE_FEE_DOC
+  VIEW_FEE_DOC
+  EDIT_FEE_DOC
+  DELETE_FEE_DOC
+  RECORD_FEE_TRANSACTION
+  VIEW_FEE_SUMMARY
+
+  // Session
+  CREATE_SESSION
+  VIEW_SESSION
+  EDIT_SESSION
+  LOCK_SESSION
+  PROMOTE_STUDENTS
+
+  // Reports
+  VIEW_REPORTS
+  EXPORT_REPORTS
+
+  // Documents
+  GENERATE_ID_CARD
+  GENERATE_TRANSFER_CERTIFICATE
+
+  // Notifications
+  SEND_NOTIFICATION
+  VIEW_NOTIFICATIONS
+}
+
 
 model User {
   id           String   @id @default(uuid())
   name         String
   email        String   @unique
-  phone        String
+  phone        String?
   password     String
-  role         Role     // ENUM: ADMIN | DIRECTOR | PRINCIPAL | TEACHER | LIBRARIAN | STUDENT | PARENT
-  permissions  Json?
+  role         Role[]   @default([])     // ENUM: ADMIN | DIRECTOR | PRINCIPAL | TEACHER | LIBRARIAN | STUDENT | PARENT
+  permissions  Permission[] @default([])
   createdAt    DateTime @default(now())
-
+  isPhoneVerified      Boolean
+  isEmailVerified      Boolean
   // Relationships
   directorSchools     School[]       @relation("DirectorSchools")
   principalAssignment Branch?        @relation("PrincipalBranch")
@@ -77,30 +138,29 @@ model User {
   studentProfile      Student?       
   parentProfile       Parent?
   feeTransactions      FeeTransaction[]
-
 }
 
 model School {
   id         String   @id @default(uuid())
   name       String
-  address    String
   createdBy  User     @relation("DirectorSchools", fields: [createdById], references: [id])
   createdById String
 
   branches   Branch[]
   students   Student[]
-  academicSession AcademicSession[]
 }
 
 model Branch {
   id         String   @id @default(uuid())
   name       String
+  address    String
   school     School   @relation(fields: [schoolId], references: [id])
   schoolId   String
 
   principal  User?    @relation("PrincipalBranch", fields: [principalId], references: [id])
   principalId String? @unique
   classes    Class[]
+  academicSession AcademicSession[]
 }
 
 
@@ -193,8 +253,8 @@ model FeeTransaction {
 model AcademicSession {
   id         String    @id @default(uuid())
   name       String    // e.g., "2025–26"
-  school     School    @relation(fields: [schoolId], references: [id])
-  schoolId   String
+  branch     Branch    @relation(fields: [branchId], references: [id])
+  branchId   String
   isCurrent  Boolean   @default(false)
   isLocked   Boolean   @default(false)
   createdAt  DateTime  @default(now())
