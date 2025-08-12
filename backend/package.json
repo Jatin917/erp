@@ -4,14 +4,24 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "npx tsc -b --noEmit false",
+    "start": "npm run build && node dist/server.js",
+    "start:dev": "ts-node src/server.ts",
+    "dev": "nodemon",
+    "prisma:generate": "prisma generate"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
+  "type": "module",
   "dependencies": {
-    "express": "^5.1.0"
+    "@types/dotenv": "^6.1.1",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.1",
+    "express": "^5.1.0",
+    "multer": "^2.0.2",
+    "nodemon": "^3.1.10"
   },
   "devDependencies": {
     "@types/express": "^5.0.3",
