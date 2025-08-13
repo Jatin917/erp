@@ -4,16 +4,21 @@ import os from 'os';
 import cluster from 'node:cluster';
 const totalCPUs = os.cpus().length;
 import dotenv from 'dotenv';
-const app = express();
+import { router_v1 } from './routes/version-1.ts/route.js';
+import { PrismaClient } from '../generated/prisma/index.js';
+dotenv.config();
 const PORT = process.env.PORT;
 const ENV = process.env.ENV;
-console.log("env value ", ENV);
-dotenv.config();
+const app = express();
+export const otpStorage = new Map();
+export const emailVerified = new Map();
 // set up server
 app.set('view engine', 'ejs');
 app.use(express.static(path.resolve('public')));
 app.use(express.json({ limit: '500mb' }));
 app.use(express.urlencoded({ limit: '500mb', extended: true }));
+app.use('/api/v1', router_v1);
+export const prisma = new PrismaClient();
 if (ENV === "DEV") {
     app.listen(PORT, () => {
         console.log("Server running on port", PORT);
