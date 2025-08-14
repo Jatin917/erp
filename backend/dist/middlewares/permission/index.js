@@ -20,7 +20,7 @@ export const isPermitted = async (req, res, next) => {
                 message: "User not found or permissions not set"
             });
         }
-        if (user.permissions.includes(task)) {
+        if (user.permissions.includes(task) || user.permissions.includes("ALL")) {
             return next(); // ✅ Stop execution after calling next()
         }
         return res.status(HTTP_STATUS.FORBIDDEN).json({

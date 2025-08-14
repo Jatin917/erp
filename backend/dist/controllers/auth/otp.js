@@ -1,7 +1,8 @@
 // const nodemailer = require("nodemailer");
 import nodemailer from 'nodemailer';
 import dotenv from 'dotenv';
-import { emailVerified, otpStorage } from '../../server.js';
+import { emailVerified, JWT_SECRET, otpStorage } from '../../server.js';
+import jwt from 'jsonwebtoken';
 // import TelesignSDK from 'telesignenterprisesdk';
 dotenv.config();
 const transporter = nodemailer.createTransport({
@@ -103,12 +104,14 @@ export const emailVerificationController = async (req, res) => {
     try {
         const receivedOtp = req.body.otp;
         const userId = req.body.email;
+        const role = req.body.role;
         const storedOtp = otpStorage.get(userId);
         if (storedOtp && storedOtp.otp === Number(receivedOtp) && Date.now() < storedOtp.expiresAt) {
             console.log("OTP is valid!");
             otpStorage.delete(userId);
             emailVerified.set(userId, { isVerified: true, expiresAt: Date.now() + 300000 });
-            return res.status(200).json({ message: "OTP verified successfully" });
+            const token = jwt.sign({ userId, role: role }, JWT_SECRET, { expiresIn: "10m" });
+            return res.status(200).json({ message: "OTP verified successfully", token });
         }
         return res.status(401).json({ message: "Otp expired or invalid" });
     }

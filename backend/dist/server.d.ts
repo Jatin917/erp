@@ -1,4 +1,7 @@
 import { PrismaClient } from '../generated/prisma/index.js';
+export declare const JWT_SECRET: string;
+export declare const SUPERADMIN_EMAIL: string | undefined;
+export declare const SUPERADMIN_PASSWORD: string | undefined;
 export declare const otpStorage: Map<string, {
     otp: number;
     expiresAt: number;

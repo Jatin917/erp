@@ -59,7 +59,7 @@ export const permissions = {
     ],
 };
 export const roleDefaults = {
-    ADMIN: [
+    SUPERADMIN: [
         ...permissions.school,
         ...permissions.branch,
         ...permissions.class,
@@ -94,10 +94,43 @@ export const roleDefaults = {
         ...permissions.documents,
         ...permissions.notifications
     ],
-    STAFF: [
+    TEACHER: [
+        ...permissions.class,
         ...permissions.student,
         ...permissions.parent,
         "VIEW_REPORTS",
+        "VIEW_NOTIFICATIONS"
+    ],
+    LIBRARIAN: [
+        ...permissions.student,
+        "VIEW_REPORTS",
+        "VIEW_NOTIFICATIONS"
+    ],
+    RECEPTIONIST: [
+        ...permissions.student,
+        ...permissions.parent,
+        "VIEW_REPORTS",
+        "VIEW_NOTIFICATIONS"
+    ],
+    ACCOUNTANT: [
+        ...permissions.fees,
+        "VIEW_REPORTS",
+        "VIEW_NOTIFICATIONS"
+    ],
+    SCHOOL_ADMIN: [
+        ...permissions.branch,
+        ...permissions.class,
+        ...permissions.student,
+        ...permissions.parent,
+        ...permissions.fees,
+        ...permissions.session,
+        "VIEW_REPORTS",
+        "VIEW_NOTIFICATIONS"
+    ],
+    STUDENT: [
+        "VIEW_NOTIFICATIONS"
+    ],
+    PARENT: [
         "VIEW_NOTIFICATIONS"
     ],
 };

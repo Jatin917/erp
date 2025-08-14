@@ -1,10 +1,10 @@
 export declare const createSchool: (req: {
     body: {
-        name: any;
-        address: any;
-        createdById: any;
-        principalId: any;
-        currentSession: any;
+        name: string;
+        address: string;
+        createdById: string;
+        principalId: string;
+        currentSession: string;
     };
 }, res: {
     status: (arg0: number) => {
