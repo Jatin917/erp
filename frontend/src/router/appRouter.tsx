@@ -1,57 +1,52 @@
-// src/router/AppRouter.tsx
+
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { useLogin } from "../hooks/useAuth";
-
-
-function PrivateRoute({ children, roles }: { children: JSX.Element; roles?: string[] }) {
-  const { token, user } = useLogin();
-  
-  if (!token) return <Navigate to="/login" replace />;
-  if (roles && !roles.includes(user?.role)) return <Navigate to="/" replace />;
-
-  return children;
-}
+import PrivateRoute from "./privateRouter";
+import AppShell from "../components/layout/AppShell";
+import Dashboard from "../pages/Dashboard/Dashboard";
+import StudentsPage from "../pages/Students/StudentsPage";
+import ClassesPage from "../pages/Class/ClassPage";
+import FeesPage from "../pages/Fees/FeesPage";
+import SessionsPage from "../pages/Sessions/SessionsPage";
+import UsersPage from "../pages/Users/UsersPage";
+import ReportsPage from "../pages/Reports/ReportsPage";
+import SettingsPage from "../pages/Settings/SettingsPage";
+import AuthLayout from "../pages/auth/authLayout";
+import PublicRoute from "./publickRouter";
+import LoginPage from "../pages/auth/login";
 
 export default function AppRouter() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Public Routes */}
+        {/* public */}
         <Route element={<AuthLayout />}>
-          <Route path="/login" element={<Login />} />
+          <Route path="/login" element={
+            <PublicRoute>
+                <LoginPage />
+            </PublicRoute>
+          } />
         </Route>
 
-        {/* Protected Routes */}
-        {/* <Route
+        {/* protected */}
+        <Route
+          path="/"
           element={
             <PrivateRoute>
-              <DashboardLayout />
+              <AppShell />
             </PrivateRoute>
           }
         >
-          <Route path="/" element={<Home />} />
-          <Route path="/students" element={<Students />} />
-          <Route path="/fees" element={<Fees />} />
-          <Route path="/reports" element={<Reports />} /> */}
+          <Route index element={<Dashboard />} />
+          <Route path="students" element={<StudentsPage />} />
+          <Route path="classes" element={<ClassesPage />} />
+          <Route path="fees" element={<FeesPage />} />
+          <Route path="sessions" element={<SessionsPage />} />
+          <Route path="users" element={<UsersPage />} />
+          <Route path="reports" element={<ReportsPage />} />
+          <Route path="settings" element={<SettingsPage />} />
+        </Route>
 
-          {/* Admin Only */}
-          {/* <Route
-            path="/settings/roles"
-            element={
-              <PrivateRoute roles={["SUPERADMIN"]}>
-                <Roles />
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/settings/permissions"
-            element={
-              <PrivateRoute roles={["SUPERADMIN"]}>
-                <Permissions />
-              </PrivateRoute>
-            }
-          />
-        </Route> */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
   );

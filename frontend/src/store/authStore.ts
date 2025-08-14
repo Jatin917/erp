@@ -1,23 +1,38 @@
 import { create } from "zustand";
+import { persist } from "zustand/middleware";
+import type { UserDTO, Role, Permission } from "../api/types";
 
-interface AuthState {
+type AuthState = {
   token: string | null;
-  user: any;
-  login: (token: string, user: any) => void;
+  user: UserDTO | null;
+  roles: Role[];
+  permissions: Permission[];
+  login: (payload: { token: string; user: UserDTO }) => void;
   logout: () => void;
-}
+  hasRole: (role: Role) => boolean;
+  hasPermission: (perm: Permission) => boolean;
+};
 
-export const useAuthStore = create<AuthState>((set) => ({
-  token: localStorage.getItem("token"),
-  user: JSON.parse(localStorage.getItem("user") || "null"),
-  login: (token, user) => {
-    localStorage.setItem("token", token);
-    localStorage.setItem("user", JSON.stringify(user));
-    set({ token, user });
-  },
-  logout: () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    set({ token: null, user: null });
-  },
-}));
+export const useAuthStore = create<AuthState>()(
+  persist(
+    (set, get) => ({
+      token: null,
+      user: null,
+      roles: [],
+      permissions: [],
+      login: ({ token, user }) => {
+        // take roles and permissions exactly as provided by backend
+        set({
+          token,
+          user,
+          roles: user.roles,
+          permissions: user.permissions || [],
+        });
+      },
+      logout: () => set({ token: null, user: null, roles: [], permissions: [] }),
+      hasRole: (role) => get().roles.includes(role),
+      hasPermission: (perm) => get().permissions.includes(perm),
+    }),
+    { name: "auth-store" }
+  )
+);
