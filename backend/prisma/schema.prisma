@@ -60,6 +60,7 @@ enum FeeHeadType {
   ACTIVITY
 }
 enum Permission {
+  ALL
   // School
   CREATE_SCHOOL
   VIEW_SCHOOL
