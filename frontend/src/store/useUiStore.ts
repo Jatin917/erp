@@ -10,12 +10,14 @@ interface UiState {
   toggleSidebar: () => void;
   setSidebar: (open: boolean) => void;
   setDarkMode: (enabled: boolean) => void;
+  resetTheme: () => void;
+  getSystemPreference: () => boolean;
 }
 
 export const useUiStore = create<UiState>()(
   persist(
-    (set) => ({
-      darkMode: true,
+    (set, get) => ({
+      darkMode: false, // Default to light mode
       sidebarOpen: true,
 
       toggleDarkMode: () =>
@@ -26,6 +28,15 @@ export const useUiStore = create<UiState>()(
 
       setSidebar: (open) => set(() => ({ sidebarOpen: open })),
       setDarkMode: (enabled) => set(() => ({ darkMode: enabled })),
+      
+      resetTheme: () => {
+        const systemPrefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        set(() => ({ darkMode: systemPrefersDark }));
+      },
+      
+      getSystemPreference: () => {
+        return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      },
     }),
     {
       name: "ui-store", // localStorage key

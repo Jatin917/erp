@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { roleDefaults } from "../../lib/permission";
 import { useUiStore } from "../../store/useUiStore";
-import { useLogin } from "../../hooks/useAuth";
+import { useLogin } from "../../hooks/authQuery";
 
 export default function LoginPage() {
   const { darkMode: isDarkMode } = useUiStore();

@@ -1,4 +1,5 @@
 import axios from "axios";
+import type { Permission, Role } from "./types";
 
 export const API=axios.create({
     baseURL:import.meta.env.VITE_BACKEND_URL
@@ -20,11 +21,45 @@ export const loginApi = async (authdata: { email: string; password: string; setu
     const { data } = await API.post("auth/login", authdata);
     return data;
   };
-export const registerUser=(authdata:{name:string, password:string|null, permissions:string[]})=>API.post("auth/register-user",authdata);
+export const registerUser= async (authdata:{name:string, email:string, phone:string|null, password:string|null, roles:Role[]})=>  {
+    const {data} = await API.post("auth/register-user",authdata)
+    return data;
+}
+export const changePassword= async (authdata:{email:string, oldPassword:string, newPassword:string})=>  {
+    const {data} = await API.post("auth/change-password",authdata)
+    return data;
+}
+export const checkUserExists = async (email: string) => {
+    const { data } = await API.get(`auth/exists?email=${email}`);
+    return data.success; // true | false
+  };
+  
+
 // export const getallusers=()=> API.get("/user/getallusers");
 // export const updateprofile=(updatedata)=>API.patch(`auth/change-password`,updatedata)
+// OTP
+export const sendOTP = async (authdata:{email:string}) =>{
+    const {data} = await API.post("auth/send-otp", authdata);
+    return data;
+}
+export const verifyOTP = async (authdata:{email:string, otp:string}) =>{
+    const {data} = await API.post("auth/verify-otp", authdata);
+    return data;
+}
 
 
+// Schoool
+export const createSchool = async (authdata:{name:string, address:string, createdById:string, principalId:string, currentSession:string})=>{
+    const {data} = await API.post("/school/create-school", authdata)
+    return data;
+}
+
+
+// Permission
+export const assignPermission = async(authdata:{permissionToWhomId:string, permissionsToAllow:Permission[], permissionsToDeny:Permission[]})=>{
+    const {data} = await API.post("/auth/assign-permission", authdata);
+    return data;
+}
 // export const postquestion=(questiondata)=>API.post("/questions/Ask",questiondata);
 // export const getallquestions=()=>API.get("/questions/get");
 // export const deletequestion=(id)=>API.delete(`/questions/delete/${id}`);

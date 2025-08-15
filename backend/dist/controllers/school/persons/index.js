@@ -129,8 +129,22 @@ export const login = async (req, res) => {
             message: "Logged in successfully",
             token,
             user: { name: user.name,
-                email: user.email }
+                email: user.email, permissions: user.permissions, roles: user.role }
         });
+    }
+    catch (error) {
+        console.error(error);
+        return res
+            .status(500)
+            .json({ success: false, message: "Something went wrong" });
+    }
+};
+export const userExist = async (req, res) => {
+    try {
+        const email = req.query.email;
+        console.log("network req ", email);
+        const user = await prisma.user.findFirst({ where: { email } });
+        return res.status(HTTP_STATUS.OK).json({ message: "Founded", success: !!user });
     }
     catch (error) {
         console.error(error);

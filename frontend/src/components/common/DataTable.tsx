@@ -20,7 +20,7 @@ export default function DataTable<T extends { id: string | number }>({
             {data.map((row, i) => (
               <tr key={String(row.id)} className={i % 2 === 0 ? "bg-white dark:bg-slate-900" : "bg-slate-50/40 dark:bg-slate-900/40"}>
                 {columns.map((c) => (
-                  <td key={String(c.key)} className="px-4 py-3 whitespace-nowrap">
+                  <td key={String(c.key)} className="px-4 py-3 whitespace-nowrap text-slate-900 dark:text-slate-100">
                     {c.render ? c.render((row as any)[c.key], row) : (row as any)[c.key]}
                   </td>
                 ))}

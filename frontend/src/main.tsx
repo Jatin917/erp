@@ -10,10 +10,7 @@ createRoot(document.getElementById('root')!).render(
     <Toaster
       position="top-right"
       toastOptions={{
-        style: {
-          background: '#333',
-          color: '#fff',
-        },
+        className: 'bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-700',
       }}
     />
   </StrictMode>,

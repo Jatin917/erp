@@ -13,6 +13,7 @@ import SettingsPage from "../pages/Settings/SettingsPage";
 import AuthLayout from "../pages/auth/authLayout";
 import PublicRoute from "./publickRouter";
 import LoginPage from "../pages/auth/login";
+import SchoolCreationPage from "../pages/School/SchoolCreationPage";
 
 export default function AppRouter() {
   return (
@@ -44,6 +45,7 @@ export default function AppRouter() {
           <Route path="users" element={<UsersPage />} />
           <Route path="reports" element={<ReportsPage />} />
           <Route path="settings" element={<SettingsPage />} />
+          <Route path="school" element={<SchoolCreationPage />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />

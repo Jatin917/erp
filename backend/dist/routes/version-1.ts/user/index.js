@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { changePassword, login, registerUser } from "../../../controllers/school/persons/index.js";
+import { changePassword, login, registerUser, userExist } from "../../../controllers/school/persons/index.js";
 import { emailVerificationController, sendOtpEmailController } from "../../../controllers/auth/otp.js";
 import { permitPermission } from "../../../controllers/user/index.js";
 import { isPermitted } from "../../../middlewares/permission/index.js";
@@ -10,4 +10,5 @@ userRouter.patch("/change-password", changePassword);
 userRouter.post("/send-otp", sendOtpEmailController);
 userRouter.post("/verify-otp", emailVerificationController);
 userRouter.post("/assign-permission", isPermitted, permitPermission);
+userRouter.get("/exists", userExist);
 //# sourceMappingURL=index.js.map

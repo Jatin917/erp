@@ -22,7 +22,7 @@ export default function StudentsPage() {
               <Button>Add Student</Button>
             </PermissionGuard>
             <PermissionGuard allowPermissions={["BULK_UPLOAD_STUDENTS"]}>
-              <a className="text-sm underline" href="/templates/students.csv" download>Download CSV Template</a>
+              <a className="text-sm underline hover:text-blue-600 dark:hover:text-blue-400 transition-colors" href="/templates/students.csv" download>Download CSV Template</a>
             </PermissionGuard>
           </div>
         }
@@ -36,7 +36,7 @@ export default function StudentsPage() {
       </PermissionGuard>
 
       {isLoading ? (
-        <div className="rounded-xl border border-slate-200 p-4">Loading…</div>
+        <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 text-slate-900 dark:text-slate-100">Loading…</div>
       ) : (
         <DataTable<StudentRow>
           columns={[

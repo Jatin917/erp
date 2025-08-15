@@ -17,12 +17,12 @@ const app = express();
 export const otpStorage = new Map();
 export const emailVerified = new Map();
 // set up server
+app.use(cors({ origin: '*' }));
 app.set('view engine', 'ejs');
 app.use(express.static(path.resolve('public')));
 app.use(express.json({ limit: '500mb' }));
 app.use(express.urlencoded({ limit: '500mb', extended: true }));
 app.use('/api/v1', router_v1);
-app.use(cors({ origin: '*' }));
 export const prisma = new PrismaClient();
 if (ENV === "DEV") {
     app.listen(PORT, () => {
