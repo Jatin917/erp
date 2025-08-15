@@ -1,8 +1,8 @@
 // stores/schoolStore.ts
 import { create } from "zustand";
 
-type ContactRole = "director" | "principal" | null;
-type ContactType = "email" | "phone" | null;
+type ContactRole = "director" | "principal";
+type ContactType = "email" | "phone";
 
 interface ContactInfo {
   existing: boolean;
@@ -11,6 +11,7 @@ interface ContactInfo {
   name: string;
   phone: string;
   isVerifiedPhone: boolean;
+  assignMyself: boolean;
 }
 
 interface SchoolState {
@@ -35,6 +36,7 @@ export const useSchoolStore = create<SchoolState>((set) => ({
     name: "",
     phone: "",
     isVerifiedPhone: false,
+    assignMyself: false,
   },
   principal: {
     existing: false,
@@ -43,6 +45,7 @@ export const useSchoolStore = create<SchoolState>((set) => ({
     name: "",
     phone: "",
     isVerifiedPhone: false,
+    assignMyself: false,
   },
 
   // ✅ Update top-level school fields
