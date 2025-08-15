@@ -2,6 +2,9 @@ import { error } from "console";
 import { Role } from "../../../../generated/prisma/index.js";
 import { HTTP_STATUS } from "../../../lib/http-codes.js";
 import { defaultPassword, emailVerified, prisma } from "../../../server.js";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
 // Updated createBranch to accept tx for transactions
 const createBranch = async (tx, address, principalId, name, schoolId) => {
     try {
@@ -55,14 +58,17 @@ const findOrCreateUser = async (role, userData, tx) => {
         return newUser.id;
     }
 };
-import multer from "multer";
-import path from "path";
-import fs from "fs";
-const upload = multer({ dest: "temp/" }); // temp dir
 export const createSchool = async (req, res) => {
     const file = req.file; // Multer puts uploaded file here
     try {
-        const { schoolName, address, director, principal, currentSession } = req.body;
+        // Parse incoming body fields from multipart/form-data
+        const schoolName = req.body.schoolName;
+        const address = req.body.address;
+        const currentSession = req.body.currentSession;
+        // Parse director & principal from JSON strings
+        const director = req.body.director ? JSON.parse(req.body.director) : null;
+        const principal = req.body.principal ? JSON.parse(req.body.principal) : null;
+        console.log("Parsed body:", { schoolName, address, director, principal, currentSession });
         let schoolId;
         let branchId;
         await prisma.$transaction(async (tx) => {
@@ -86,20 +92,25 @@ export const createSchool = async (req, res) => {
                     isCurrent: true,
                 },
             });
+            if (!file) {
+                throw new Error("NO File Found. Please Try Again");
+            }
         });
         // ---------- File Handling AFTER transaction ----------
-        if (file) {
-            const uploadDir = path.join("uploads", schoolId, branchId);
-            fs.mkdirSync(uploadDir, { recursive: true });
-            const ext = path.extname(file.originalname);
-            const destPath = path.join(uploadDir, `logo${ext}`);
-            fs.renameSync(file.path, destPath);
-            // Save logo path in DB
-            await prisma.branch.update({
-                where: { id: branchId },
-                data: { logo: destPath },
-            });
+        // @ts-ignore
+        if (!schoolId || !branchId) {
+            throw new Error("School ID or Branch ID is missing after transaction.");
         }
+        const uploadDir = path.join("uploads", String(schoolId), String(branchId));
+        fs.mkdirSync(uploadDir, { recursive: true });
+        const ext = path.extname(file.originalname);
+        const destPath = path.join(uploadDir, `logo${ext}`);
+        fs.renameSync(file.path, destPath);
+        // Save logo path in DB
+        await prisma.branch.update({
+            where: { id: branchId },
+            data: { logoUrl: destPath },
+        });
         return res.status(HTTP_STATUS.CREATED).json({
             success: true,
             message: "Created School with default branch",

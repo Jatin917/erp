@@ -49,10 +49,39 @@ export const verifyOTP = async (authdata:{email:string, otp:string}) =>{
 
 
 // Schoool
-export const createSchool = async (authdata:{name:string, address:string, createdById:string, principalId:string, currentSession:string})=>{
-    const {data} = await API.post("/school/create-school", authdata)
+export const createSchool = async (authdata: {
+    schoolName: string,
+    logo: File,
+    address: string,
+    director: { name?: string, email: string },
+    principal: { name?: string, email: string },
+    currentSession: string
+  }) => {
+  
+    const email = JSON.parse(localStorage.getItem("auth-store") || "{}")?.state?.user?.email;
+    if (!email) {
+      return { success: false, message: "Please Log in and Try again" };
+    }
+  
+    // Build FormData for file + text fields
+    const formData = new FormData();
+    formData.append("schoolName", authdata.schoolName);
+    formData.append("address", authdata.address);
+    formData.append("currentSession", authdata.currentSession);
+    formData.append("logo", authdata.logo);
+    formData.append("director", JSON.stringify(authdata.director));
+    formData.append("principal", JSON.stringify(authdata.principal));
+    formData.append("createdBy", email);
+    formData.append("task", "CREATE_SCHOOL");
+
+    // Send as multipart/form-data
+    const { data } = await API.post("/school/create-school", formData, {
+      headers: { "Content-Type": "multipart/form-data" }
+    });
+  
     return data;
-}
+  };
+  
 
 
 // Permission
@@ -60,7 +89,7 @@ export const assignPermission = async(authdata:{permissionToWhomId:string, permi
     const {data} = await API.post("/auth/assign-permission", authdata);
     return data;
 }
-// export const postquestion=(questiondata)=>API.post("/questions/Ask",questiondata);
+
 // export const getallquestions=()=>API.get("/questions/get");
 // export const deletequestion=(id)=>API.delete(`/questions/delete/${id}`);
 // export const votequestion=(id,value)=>API.patch(`/questions/vote/${id}`,{value});

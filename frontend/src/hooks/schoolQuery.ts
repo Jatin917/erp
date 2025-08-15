@@ -6,11 +6,19 @@ import { createSchool as createSchoolApi } from "../api/index"; // <- API call
 
 // Payload type (adjust fields as per your API)
 export type CreateSchoolPayload = {
-  name: string;
+  schoolName: string;
   address: string;
-  createdById: string;
-  principalId:string;
+  logo:File | null;
+  director: {
+    name?:string;
+    email:string
+  };
+  principal:{
+    name?:string;
+    email:string;
+  };
   currentSession: string;
+  task:string;
 };
 
 // Hook for creating a new school

@@ -2,7 +2,7 @@ import { HTTP_STATUS } from "../../lib/http-codes.js";
 import { prisma } from "../../server.js";
 export const isPermitted = async (req, res, next) => {
     try {
-        const userId = req.body.email; // Better: use req.user.id from auth middleware
+        const userId = req.body.createdBy; // Better: use req.user.id from auth middleware
         const task = req.body.task;
         console.log("isPermitted ", userId, task);
         if (!userId || !task) {
@@ -22,6 +22,7 @@ export const isPermitted = async (req, res, next) => {
             });
         }
         if (user.permissions.includes(task) || user.permissions.includes("ALL")) {
+            console.log("yha tak chala");
             return next(); // ✅ Stop execution after calling next()
         }
         return res.status(HTTP_STATUS.FORBIDDEN).json({

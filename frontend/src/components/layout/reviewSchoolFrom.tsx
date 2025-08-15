@@ -12,6 +12,7 @@ interface RoleData {
 interface ReviewSchoolFormProps {
   schoolName: string;
   address: string;
+  currentSession: string;
   logo?: File | string; // Allow both File and URL string
   director: RoleData;
   principal: RoleData;
@@ -22,6 +23,7 @@ interface ReviewSchoolFormProps {
 export default function ReviewSchoolForm({
   schoolName,
   address,
+  currentSession,
   logo,
   director,
   principal,
@@ -64,6 +66,7 @@ export default function ReviewSchoolForm({
         <div className="bg-white dark:bg-gray-900 p-4 rounded-lg border dark:border-gray-700 space-y-2">
           <p><strong>Name:</strong> {schoolName}</p>
           <p><strong>Address:</strong> {address}</p>
+          <p><strong>Current Session:</strong> {currentSession}</p>
           {logo && (
             <div>
               <strong>Logo:</strong>

@@ -18,6 +18,7 @@ interface SchoolState {
   schoolName: string;
   address: string;
   logo: File | null;
+  currentSession:string;
   director: ContactInfo;
   principal: ContactInfo;
   updateField: (field: keyof SchoolState, value: any) => void;
@@ -29,6 +30,7 @@ export const useSchoolStore = create<SchoolState>((set) => ({
   schoolName: "",
   address: "",
   logo: null,
+  currentSession:"",
   director: {
     existing: false,
     email: "",

@@ -7,6 +7,7 @@ import AssignLeadershipForm from "../../components/layout/AssignLeadershipForm";
 import { useVerifyOtp } from "../../hooks/authQuery";
 import { useSchoolStore } from "../../store/schoolStore";
 import ReviewSchoolForm from "../../components/layout/reviewSchoolFrom";
+import { useCreateSchool } from "../../hooks/schoolQuery";
 
 interface Contact {
   type: "email" | "phone" | null;
@@ -30,9 +31,10 @@ export default function SchoolCreationPage() {
     principal, 
     schoolName, 
     logo, 
-    address 
+    address,
+    currentSession
   } = useSchoolStore();
-
+  const {mutate:createSchoolPayload} = useCreateSchool();
   const handleVerifyClick = (contact: Contact) => {
     setOtpModal({ open: true, contact });
   };
@@ -51,7 +53,7 @@ export default function SchoolCreationPage() {
   };
 
   const handleCreateSchool = async () => {
-    // Implementation for creating school
+    createSchoolPayload({schoolName, address, logo, director, principal, currentSession, task:"CREATE_SCHOOL"})
     console.log("Creating school with:", { schoolName, address, logo, director, principal });
   };
 
@@ -83,7 +85,7 @@ export default function SchoolCreationPage() {
         currentStep={step}
       />
 
-      {step === 1 && <SchoolDetailsForm updateField={updateField} onNext={() => setStep(2)} schoolNameProp={schoolName} logo={logo} addressProp={address} />}
+      {step === 1 && <SchoolDetailsForm updateField={updateField} onNext={() => setStep(2)} schoolNameProp={schoolName} logo={logo} addressProp={address} currentSessionProp={currentSession} />}
       
       {step === 2 && (
         <AssignLeadershipForm
@@ -101,6 +103,7 @@ export default function SchoolCreationPage() {
           schoolName={schoolName}
           address={address}
           logo={logo || undefined}
+          currentSession={currentSession}
           director={director}
           principal={principal}
           onBack={() => setStep(2)}

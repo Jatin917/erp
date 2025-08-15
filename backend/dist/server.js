@@ -7,6 +7,7 @@ import dotenv from 'dotenv';
 import { router_v1 } from './routes/version-1.ts/route.js';
 import { PrismaClient } from '../generated/prisma/index.js';
 import cors from 'cors';
+import multer from 'multer';
 dotenv.config();
 const PORT = process.env.PORT;
 const ENV = process.env.ENV;

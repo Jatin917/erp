@@ -2,31 +2,48 @@ import { useState } from "react";
 
 interface SchoolDetailsFormProps {
   onNext: () => void;
-  updateField: (field: "schoolName" | "address" | "logo", value: any) => void;
-  schoolNameProp:string;
-  logo:File | null;
-  addressProp:string;
+  updateField: (
+    field: "schoolName" | "address" | "logo" | "currentSession",
+    value: any
+  ) => void;
+  schoolNameProp: string;
+  logo: File | null;
+  addressProp: string;
+  currentSessionProp: string;
 }
 
-export default function SchoolDetailsForm({ onNext, updateField , schoolNameProp, logo, addressProp}: SchoolDetailsFormProps) {
+export default function SchoolDetailsForm({
+  onNext,
+  updateField,
+  schoolNameProp,
+  logo,
+  addressProp,
+  currentSessionProp,
+}: SchoolDetailsFormProps) {
   const [schoolName, setSchoolName] = useState(schoolNameProp);
   const [schoolLogo, setSchoolLogo] = useState<File | null>(logo);
   const [address, setAddress] = useState(addressProp);
+  const [currentSession, setCurrentSession] = useState(currentSessionProp);
 
   // Check if all required fields are filled
-  const isStep1Complete = schoolName.trim() !== "" && address.trim() !== "" && schoolLogo !== null;
+  const isStep1Complete =
+    schoolName.trim() !== "" &&
+    address.trim() !== "" &&
+    currentSession.trim() !== "" &&
+    schoolLogo !== null;
 
   const handleNext = () => {
-    // update global state via updateField callback
     updateField("schoolName", schoolName);
     updateField("logo", schoolLogo);
     updateField("address", address);
+    updateField("currentSession", currentSession);
 
     onNext();
   };
 
   return (
     <div className="space-y-4">
+      {/* School Name */}
       <div>
         <label className="block text-sm font-medium mb-1 dark:text-gray-200">
           School Name <span className="text-red-500">*</span>
@@ -41,6 +58,7 @@ export default function SchoolDetailsForm({ onNext, updateField , schoolNameProp
         />
       </div>
 
+      {/* School Logo */}
       <div>
         <label className="block text-sm font-medium mb-1 dark:text-gray-200">
           School Logo <span className="text-red-500">*</span>
@@ -53,10 +71,13 @@ export default function SchoolDetailsForm({ onNext, updateField , schoolNameProp
           required
         />
         {schoolLogo && (
-          <p className="text-sm text-green-600 mt-1">✅ Logo selected: {schoolLogo.name}</p>
+          <p className="text-sm text-green-600 mt-1">
+            ✅ Logo selected: {schoolLogo.name}
+          </p>
         )}
       </div>
 
+      {/* Address */}
       <div>
         <label className="block text-sm font-medium mb-1 dark:text-gray-200">
           Address <span className="text-red-500">*</span>
@@ -71,6 +92,22 @@ export default function SchoolDetailsForm({ onNext, updateField , schoolNameProp
         />
       </div>
 
+      {/* Current Session */}
+      <div>
+        <label className="block text-sm font-medium mb-1 dark:text-gray-200">
+          Current Academic Session <span className="text-red-500">*</span>
+        </label>
+        <input
+          type="text"
+          value={currentSession}
+          onChange={(e) => setCurrentSession(e.target.value)}
+          className="w-full border px-3 py-2 rounded-md dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100"
+          placeholder="e.g. 2025-26"
+          required
+        />
+      </div>
+
+      {/* Next Button */}
       <button
         onClick={handleNext}
         disabled={!isStep1Complete}
