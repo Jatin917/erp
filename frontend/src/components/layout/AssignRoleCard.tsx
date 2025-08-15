@@ -75,13 +75,13 @@ export default function AssignRoleCard({
   };
 
   return (
-    <div className="border rounded-xl p-4 dark:border-gray-700">
-      <h2 className="text-lg font-semibold mb-4 dark:text-gray-100">
+    <div className="border border-primary rounded-xl p-4 bg-card">
+      <h2 className="text-lg font-semibold mb-4 text-primary">
         Assign {role}
       </h2>
 
       {/* Assign Myself Option */}
-      <div className="mb-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+      <div className="mb-4 p-3 bg-secondary rounded-lg border border-primary">
         <div className="flex items-center gap-2">
           <input 
             type="checkbox" 
@@ -90,7 +90,7 @@ export default function AssignRoleCard({
             onChange={(e) => handleAssignMyselfChange(e.target.checked)}
             className="rounded"
           />
-          <label htmlFor={`${role}-self`} className="text-sm font-medium dark:text-gray-300">
+          <label htmlFor={`${role}-self`} className="text-sm font-medium text-secondary">
             Assign Myself as {role}
           </label>
         </div>
@@ -98,7 +98,7 @@ export default function AssignRoleCard({
 
       {/* Show user details when assign myself is selected */}
       {assignMyself && user && (
-        <div className="mb-4 p-3 rounded border" style={{ backgroundColor: 'oklch(0.32 0.14 266.75)', borderColor: 'oklch(0.32 0.14 266.75)' }}>
+        <div className="mb-4 p-3 rounded border bg-accent border-accent">
           <p className="text-sm font-medium mb-2 text-white">
             Your Details (Auto-populated):
           </p>
@@ -110,8 +110,7 @@ export default function AssignRoleCard({
               <input
                 type="text"
                 value={user.name}
-                className="w-full px-3 py-2 rounded-md text-white cursor-not-allowed"
-                style={{ backgroundColor: 'oklch(0.32 0.14 266.75)' }}
+                className="w-full px-3 py-2 rounded-md text-white cursor-not-allowed bg-accent"
                 disabled
               />
             </div>
@@ -122,13 +121,12 @@ export default function AssignRoleCard({
               <input
                 type="email"
                 value={user.email}
-                className="w-full px-3 py-2 rounded-md text-white cursor-not-allowed"
-                style={{ backgroundColor: 'oklch(0.32 0.14 266.75)' }}
+                className="w-full px-3 py-2 rounded-md text-white cursor-not-allowed bg-accent"
                 disabled
               />
             </div>
             <div className="flex items-center gap-2 mt-2">
-              <span className="text-xs" style={{ color: 'oklch(0.54 0.11 158.7)' }}>✅ Auto-verified (current user)</span>
+              <span className="text-xs text-positive">✅ Auto-verified (current user)</span>
             </div>
           </div>
         </div>
@@ -139,15 +137,14 @@ export default function AssignRoleCard({
         <>
           {/* Existing User */}
           <div className="mb-3">
-            <label className="block text-sm font-medium mb-1 dark:text-gray-200">
+            <label className="block text-sm font-medium mb-1 text-secondary">
               Existing User Email
             </label>
             <div className="flex gap-2">
               <input
                 type="email"
                 placeholder="Enter email"
-                className="flex-1 px-3 py-2 rounded-md text-white cursor-not-allowed"
-                style={{ backgroundColor: 'oklch(0.32 0.14 266.75)', border: '1px solid oklch(0.32 0.14 266.75)' }}
+                className="flex-1 px-3 py-2 rounded-md text-primary bg-secondary border border-primary"
                 value={email}
                 onChange={handleEmailChange}
                 disabled={isVerified}
@@ -157,28 +154,27 @@ export default function AssignRoleCard({
                 className={`px-3 py-2 rounded-md transition-colors ${
                   isVerified
                     ? "cursor-not-allowed"
-                    : "bg-indigo-600 text-white hover:bg-indigo-700"
+                    : "bg-accent text-white hover:bg-accent"
                 }`}
-                style={isVerified ? { backgroundColor: 'oklch(0.54 0.11 158.7)', color: 'white' } : {}}
+                style={isVerified ? { backgroundColor: 'var(--positive)', color: 'white' } : {}}
                 onClick={() => onVerifyClick({ type: "email", value: email, role: roleKey })}
               >
                 {isVerified ? "✅ Verified" : "Verify"}
               </button>
             </div>
             {isVerified && (
-              <p className="text-sm mt-1" style={{ color: 'oklch(0.54 0.11 158.7)' }}>✅ Email verified for existing user</p>
+              <p className="text-sm mt-1 text-positive">✅ Email verified for existing user</p>
             )}
           </div>
 
           {/* Or Create New */}
           <div className="mb-3">
-            <p className="text-sm font-medium mb-1 dark:text-gray-200">Or Create New</p>
+            <p className="text-sm font-medium mb-1 text-secondary">Or Create New</p>
             <div className="space-y-2">
               <input
                 type="text"
                 placeholder="Full Name"
-                className="w-full px-3 py-2 rounded-md text-white"
-                style={{ backgroundColor: 'oklch(0.32 0.14 266.75)', border: '1px solid oklch(0.32 0.14 266.75)' }}
+                className="w-full px-3 py-2 rounded-md text-primary bg-secondary border border-primary"
                 value={name[roleKey].value}
                 onChange={handleNameChange}
                 disabled={isVerified}
@@ -187,8 +183,7 @@ export default function AssignRoleCard({
                 <input
                   type="email"
                   placeholder="Email"
-                  className="w-full px-3 py-2 rounded-md text-white"
-                  style={{ backgroundColor: 'oklch(0.32 0.14 266.75)', border: '1px solid oklch(0.32 0.14 266.75)' }}
+                  className="w-full px-3 py-2 rounded-md text-primary bg-secondary border border-primary"
                   value={email}
                   onChange={handleEmailChange}
                   disabled={isVerified}
@@ -198,16 +193,16 @@ export default function AssignRoleCard({
                   className={`px-3 py-2 rounded-md transition-colors ${
                     isVerified
                       ? "cursor-not-allowed"
-                      : "bg-indigo-600 text-white hover:bg-indigo-700"
+                      : "bg-accent text-white hover:bg-accent"
                   }`}
-                  style={isVerified ? { backgroundColor: 'oklch(0.54 0.11 158.7)', color: 'white' } : {}}
+                  style={isVerified ? { backgroundColor: 'var(--positive)', color: 'white' } : {}}
                   onClick={() => onVerifyClick({ type: "email", value: email, role: roleKey })}
                 >
                   {isVerified ? "✅ Verified" : "Verify"}
                 </button>
               </div>
               {isVerified && (
-                <p className="text-sm mt-1" style={{ color: 'oklch(0.54 0.11 158.7)' }}>✅ New user email verified</p>
+                <p className="text-sm mt-1 text-positive">✅ New user email verified</p>
               )}
             </div>
           </div>
@@ -215,12 +210,12 @@ export default function AssignRoleCard({
       )}
 
       {/* Status Summary */}
-      <div className="mt-4 p-3 rounded-lg border" style={{ backgroundColor: 'oklch(0.32 0.14 266.75)', borderColor: 'oklch(0.32 0.14 266.75)' }}>
+      <div className="mt-4 p-3 rounded-lg border bg-accent border-accent">
         <p className="text-sm font-medium mb-1 text-white">
           Assignment Status:
         </p>
         {assignMyself ? (
-          <div className="text-sm" style={{ color: 'oklch(0.54 0.11 158.7)' }}>
+          <div className="text-sm text-positive">
             <p>✅ You will be assigned as {role}</p>
             <p className="text-xs mt-1">
               <strong>Name:</strong> {user?.name || "Loading..."}
@@ -230,9 +225,9 @@ export default function AssignRoleCard({
             </p>
           </div>
         ) : isVerified ? (
-          <p className="text-sm" style={{ color: 'oklch(0.54 0.11 158.7)' }}>✅ {role} assignment ready</p>
+          <p className="text-sm text-positive">✅ {role} assignment ready</p>
         ) : (
-          <p className="text-sm text-yellow-600">⚠️ Complete one of the options above</p>
+          <p className="text-sm text-warning">⚠️ Complete one of the options above</p>
         )}
       </div>
     </div>

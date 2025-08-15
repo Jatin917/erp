@@ -34,9 +34,6 @@ export const checkUserExists = async (email: string) => {
     return data.success; // true | false
   };
   
-
-// export const getallusers=()=> API.get("/user/getallusers");
-// export const updateprofile=(updatedata)=>API.patch(`auth/change-password`,updatedata)
 // OTP
 export const sendOTP = async (authdata:{email:string}) =>{
     const {data} = await API.post("auth/send-otp", authdata);

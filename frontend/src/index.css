@@ -1,4 +1,135 @@
+/* index.css */
 @import "tailwindcss";
+
+/* CSS Custom Properties for AblePro Theme */
+:root {
+  /* Light Theme Colors */
+  --bg-primary: #f8f9fa;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #ffffff;
+  --sidebar-bg: #ffffff;
+  --card-bg: #ffffff;
+  --text-primary: #212529;
+  --text-secondary: #6c757d;
+  --text-tertiary: #495057;
+  --border-primary: #dee2e6;
+  --border-secondary: #dee2e6;
+  --accent-primary: #04a9f5;
+  --accent-secondary: #04a9f5;
+  --positive: #28a745;
+  --info: #17a2b8;
+  --warning: #ffc107;
+  --danger: #dc3545;
+}
+
+/* Dark Theme Colors */
+.dark {
+  --bg-primary: #212529;
+  --bg-secondary: #2a2d32;
+  --bg-tertiary: #1e1f23;
+  --sidebar-bg: #1e1f23;
+  --card-bg: #2a2d32;
+  --text-primary: #ffffff;
+  --text-secondary: #adb5bd;
+  --text-tertiary: #dee2e6;
+  --border-primary: #343a40;
+  --border-secondary: #343a40;
+  --accent-primary: #04a9f5;
+  --accent-secondary: #04a9f5;
+  --positive: #28a745;
+  --info: #17a2b8;
+  --warning: #ffc107;
+  --danger: #dc3545;
+}
+
+/* Base Styles */
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* Component Styles using CSS Custom Properties */
+.bg-primary {
+  background-color: var(--bg-primary);
+}
+
+.bg-secondary {
+  background-color: var(--bg-secondary);
+}
+
+.bg-card {
+  background-color: var(--card-bg);
+}
+
+.bg-sidebar {
+  background-color: var(--sidebar-bg);
+}
+
+.bg-accent {
+  background-color: var(--accent-primary);
+}
+
+.text-primary {
+  color: var(--text-primary);
+}
+
+.text-secondary {
+  color: var(--text-secondary);
+}
+
+.text-tertiary {
+  color: var(--text-tertiary);
+}
+
+.text-accent {
+  color: var(--accent-primary);
+}
+
+.text-positive {
+  color: var(--positive);
+}
+
+.text-info {
+  color: var(--info);
+}
+
+.text-warning {
+  color: var(--warning);
+}
+
+.text-danger {
+  color: var(--danger);
+}
+
+.border-primary {
+  border-color: var(--border-primary);
+}
+
+.border-secondary {
+  border-color: var(--border-secondary);
+}
+
+.border-accent {
+  border-color: var(--accent-primary);
+}
+
+/* Hover states */
+.hover\:bg-card:hover {
+  background-color: var(--bg-tertiary);
+}
+
+.hover\:bg-accent:hover {
+  background-color: var(--accent-secondary);
+}
+
+.hover\:text-primary:hover {
+  color: var(--text-primary);
+}
+
+.hover\:text-accent:hover {
+  color: var(--accent-primary);
+}
 
 @keyframes slideIn {
   0% {
@@ -10,6 +141,7 @@
     transform: translateX(0);
   }
 }
+
 .animate-slideIn {
   animation: slideIn 0.6s ease forwards;
 }
@@ -38,3 +170,45 @@ select, input, option {
 * {
   transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
 }
+
+/* Dark mode base styles */
+.dark {
+  color-scheme: dark;
+}
+
+/* Custom scrollbar for dark mode */
+.dark ::-webkit-scrollbar {
+  width: 8px;
+}
+
+.dark ::-webkit-scrollbar-track {
+  background: var(--bg-tertiary);
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: var(--border-secondary);
+  border-radius: 4px;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: var(--text-tertiary);
+}
+
+/* Light mode scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-tertiary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-secondary);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-tertiary);
+}
+
