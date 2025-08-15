@@ -148,7 +148,6 @@ model School {
   createdById String
 
   branches   Branch[]
-  students   Student[]
 }
 
 model Branch {
@@ -161,35 +160,114 @@ model Branch {
   principal  User?    @relation("PrincipalBranch", fields: [principalId], references: [id])
   principalId String? @unique
   classes    Class[]
+  students    Student[]
   academicSession AcademicSession[]
 }
 
 
 model Student {
   id                   String   @id @default(uuid())
-  user                 User     @relation( fields: [userId], references: [id])
+  user                 User     @relation(fields: [userId], references: [id])
   userId               String   @unique
 
-  school               School @relation(fields: [schoolId], references: [id])
-  schoolId             String
-  branchId             String
-  classId              String?
-  sessionId            String?
-
+  branchId             String 
+  branch               Branch   @relation(fields: [branchId], references: [id])
   rollNo               String
-  studentId            String
 
-  // Fee tracking
-  totalPayable         Float    @default(0)  // across all sessions
-  totalPaid            Float    @default(0)
-  balanceRemaining     Float    // totalPayable - totalPaid (auto-updated)
+  // ----- Personal Details -----
+  admissionNo          String?
+  section              String?
+  gender               String?
+  dob                  DateTime?
+  aadhaar              String?
+  birthCertificateUrl  String?
+  abcId                String?
+  sssmId               String?
+  familySssmId         String?
+  minority             String?
+  scStObc              String?
+  bpl                  String?
+  scStObcCertificateUrl String?
+  bplCertificateUrl    String?
+  specialChild         Boolean? @default(false)
+  allergies            String?
+  studentEmail         String?
+  studentMobile        String?
+  citizenship          String?
+  visaNo               String?
+  visaType             String?
+  visaValidity         DateTime?
 
-  feeDocs              FeeDoc[]
-  feeTransactions      FeeTransaction[]
-  enrollments Enrollment[]
-  parentId             String
-  parent               Parent @relation("ParentToStudent", fields: [parentId], references: [id])
+  // ----- Previous Education -----
+  previousSchoolName   String?
+  previousClassPassed  String?
+  previousClassMarks   String?
+  previousClassYear    String?
+  previousBoard        String?
+  migrationCertificateUrl String?
+  tcNo                 String?
+
+  // ----- Address -----
+  permanentAddress     String?
+  temporaryAddress     String?
+
+  // ----- Father Details -----
+  fatherName           String?
+  fatherOccupation     String?
+  fatherEmail          String?
+  fatherMobile         String?
+  fatherAadhaar        String?
+  fatherIdUrl          String?
+  fatherPan            String?
+  fatherPassport       String?
+  fatherCitizenship    String?
+  fatherVisaNo         String?
+  fatherVisaType       String?
+  fatherVisaValidity   DateTime?
+
+  // ----- Mother Details -----
+  motherName           String?
+  motherOccupation     String?
+  motherEmail          String?
+  motherMobile         String?
+  motherAadhaar        String?
+  motherIdUrl          String?
+  motherPan            String?
+  motherPassport       String?
+  motherCitizenship    String?
+  motherVisaNo         String?
+  motherVisaType       String?
+  motherVisaValidity   DateTime?
+
+  // ----- Fees -----
+  discount             Float    @default(0)
+  lateFine             Float    @default(0)
+  remark               String?
+
+  // Current year fee tracking
+  currentYearTotal         Float    @default(0)
+  currentYearTotalPaid     Float    @default(0)
+  currentYearTotalBalance  Float    @default(0)
+
+  // Last year fee tracking
+  lastYearTotal            Float    @default(0)
+  lastYearTotalPaid        Float    @default(0)
+  lastYearTotalBalance     Float    @default(0)
+
+  // ----- Extras -----
+  result                Json?
+  resultStatus          String?
+  photoUrl              String?
+  barcodeUrl            String?
+
+  // Relationships
+  feeDocs               FeeDoc[]
+  feeTransactions       FeeTransaction[]
+  enrollments           Enrollment[]
+  parentId              String
+  parent                Parent   @relation("ParentToStudent", fields: [parentId], references: [id])
 }
+
 model Parent {
   id        String   @id @default(uuid())
   user      User     @relation(fields: [userId], references: [id])
@@ -225,8 +303,8 @@ model FeeDoc {
 
   admissionFee    Float
   tuitionFee      Float
-  transportFee    Float
-  hostelFee       Float
+  transportFee    Float?
+  hostelFee       Float?
   concessions     Float   @default(0)
 
   totalPayable    Float   // derived from above
