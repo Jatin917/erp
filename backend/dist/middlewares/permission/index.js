@@ -2,8 +2,9 @@ import { HTTP_STATUS } from "../../lib/http-codes.js";
 import { prisma } from "../../server.js";
 export const isPermitted = async (req, res, next) => {
     try {
-        const userId = req.body.createdById; // Better: use req.user.id from auth middleware
+        const userId = req.body.email; // Better: use req.user.id from auth middleware
         const task = req.body.task;
+        console.log("isPermitted ", userId, task);
         if (!userId || !task) {
             return res.status(HTTP_STATUS.BAD_REQUEST).json({
                 success: false,
@@ -11,7 +12,7 @@ export const isPermitted = async (req, res, next) => {
             });
         }
         const user = await prisma.user.findFirst({
-            where: { id: userId },
+            where: { email: userId },
             select: { permissions: true }
         });
         if (!user || !Array.isArray(user.permissions)) {

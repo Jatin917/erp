@@ -157,7 +157,7 @@ model Branch {
   address    String
   school     School   @relation(fields: [schoolId], references: [id])
   schoolId   String
-
+  logoUrl    String?
   principal  User?    @relation("PrincipalBranch", fields: [principalId], references: [id])
   principalId String? @unique
   classes    Class[]

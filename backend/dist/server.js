@@ -16,6 +16,7 @@ export const SUPERADMIN_PASSWORD = process.env.SUPER_ADMIN_PASSWORD;
 const app = express();
 export const otpStorage = new Map();
 export const emailVerified = new Map();
+export const defaultPassword = process.env.DEFAULT_PASSWORD || "secret";
 // set up server
 app.use(cors({ origin: '*' }));
 app.set('view engine', 'ejs');
