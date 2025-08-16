@@ -138,9 +138,8 @@ model User {
   principalAssignment Branch?        @relation("PrincipalBranch")
   teacherClasses      ClassTeacher[]
   studentProfile      Student?       
-  fatherProfile       Parent?  @relation("FatherRelation")
-  motherProfile       Parent?  @relation("MotherRelation")
-  feeTransactions      FeeTransaction[]
+   parents            Parent[]
+  feeTransactions     FeeTransaction[]
 }
 
 model School {
@@ -272,13 +271,12 @@ model Student {
 }
 
 model Parent {
-  id        String   @id @default(uuid())
-  type      String   @default("FATHER")
-  fatherUserId    String   @unique
-  motherUserId    String   @unique
-  fatherOf  User?  @relation("FatherRelation", fields: [fatherUserId], references: [id])
-  motherOf  User?  @relation("MotherRelation", fields: [motherUserId], references: [id])
-  students  Student[] @relation("ParentToStudent")
+  id     String @id @default(uuid())
+  type   String // "FATHER" or "MOTHER"
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  students Student[] @relation("ParentToStudent")
 }
 model Class {
   id              String   @id @default(uuid())
