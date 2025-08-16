@@ -16,7 +16,7 @@ interface UiState {
 
 export const useUiStore = create<UiState>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       darkMode: false, // Default to light mode
       sidebarOpen: true,
 

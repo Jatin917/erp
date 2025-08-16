@@ -1,5 +1,4 @@
 import {API} from "../api/index";
-import type { Permission } from "../api/types";
 
 export interface StudentRow {
   id: string;

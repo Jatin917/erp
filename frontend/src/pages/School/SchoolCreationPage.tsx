@@ -68,7 +68,7 @@ export default function SchoolCreationPage() {
   };
 
   // Handle reset verification with proper types
-  const handleResetVerification = (role: "director" | "principal", type: "email" | "phone" | null) => {
+  const handleResetVerification = (role: "director" | "principal" | null, type: "email" | "phone" | null) => {
     if (role && type) {
       resetVerification(role, type);
     }

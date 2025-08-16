@@ -5,7 +5,7 @@ import { useState } from "react";
 
 export default function Topbar() {
   const toggleSidebar = useUiStore((s) => s.toggleSidebar);
-  const { darkMode, toggleDarkMode, resetTheme } = useUiStore();
+  const { darkMode, resetTheme } = useUiStore();
   const { user, logout } = useAuthStore();
   const [showThemeMenu, setShowThemeMenu] = useState(false);
 

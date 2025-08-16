@@ -1,5 +1,4 @@
 // components/layout/ReviewSchoolForm.tsx
-import React from "react";
 
 interface RoleData {
   name?: string;

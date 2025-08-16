@@ -1,7 +1,4 @@
 import Section from "../../components/common/Section";
-import Tag from "../../components/common/Tag";
-import Button from "../../components/common/Button";
-
 export default function Dashboard() {
   return (
     <div className="space-y-6">

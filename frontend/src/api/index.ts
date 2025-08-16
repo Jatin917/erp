@@ -48,7 +48,7 @@ export const verifyOTP = async (authdata:{email:string, otp:string}) =>{
 // Schoool
 export const createSchool = async (authdata: {
     schoolName: string,
-    logo: File,
+    logo: File | null,
     address: string,
     director: { name?: string, email: string },
     principal: { name?: string, email: string },
@@ -65,7 +65,7 @@ export const createSchool = async (authdata: {
     formData.append("schoolName", authdata.schoolName);
     formData.append("address", authdata.address);
     formData.append("currentSession", authdata.currentSession);
-    formData.append("logo", authdata.logo);
+    if(authdata.logo) formData.append("logo", authdata.logo);
     formData.append("director", JSON.stringify(authdata.director));
     formData.append("principal", JSON.stringify(authdata.principal));
     formData.append("createdBy", email);

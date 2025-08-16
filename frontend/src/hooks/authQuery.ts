@@ -4,7 +4,6 @@ import { useAuthStore } from "../store/authStore";
 import type { Permission, Role } from "../api/types";
 import toast from "react-hot-toast";
 import type { AxiosError } from "axios";
-import { useState } from "react";
 import { useSchoolStore } from "../store/schoolStore";
 
 // Expected API response type
@@ -42,11 +41,16 @@ export const useLogin = (): UseMutationResult<
       toast.success("Logged in successfully");
     },
     // ❌ Error handler
-    onError: (error : AxiosError<any>) => {
+    onError: (error, _variables, _context) => {
       // If your API sends structured error messages, use that
-      const message =
-        error?.response?.data?.message ||
-        error?.message ||
+      // Try to extract Axios error message if possible
+      let message = "Failed to login";
+      if ((error as any)?.response?.data?.message) {
+        message = (error as any).response.data.message;
+      } else if (error.message) {
+        message = error.message;
+      }
+      toast.error(message);
         "Failed to send OTP";
       toast.error(message);
     },
@@ -117,7 +121,7 @@ export const useVerifyOtp = () => {
     onSuccess: (data, variables) => {
       toast.success(data.message || "OTP verified successfully");
       const { role, type } = variables;
-      setField(role, `isVerified${type === "email" ? "Email" : "Phone"}` as any, true);
+      if(role) setField(role, `isVerified${type === "email" ? "Email" : "Phone"}` as any, true);
     },
     onError: (error: any) => {
       toast.error(error.response?.data?.message || "Failed to verify OTP");

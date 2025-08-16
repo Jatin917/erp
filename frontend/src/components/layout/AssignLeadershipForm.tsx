@@ -4,8 +4,9 @@ import AssignRoleCard from "./AssignRoleCard";
 import { useAuthStore } from "../../store/authStore";
 
 interface Contact {
+  type: "email" | "phone" | null;
   value: string;
-  role: Role;
+  role: "director" | "principal" | null;
 }
 
 type Role = "director" | "principal";

@@ -1,10 +1,9 @@
 import { Outlet } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import Topbar from "./Topbar";
-import { useUiStore } from "../../store/useUiStore";
+// import { useUiStore } from "../../store/useUiStore";
 
 export default function AppShell() {
-  const { sidebarOpen } = useUiStore();
 
   return (
     <div className="min-h-screen w-full bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
-import { useCheckUserExists, useSendOtp, useVerifyOtp } from "../../hooks/authQuery";
-import { checkUserExists } from "../../api";
+import { useCheckUserExists, useSendOtp } from "../../hooks/authQuery";
+// import { checkUserExists } from "../../api";
 
 interface Contact {
   type: "email" | "phone" | null;

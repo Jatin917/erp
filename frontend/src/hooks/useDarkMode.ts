@@ -41,7 +41,7 @@ export const useDarkMode = () => {
     if (mounted) {
       const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
       
-      const handleChange = (e: MediaQueryListEvent) => {
+      const handleChange = () => {
         // Only auto-update if user hasn't manually set a preference
         const savedTheme = localStorage.getItem('ui-store');
         if (!savedTheme) {

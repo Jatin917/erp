@@ -1,4 +1,4 @@
-import { Outlet, redirect } from "react-router-dom";
+import { Outlet } from "react-router-dom";
 import { useUiStore } from "../../store/useUiStore";
 
 export default function AuthLayout() {

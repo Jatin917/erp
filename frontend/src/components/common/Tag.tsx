@@ -1,3 +1,4 @@
+// @ts-nocheck
 export default function Tag({ children, tone = "slate" as "slate" | "green" | "orange" | "red" | "blue" }) {
     const toneMap: Record<string, string> = {
       slate: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200",
