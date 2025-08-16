@@ -266,8 +266,10 @@ model Student {
   feeDocs               FeeDoc[]
   feeTransactions       FeeTransaction[]
   enrollments           Enrollment[]
-  parentId              String
-  parent                Parent   @relation("ParentToStudent", fields: [parentId], references: [id])
+  fatherId              String?
+  father                Parent?   @relation("fatherToStudent", fields: [fatherId], references: [id])
+  motherId              String?
+  mother                Parent?   @relation("motherToStudent", fields: [motherId], references: [id])
 }
 
 model Parent {
@@ -276,7 +278,8 @@ model Parent {
   userId String
   user   User   @relation(fields: [userId], references: [id])
 
-  students Student[] @relation("ParentToStudent")
+  fatherOf Student[] @relation("fatherToStudent")
+  motherOf Student[] @relation("motherToStudent")
 }
 model Class {
   id              String   @id @default(uuid())
