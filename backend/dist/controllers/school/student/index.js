@@ -1,187 +1,356 @@
-// import { prisma } from "../../../server.js";
-export {};
-// const express = require('express');
-// const router = express.Router();
-// const Student = require('../database/models/Student');
-// const User = require('../database/models/User')
-// const XLSX = require('xlsx');
-// const path = require('path');
-// const fs = require('fs');
-// const bwipjs = require('bwip-js');
-// const QRCode = require('qrcode');
-// const FeeNarration = require('../database/models/FeeNarration')
-// // Helper: get student upload directory
-// function getStudentDir(sid, bid, admissionNo) {
-//   // All must be string for path.join
-//   return path.join(
-//     __dirname,
-//     '..', 'uploads', 
-//     String(sid), 
-//     String(bid), 
-//     String(admissionNo)
-//   );
-// }
-// // Function to generate barcode and save as image
-// async function generateBarcode(student) {
-//   const qrText = `${student.sid}|${student.bid}|${student.studentName}|${student.admissionNo}|${student.class}|${student.section}|${student.session}`;
-//   const qrDir = path.join(__dirname, '../uploads', student.sid, student.bid, student.admissionNo);
-//   fs.mkdirSync(qrDir, { recursive: true });
-//   const qrPath = path.join(qrDir, 'barcode.png');
-//   // Generate QR code image buffer and save
-//   await new Promise((resolve, reject) => {
-//     QRCode.toFile(qrPath, qrText, {
-//       type: 'png',
-//       width: 350,
-//       margin: 1,
-//       color: {
-//         dark: '#000',
-//         light: '#FFF'
-//       }
-//     }, function (err) {
-//       if (err) return reject(err);
-//       resolve();
-//     });
-//   });
-//   // Return the URL relative to your static serving
-//   return `uploads/${student.sid}/${student.bid}/${student.admissionNo}/barcode.png`;
-// }
-// // CRUD
-// router.get('/', async (req, res) => {
-//   const { session, sid, bid, cls, sec } = req.query;
-//   const query = { sid, bid };
-//   if (session) query.session = session;
-//   if (cls) query.class = cls.toUpperCase();
-//   if (sec) query.section = sec;
-//   const romanOrder = [
-//     'Nursery', 'LKG', 'UKG',
-//     'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'
-//   ];
-//   const romanOrderObj = {};
-//   romanOrder.forEach((cls, idx) => { romanOrderObj[cls] = idx; });
-//   let students = await Student.aggregate([
-//     { $match: query },
-//     {
-//       $addFields: {
-//         sortableClass: {
-//           $switch: {
-//             branches: romanOrder.map((cls, idx) => ({
-//               case: { $eq: ['$class', cls] },
-//               then: idx
-//             })),
-//             default: 999
-//           }
-//         }
-//       }
-//     },
-//     { $sort: { sortableClass: 1, section: 1 } }
-//   ]);
-//   // Process each student
-//   for (const student of students) {
-//     const studentId = student._id;
-//     const lastFeeTransaction = await FeeNarration.findOne({ studentId }).sort({ createdAt: -1 });
-//     let totalFees = 0;
-//     let totalPaid = 0;
-//     let totalBalance = 0;
-//     if (lastFeeTransaction) {
-//       totalPaid = lastFeeTransaction.totalPaid || 0;
-//       totalBalance = lastFeeTransaction.totalBalance || 0;
-//       totalFees = totalPaid + totalBalance;
-//     }
-//     student.totalFees = totalFees;
-//     student.totalPaid = totalPaid;
-//     student.totalBalance = totalBalance;
-//     student.totalCurrentYearPaid = lastFeeTransaction
-//       ? (lastFeeTransaction.totalPaid - (student.totalLastYearPaid || 0))
-//       : 0;
-//     student.totalCurrentYearFees = student.totalPayableYearly || 0;
-//     student.totalCurrentYearRemaningBalance = (student.totalBalancePayable || 0) - (student.totalLastRemainingBalance || 0);
-//     student.totalOfLastAndCurrent =
-//       (student.totalLastRemainingBalance || 0) +
-//       (student.totalCurrentYearRemaningBalance || 0);
-//   }
-//   res.json(students);
-// });
-// // Single student create (with barcode)
-// router.post('/', async (req, res) => {
-//     const {name, }
-//     const student = await prisma.student.create({data:{req.body}});
-//   const barcodeUrl = await generateBarcode(student);
-//   student.barcodeUrl = barcodeUrl;
-//   await student.save();
-//   res.json(student);
-//   if(student.studentEmail != "" || student.studentMobile != "")
-//   {
-//           let user = await User.findOne({ email: student.studentEmail, mobile: student.studentMobile,  sid : student.sid, bid: student.bid, usertype: 'Student' })
-//           if (user) {
-//             // Only update name/mobile, don't touch password
-//             user.name = student.studentName
-//             user.mobile = student.studentMobile
-//             user.email = student.studentEmail
-//             await user.save()
-//           } else {
-//             // If password is not sent, default to '1234'
-//             const rawPwd = '1234'
-//             await User.create({
-//               name: student.studentName,
-//               email: student.studentEmail,
-//               mobile: student.studentMobile,
-//               sid : student.sid,
-//               bid: student.bid,
-//               usertype: 'Student',
-//               password: rawPwd, // will be handled by pre-save
-//               status: 'Active'
-//             })
-//           }
-//   }
-//   if(student.fatherName != "" || student.fatherEmail != "" || student.fatherMobile != "")
-//   {
-//           let user = await User.findOne({ email: student.fatherEmail, mobile: student.fatherMobile,  sid : student.sid, bid: student.bid, usertype: 'Parent' })
-//           if (user) {
-//             // Only update name/mobile, don't touch password
-//             user.name = student.fatherName
-//             user.mobile = student.fatherMobile
-//             user.email = student.fatherEmail
-//             await user.save()
-//           } else {
-//             // If password is not sent, default to '1234'
-//             const rawPwd = '1234'
-//             await User.create({
-//               name: student.fatherName,
-//               email: student.fatherEmail,
-//               mobile: student.fatherMobile,
-//               sid : student.sid,
-//               bid: student.bid,
-//               usertype: 'Parent',
-//               password: rawPwd, // will be handled by pre-save
-//               status: 'Active'
-//             })
-//           }
-//   }
-//   if(student.motherName != "" || student.motherEmail != "" || student.motherMobile != "")
-//   {
-//           let user = await User.findOne({ email: student.motherEmail, mobile: student.motherMobile,  sid : student.sid, bid: student.bid, usertype: 'Parent' })
-//           if (user) {
-//             // Only update name/mobile, don't touch password
-//             user.name = student.motherName
-//             user.mobile = student.motherMobile
-//             user.email = student.motherEmail
-//             await user.save()
-//           } else {
-//             // If password is not sent, default to '1234'
-//             const rawPwd = '1234'
-//             await User.create({
-//               name: student.motherName,
-//               email: student.motherEmail,
-//               mobile: student.motherMobile,
-//               sid : student.sid,
-//               bid: student.bid,
-//               usertype: 'Parent',
-//               password: rawPwd, // will be handled by pre-save
-//               status: 'Active'
-//             })
-//           }
-//   }
-// });
+// @ts-nocheck
+import path from "path";
+import fs from "fs";
+import QRCode from "qrcode";
+import bcrypt from "bcrypt";
+import { defaultPassword, prisma } from "../../../server.js"; // your prisma instance
+import { HTTP_STATUS } from "../../../lib/http-codes.js";
+import * as XLSX from "xlsx";
+function getStudentDir(sid, bid, admissionNo) {
+    // All must be string for path.join
+    return path.join(__dirname, '..', 'uploads', String(sid), String(bid), String(admissionNo));
+}
+// ----------------------
+// Generate Barcode
+// ----------------------
+async function generateBarcode(student) {
+    const qrText = `${student.id}|${student.branchId}|${student.user.name}|${student.rollNo}|${student.enrollments.id || ""}|${student.sessionId || ""}`;
+    // Store under /uploads/{schoolId}/{branchId}/barcodes/{studentId}.png
+    const qrDir = getStudentDir(student.schoolId, student.branchId, student.admissionNo);
+    const qrPath = path.join(qrDir, `${student.id}.png`);
+    await new Promise((resolve, reject) => {
+        QRCode.toFile(qrPath, qrText, {
+            type: "png",
+            width: 350,
+            margin: 1,
+            color: { dark: "#000", light: "#FFF" },
+        }, (err) => {
+            if (err)
+                return reject(err);
+            resolve(true);
+        });
+    });
+    return `uploads/${student.schoolId}/${student.branchId}/barcodes/${student.id}.png`;
+}
+// ----------------------
+// Create / Find User Helper
+// ----------------------
+async function findOrCreateUser(role, name, email, phone) {
+    if (!email && !phone)
+        return null;
+    let user = await prisma.user.findFirst({
+        where: { OR: [{ email }, { phone }] },
+    });
+    if (user) {
+        return prisma.user.update({
+            where: { id: user.id },
+            data: { name, email, phone, role: { push: role } },
+        });
+    }
+    else {
+        const hashedPwd = await bcrypt.hash(defaultPassword, 10);
+        return prisma.user.create({
+            data: {
+                name,
+                email,
+                phone,
+                password: hashedPwd,
+                role: [role],
+                isEmailVerified: false,
+                isPhoneVerified: false,
+            },
+        });
+    }
+}
+async function createEnrollment(tx, // 👈 accept tx here
+studentId, className, branchId, section, sessionId, rollNo) {
+    // Ensure class exists (or create)
+    let cls = await tx.class.findFirst({
+        where: { name: className, section, branchId },
+    });
+    if (!cls) {
+        cls = await tx.class.create({
+            data: { name: className, section, branchId },
+        });
+    }
+    // Create enrollment (if not already created, optional uniqueness check)
+    const enrollment = await tx.enrollment.create({
+        data: {
+            studentId,
+            classId: cls.id,
+            sessionId,
+            rollNo,
+        },
+    });
+    return enrollment;
+}
+function normalizeSession(session) {
+    // 1. Extract years (assume formats like "2024-2025", "2024-25", "24-25")
+    const parts = session.split("-");
+    if (parts.length !== 2)
+        return session; // fallback if invalid format
+    let start = parts[0].trim();
+    let end = parts[1].trim();
+    // If start is 2 digits (e.g. "24") → prefix with "20"
+    if (start.length === 2)
+        start = "20" + start;
+    // If end is 2 digits (e.g. "25") → prefix with "20"
+    if (end.length === 2)
+        end = "20" + end;
+    // If end is only 4 digits but not complete, we assume full
+    return `${start}-${end}`;
+}
+// ----------------------
+// Main Create Student Function
+// ----------------------
+export const createStudent = async (req, res) => {
+    try {
+        const data = req.body;
+        const { session, class: classAsParam, branchId, rollNo } = data;
+        const normalized = normalizeSession(session);
+        await prisma.$transaction(async (tx) => {
+            // ---------- 1. Check Session ----------
+            const sessionIsThere = await tx.academicSession.findFirst({
+                where: { name: normalized },
+            });
+            if (!sessionIsThere) {
+                throw new Error("Academic Session does not exist");
+            }
+            // ---------- 2. Create Student User ----------
+            const studentUser = await findOrCreateUser("STUDENT", data.studentName, data.studentEmail, data.studentMobile);
+            if (!studentUser)
+                throw new Error("No student user Found");
+            // ---------- 3. Create Parent Users ----------
+            let fatherParent = null;
+            let motherParent = null;
+            if (data.fatherName || data.fatherEmail || data.fatherMobile) {
+                const fatherUser = await findOrCreateUser("FATHER", data.fatherName, data.fatherEmail, data.fatherMobile);
+                if (fatherUser) {
+                    fatherParent = await tx.parent.create({
+                        data: { type: "FATHER", userId: fatherUser.id },
+                    });
+                }
+            }
+            if (data.motherName || data.motherEmail || data.motherMobile) {
+                const motherUser = await findOrCreateUser("MOTHER", data.motherName, data.motherEmail, data.motherMobile);
+                if (motherUser) {
+                    motherParent = await tx.parent.create({
+                        data: { type: "MOTHER", userId: motherUser.id },
+                    });
+                }
+            }
+            // ---------- 4. Create Student ----------
+            const student = await tx.student.create({
+                data: {
+                    ...data, // pass extra fields as is
+                    userId: studentUser.id,
+                    fatherId: fatherParent?.id,
+                    motherId: motherParent?.id,
+                },
+                include: { user: true },
+            });
+            // ---------- 5. Enrollment ----------
+            await createEnrollment(tx, classAsParam, branchId, student.id, data.section, sessionIsThere.id, rollNo);
+            // ---------- 6. Barcode ----------
+            const barcodeUrl = await generateBarcode(student);
+            await tx.student.update({
+                where: { id: student.id },
+                data: { barcodeUrl },
+            });
+            // ---------- 7. FeeDocs ----------
+            let tuitionFee = 0;
+            let admissionFee = 0;
+            if (!data.currentYearAdmissionFee && !data.currentYearTuitionFee) {
+                // fallback when both are not provided
+                tuitionFee = data.currentYearTotal || 0;
+            }
+            else {
+                tuitionFee = data.currentYearTuitionFee || 0;
+                admissionFee = data.currentYearAdmissionFee || 0;
+            }
+            await tx.feeDoc.create({
+                data: {
+                    studentId: student.id,
+                    sessionId: sessionIsThere.id,
+                    admissionFee,
+                    tuitionFee,
+                    totalPayable: admissionFee + tuitionFee,
+                    dueInSession: admissionFee + tuitionFee - (data.currentYearTotalPaid || 0),
+                },
+            });
+            // ---------- 8. Last year fees (optional) ----------
+            if (data.lastYearAdmissionFee || data.lastYearTuitionFee || data.lastYearTotal) {
+                const lastSession = await tx.academicSession.findFirst({
+                    where: { branchId, isCurrent: false },
+                    orderBy: { createdAt: "desc" },
+                });
+                if (lastSession) {
+                    await tx.feeDoc.create({
+                        data: {
+                            studentId: student.id,
+                            sessionId: lastSession.id,
+                            admissionFee: data.lastYearAdmissionFee || 0,
+                            tuitionFee: data.lastYearTuitionFee || data.lastYearTotal || 0,
+                            totalPayable: (data.lastYearAdmissionFee || 0) +
+                                (data.lastYearTuitionFee || data.lastYearTotal || 0),
+                            dueInSession: data.lastYearTotalBalance || 0,
+                        },
+                    });
+                }
+                else {
+                    // log for debugging but don’t mix with current session
+                    console.warn(`No lastSession found for branch ${branchId}, student ${student.id}`);
+                }
+            }
+        });
+        return res.status(HTTP_STATUS.CREATED).json({
+            success: true,
+            message: "Student created successfully",
+        });
+    }
+    catch (error) {
+        console.error(error);
+        return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
+            success: false,
+            message: error.message,
+        });
+    }
+};
+export const bulkUploadStudents = async (req, res) => {
+    try {
+        if (!req.file) {
+            return res
+                .status(400)
+                .json({ success: false, message: "No file uploaded" });
+        }
+        const filePath = req.file.path; // multer stores file temporarily
+        const workbook = XLSX.readFile(filePath);
+        const sheetName = workbook.SheetNames[0];
+        const sheetData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+        let results = [];
+        for (const row of sheetData) {
+            try {
+                const student = await prisma.$transaction(async (tx) => {
+                    // 1. Student User
+                    const studentUser = await findOrCreateUser("STUDENT", row.studentName, row.studentEmail, row.studentMobile);
+                    if (!studentUser)
+                        throw new Error("Student user creation failed");
+                    // 2. Father (if any)
+                    let fatherParent = null;
+                    if (row.fatherName || row.fatherEmail || row.fatherMobile) {
+                        const fatherUser = await findOrCreateUser("FATHER", row.fatherName, row.fatherEmail, row.fatherMobile);
+                        if (fatherUser) {
+                            fatherParent = await tx.parent.create({
+                                data: { type: "FATHER", userId: fatherUser.id },
+                            });
+                        }
+                    }
+                    // 3. Mother (if any)
+                    let motherParent = null;
+                    if (row.motherName || row.motherEmail || row.motherMobile) {
+                        const motherUser = await findOrCreateUser("MOTHER", row.motherName, row.motherEmail, row.motherMobile);
+                        if (motherUser) {
+                            motherParent = await tx.parent.create({
+                                data: { type: "MOTHER", userId: motherUser.id },
+                            });
+                        }
+                    }
+                    // 4. Student record
+                    const student = await tx.student.create({
+                        data: {
+                            userId: studentUser.id,
+                            branchId: row.branchId,
+                            rollNo: row.rollNo,
+                            studentId: row.studentId,
+                            studentEmail: row.studentEmail,
+                            studentMobile: row.studentMobile,
+                            fatherName: row.fatherName,
+                            fatherEmail: row.fatherEmail,
+                            fatherMobile: row.fatherMobile,
+                            motherName: row.motherName,
+                            motherEmail: row.motherEmail,
+                            motherMobile: row.motherMobile,
+                            lastYearTotal: row.totalLastYearFees,
+                            lastYearTotalBalance: row.totalLastRemainingBalance,
+                            lastYearTotalPaid: row.totalLastYearPaid,
+                            currentYearTotal: row.totalCurrentYearFees,
+                            currentYearTotalPaid: row.totalCurrentYearPaid,
+                            currentYearTotalBalance: row.totalCurrentYearRemaningBalance,
+                            fatherId: fatherParent?.id || null,
+                            motherId: motherParent?.id || null,
+                        },
+                        include: { user: true },
+                    });
+                    // 5. Barcode
+                    const barcodeUrl = await generateBarcode(student);
+                    await tx.student.update({
+                        where: { id: student.id },
+                        data: { barcodeUrl },
+                    });
+                    // 6. Current year fees
+                    let tuitionFee = 0;
+                    let admissionFee = 0;
+                    if (!row.currentYearAdmissionFee && !row.currentYearTuitionFee) {
+                        tuitionFee = row.currentYearTotal || 0;
+                    }
+                    else {
+                        tuitionFee = row.currentYearTuitionFee || 0;
+                        admissionFee = row.currentYearAdmissionFee || 0;
+                    }
+                    await tx.feeDoc.create({
+                        data: {
+                            studentId: student.id,
+                            sessionId: row.sessionId,
+                            admissionFee,
+                            tuitionFee,
+                            totalPayable: admissionFee + tuitionFee,
+                            dueInSession: (admissionFee + tuitionFee) - (row.currentYearTotalPaid || 0),
+                        },
+                    });
+                    // 7. Last year fees (optional)
+                    if (row.lastYearAdmissionFee || row.lastYearTuitionFee || row.lastYearTotal) {
+                        const lastSession = await tx.academicSession.findFirst({
+                            where: { branchId: row.branchId, isCurrent: false },
+                            orderBy: { createdAt: "desc" },
+                        });
+                        if (lastSession) {
+                            await tx.feeDoc.create({
+                                data: {
+                                    studentId: student.id,
+                                    sessionId: lastSession.id,
+                                    admissionFee: row.lastYearAdmissionFee || 0,
+                                    tuitionFee: row.lastYearTuitionFee || row.lastYearTotal || 0,
+                                    totalPayable: (row.lastYearAdmissionFee || 0) + (row.lastYearTuitionFee || row.lastYearTotal || 0),
+                                    dueInSession: row.lastYearTotalBalance || 0,
+                                },
+                            });
+                        }
+                        else {
+                            // fallback: don't mix with current session
+                            console.warn(`No lastSession found for branch ${row.branchId}, student ${student.id}`);
+                        }
+                    }
+                    return student;
+                });
+                results.push({ studentId: student.id, success: true });
+            }
+            catch (err) {
+                results.push({ error: err.message, success: false });
+            }
+        }
+        return res.status(201).json({
+            success: true,
+            message: "Bulk upload completed",
+            results,
+        });
+    }
+    catch (error) {
+        console.error(error);
+        return res
+            .status(500)
+            .json({ success: false, message: error.message });
+    }
+};
 // // ----------- UPDATE STUDENT -----------
 // router.put('/:id', async (req, res) => {
 //   const student = await Student.findByIdAndUpdate(req.params.id, req.body, { new: true });
@@ -203,7 +372,7 @@ export {};
 //   if (!req.files || !req.files.file){
 //     console.log('NO FILE UPLOADED!');
 //     return res.status(400).json({ error: 'No file uploaded' });
-//   } 
+//   }
 //   console.log('GOT FILE:', req.files.file.name, req.files.file.size);
 //   const workbook = XLSX.read(req.files.file.data, { type: 'buffer' });
 //   const sheetName = workbook.SheetNames[0];

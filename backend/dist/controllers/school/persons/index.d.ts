@@ -1,4 +1,4 @@
-type RoleKey = 'SUPERADMIN' | 'DIRECTOR' | 'PRINCIPAL' | 'TEACHER' | 'LIBRARIAN' | 'RECEPTIONIST' | 'ACCOUNTANT' | 'SCHOOL_ADMIN' | 'STUDENT' | 'PARENT';
+type RoleKey = 'SUPERADMIN' | 'DIRECTOR' | 'PRINCIPAL' | 'TEACHER' | 'LIBRARIAN' | 'RECEPTIONIST' | 'ACCOUNTANT' | 'SCHOOL_ADMIN' | 'STUDENT' | 'FATHER' | "MOTHER";
 import type { Request, Response } from "express";
 export declare const registerUser: (req: Request<{}, // params
 {}, // response body

@@ -120,7 +120,23 @@ enum Permission {
   SEND_NOTIFICATION
   VIEW_NOTIFICATIONS
 }
-
+enum ClassEnum {
+  NURSERY
+  LKG
+  UKG
+  FIRST
+  SECOND
+  THIRD
+  FOURTH
+  FIFTH
+  SIXTH
+  SEVENTH
+  EIGHTH
+  NINTH
+  TENTH
+  ELEVENTH
+  TWELFTH
+}
 
 model User {
   id           String   @id @default(uuid())
@@ -178,6 +194,7 @@ model Student {
 
   // ----- Personal Details -----
   admissionNo          String?
+  class                ClassEnum?
   section              String?
   gender               String?
   dob                  DateTime?
@@ -283,12 +300,12 @@ model Parent {
 }
 model Class {
   id              String   @id @default(uuid())
-  name            String
+  name            ClassEnum
   branch          Branch   @relation(fields: [branchId], references: [id])
   branchId        String
   classTeacher    ClassTeacher[]
-  enrollments Enrollment[]
-
+  enrollments     Enrollment[]
+  section         String
 }
 
 model ClassTeacher {

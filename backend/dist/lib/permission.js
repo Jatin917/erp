@@ -130,7 +130,10 @@ export const roleDefaults = {
     STUDENT: [
         "VIEW_NOTIFICATIONS"
     ],
-    PARENT: [
+    FATHER: [
+        "VIEW_NOTIFICATIONS"
+    ],
+    MOTHER: [
         "VIEW_NOTIFICATIONS"
     ],
 };
