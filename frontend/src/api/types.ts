@@ -192,3 +192,14 @@ export const classOptions: { value: ClassType; label: string }[] = [
   { value: "ELEVENTH", label: "11th" },
   { value: "TWELFTH", label: "12th" },
 ];
+
+
+export interface ContactInfo {
+  existing: boolean;
+  email: string;
+  isVerifiedEmail: boolean;
+  name: string;
+  phone: string;
+  isVerifiedPhone: boolean;
+  assignMyself: boolean;
+}

@@ -1,44 +1,48 @@
 import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
 import { useCheckUserExists, useSendOtp } from "../../hooks/authQuery";
+import type { ContactInfo } from "../../api/types";
 // import { checkUserExists } from "../../api";
 
 interface Contact {
   type: "email" | "phone" | null;
   value: string;
-  role:Role;
+  role: Role;
 }
-type Role =  "director" | "principal" | null
+type Role = "director" | "principal" | null
 
 interface OtpModalProps {
   open: boolean;
   onClose: () => void;
   onVerify: (otp: string, contact: Contact) => void;
   contact: Contact;
-  resetVerification:(role:Role, type:Contact["type"])=>void;
-  isVerified:boolean;
+  resetVerification: (role: Role, type: Contact["type"]) => void;
+  isVerified: boolean;
+  director: ContactInfo;
+  principal: ContactInfo;
 }
 
-export default function OtpModal({ open, onClose, onVerify, contact, resetVerification, isVerified }: OtpModalProps) {
+export default function OtpModal({ open, onClose, onVerify, contact, resetVerification, isVerified, principal, director }: OtpModalProps) {
   const [otp, setOtp] = useState("");
   const [email, setEmail] = useState(contact.value);
   const [isOtpSent, setIsOtpSent] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { mutateAsync: checkExists } = useCheckUserExists();
-//   const [isVerified, setIsVerified] = useState(false); // ✅ Track verification
+  let checkUser = true;
+  //   const [isVerified, setIsVerified] = useState(false); // ✅ Track verification
 
   const { mutate: sendOTP } = useSendOtp();
   // Reset verification if email changes
   useEffect(() => {
     if (email && email.trim() !== contact.value) {
-    resetVerification(contact.role, contact.type);
+      resetVerification(contact.role, contact.type);
     }
   }, [email, contact.value]);
 
   useEffect(() => {
     setEmail(contact.value);
   }, [contact.value]);
-  
+
   const handleSendOtp = async () => {
     // if (!isVerified || (Date.now() - (verifiedAt || 0) > 5 * 60 * 1000)) {
     //     toast.error("Email verification expired, please verify again");
@@ -48,11 +52,17 @@ export default function OtpModal({ open, onClose, onVerify, contact, resetVerifi
       toast("⚠️ Please enter a valid email address");
       return;
     }
-    const exists = await checkExists(email);
-  if (!exists) {
-    onClose();
-    return toast.error("This user does not exist. Please create one first.");
-  }
+    console.log("existing checking ", contact, principal, director)
+    if (contact.role == "principal" && principal.existing || contact.role == "director" && director.existing) {
+      checkUser = false;
+    }
+    if (!checkUser) {
+      const exists = await checkExists(email);
+      if (!exists) {
+        onClose();
+        return toast.error("This user does not exist. Please create one first.");
+      }
+    }
     setIsLoading(true);
     sendOTP({ email });
     setIsOtpSent(true);
@@ -104,7 +114,7 @@ export default function OtpModal({ open, onClose, onVerify, contact, resetVerifi
           {!isVerified && !isOtpSent && (
             <button
               onClick={handleSendOtp}
-              disabled={isLoading || (email ? !email.trim():false)}
+              disabled={isLoading || (email ? !email.trim() : false)}
               className="w-full mb-4 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white transition-colors"
             >
               {isLoading ? "Sending..." : "Send OTP"}
@@ -142,7 +152,7 @@ export default function OtpModal({ open, onClose, onVerify, contact, resetVerifi
             {isOtpSent && !isVerified && (
               <button
                 onClick={handleVerify}
-                disabled={otp ? !otp.trim(): false}
+                disabled={otp ? !otp.trim() : false}
                 className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white"
               >
                 Verify

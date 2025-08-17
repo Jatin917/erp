@@ -10,6 +10,7 @@ interface AssignRoleCardProps {
   setName: any;
   assignMyself: boolean;
   onAssignMyself: () => void;
+  updateRoleField: (role: "director" | "principal", field: string, value: any) => void;
 }
 
 // components/AssignRoleCard.tsx
@@ -21,7 +22,8 @@ export default function AssignRoleCard({
   name, 
   setName, 
   assignMyself, 
-  onAssignMyself 
+  onAssignMyself,
+  updateRoleField
 }: AssignRoleCardProps) {
   const [email, setEmail] = useState<string>("");
   const roleKey = role.toLowerCase() as "director" | "principal";
@@ -39,36 +41,29 @@ export default function AssignRoleCard({
     if (roleData.name) {
       setName((prev: any) => ({
         ...prev,
-        [roleKey]: { value: roleData.name }
+        [roleKey]: { ...prev[roleKey], value: roleData.name }
       }));
     }
   }, [roleData.email, roleData.name, roleKey, setName]);
 
   const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setEmail(e.target.value);
-    // Clear verification when email changes
-    if (roleKey === "director") {
-      // Update director email
-    } else {
-      // Update principal email
-    }
   };
 
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setName((prev: any) => ({
       ...prev,
-      [roleKey]: { value: e.target.value }
+      [roleKey]: { ...prev[roleKey], value: e.target.value }
     }));
   };
 
   // When assign myself is selected, populate with current user details
   const handleAssignMyselfChange = (checked: boolean) => {
     if (checked && user) {
-      // Auto-populate with current user details
       setEmail(user.email);
       setName((prev: any) => ({
         ...prev,
-        [roleKey]: { value: user.name }
+        [roleKey]: { ...prev[roleKey], value: user.name }
       }));
     }
     onAssignMyself();
@@ -157,7 +152,10 @@ export default function AssignRoleCard({
                     : "bg-accent text-white hover:bg-accent"
                 }`}
                 style={isVerified ? { backgroundColor: 'var(--positive)', color: 'white' } : {}}
-                onClick={() => onVerifyClick({ type: "email", value: email, role: roleKey })}
+                onClick={() => {
+                  onVerifyClick({ type: "email", value: email, role: roleKey });
+                  updateRoleField(roleKey, "existing", true); // ✅ mark as existing
+                }}
               >
                 {isVerified ? "✅ Verified" : "Verify"}
               </button>
@@ -196,7 +194,10 @@ export default function AssignRoleCard({
                       : "bg-accent text-white hover:bg-accent"
                   }`}
                   style={isVerified ? { backgroundColor: 'var(--positive)', color: 'white' } : {}}
-                  onClick={() => onVerifyClick({ type: "email", value: email, role: roleKey })}
+                  onClick={() => {
+                    onVerifyClick({ type: "email", value: email, role: roleKey });
+                    updateRoleField(roleKey, "existing", false); // ✅ mark as new
+                  }}
                 >
                   {isVerified ? "✅ Verified" : "Verify"}
                 </button>
@@ -233,4 +234,3 @@ export default function AssignRoleCard({
     </div>
   );
 }
-  

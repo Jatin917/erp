@@ -98,6 +98,7 @@ export default function AssignLeadershipForm({
           setName={setName}
           assignMyself={role === "Director" ? director.assignMyself : principal.assignMyself}
           onAssignMyself={() => handleAssignMyself(role.toLowerCase() as "director" | "principal")}
+          updateRoleField={updateRoleField}
         />
       ))}
       

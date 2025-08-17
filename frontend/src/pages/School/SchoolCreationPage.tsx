@@ -118,6 +118,8 @@ export default function SchoolCreationPage() {
         onVerify={handleOtpVerify}
         resetVerification={handleResetVerification}
         isVerified={getVerificationStatus()}
+        director={director}
+        principal={principal}
       />
     </div>
   );

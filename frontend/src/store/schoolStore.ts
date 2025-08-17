@@ -1,18 +1,11 @@
 // stores/schoolStore.ts
 import { create } from "zustand";
+import type { ContactInfo } from "../api/types";
 
 type ContactRole = "director" | "principal";
 type ContactType = "email" | "phone";
 
-interface ContactInfo {
-  existing: boolean;
-  email: string;
-  isVerifiedEmail: boolean;
-  name: string;
-  phone: string;
-  isVerifiedPhone: boolean;
-  assignMyself: boolean;
-}
+
 
 interface SchoolState {
   schoolName: string;
