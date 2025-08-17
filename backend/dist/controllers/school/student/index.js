@@ -501,6 +501,26 @@ export const bulkUploadStudents = async (req, res) => {
             .json({ success: false, message: error.message });
     }
 };
+export const fetchStudents = async (req, res) => {
+    try {
+        const { createdBy, task, studentId, ...filters } = req.query;
+        // Build dynamic where clause for Prisma
+        if (studentId)
+            filters.id = studentId;
+        console.log("students ", studentId, filters.id);
+        const whereClause = {
+            ...Object.fromEntries(Object.entries(filters).map(([key, value]) => [key, String(value)])),
+        };
+        const students = await prisma.student.findMany({
+            where: whereClause,
+        });
+        res.status(200).json({ success: true, data: students });
+    }
+    catch (err) {
+        console.error("Error fetching students:", err);
+        res.status(500).json({ error: "Failed to fetch students" });
+    }
+};
 // // ----------- UPDATE STUDENT -----------
 // router.put('/:id', async (req, res) => {
 //   const student = await Student.findByIdAndUpdate(req.params.id, req.body, { new: true });
