@@ -17,9 +17,42 @@ interface StudentState {
 }
 
 const emptyForm: StudentForm = {
+  id: "",
   branchId: "",
   rollNo: "",
+  admissionNo: "",
   name: "",
+  gender: "",
+  dob: "",
+  class:"",
+  session:"",
+  studentEmail: "",
+  studentMobile: "",
+  fatherName: "",
+  fatherMobile: "",
+  fatherEmail: "",
+  fatherAadhaar:"",
+  fatherPassport:"",
+  fatherPan:"",
+  fatherOccupation:"",
+  motherName: "",
+  motherMobile: "",
+  motherEmail: "",
+  motherAadhaar:"",
+  motherPassport:"",
+  motherPan:"",
+  motherOccupation:"",
+  section: "",
+  aadhaar: "",
+  remark:"",
+  permanentAddress:"",
+  temporaryAddress:"",
+  previousSchoolName:"",
+  previousClassPassed:"",
+  previousClassMarks:"",
+  previousClassYear:"",
+  previousBoard:"",
+  // Fee & Discount fields
   discount: 0,
   lateFine: 0,
   currentYearTotal: 0,
@@ -30,12 +63,13 @@ const emptyForm: StudentForm = {
   lastYearTotalBalance: 0,
 };
 
+
 export const useStudentStore = create<StudentState>((set) => ({
   studentForm: emptyForm,
   studentsArray: [],
   totalPages:0,
 
-  setField: (key, value) =>
+  setField: (key:any, value) =>
     set((state) => ({
       studentForm: { ...state.studentForm, [key]: value },
     })),

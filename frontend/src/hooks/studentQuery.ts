@@ -5,8 +5,9 @@ import { useStudentStore } from "../store/studentStore";
 import {
   fetchStudents,
   bulkUploadStudents,
-  createStudent,
+  createStudentApi,
 } from "../api/index"; // implement your API calls
+import type { StudentForm } from "../api/types";
 
 // Fetch paginated students
 export function useFetchStudents(filters: Record<string, any>={}) {
@@ -49,10 +50,10 @@ export function useFetchStudents(filters: Record<string, any>={}) {
 // Upload single student
 export function useUploadStudent() {
   const queryClient = useQueryClient();
-  const { studentForm, resetForm, clearStudents } = useStudentStore();
+  const { resetForm, clearStudents } = useStudentStore();
 
   return useMutation({
-    mutationFn: () => createStudent(studentForm),
+    mutationFn:(studentData: StudentForm) => createStudentApi(studentData),
     onSuccess: () => {
       toast.success("Student uploaded successfully!");
       resetForm();

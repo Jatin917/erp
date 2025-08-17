@@ -1,141 +1,128 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Section } from "../../components/common/Section-input";
+import { Input } from "../../components/common/Input";
 import { useStudentStore } from "../../store/studentStore";
+import { useUploadStudent } from "../../hooks/studentQuery";
+import { classOptions } from "../../api/types";
+import { SelectInput } from "../../components/common/selectorInput";
 
-export default function StudentsPage() {
-  const navigate = useNavigate();
-  const { studentsArray:students } = useStudentStore();
-  const branchId = null;
-  const [file, setFile] = useState<File | null>(null);
-  const [isSending, setIsSending] = useState(false);
+export default function StudentUploadPage() {
+    const { setField, studentForm } = useStudentStore();
+    const { mutate: createStudentApi } = useUploadStudent();
+    const handleChange = (e: any) => {
+        setField(e.target.name, e.target.value);
+    };
 
-  const handleBulkUpload = async () => {
-    if (!file) return;
-    try {
-      setIsSending(true);
-      const formData = new FormData();
-      formData.append("file", file);
-      // include branchId or anything else your backend expects
-      formData.append("branchId", branchId || "");
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        createStudentApi(studentForm);
+    };
 
-      const r = await fetch(`/api/students/bulk-upload`, {
-        method: "POST",
-        body: formData,
-      });
-      if (!r.ok) throw new Error("Upload failed");
-      alert("Bulk upload request sent");
-    } catch (e:any) {
-      alert(e.message || "Failed to upload");
-    } finally {
-      setIsSending(false);
-    }
-  };
-
-  return (
-    <div
-      className="w-full h-full"
-      style={{ background: "var(--bg-primary)", color: "var(--text-primary)" }}
-    >
-      {/* Top bar */}
-      <div
-        className="w-full sticky top-0 z-10"
-        style={{
-          background: "var(--bg-secondary)",
-          borderBottom: "1px solid var(--border-primary)",
-        }}
-      >
-        <div className="max-w-7xl mx-auto px-4 py-3 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <h1 className="text-xl md:text-2xl font-semibold">Students</h1>
-
-          <div className="flex flex-col gap-2 md:flex-row md:items-center">
+    return (
+        <div className="p-6" style={{ background: "var(--bg-primary)" }}>
             <div
-              className="flex items-center gap-2 p-2 rounded-xl"
-              style={{ background: "var(--card-bg)", border: "1px solid var(--border-secondary)" }}
+                className="rounded-2xl shadow p-6"
+                style={{ background: "var(--card-bg)", color: "var(--text-primary)" }}
             >
-              <input
-                type="file"
-                accept=".xlsx,.xls,.csv"
-                onChange={(e) => setFile(e.target.files?.[0] || null)}
-                className="block text-sm"
-                style={{ color: "var(--text-secondary)" }}
-              />
-              <button
-                disabled={!file || isSending}
-                onClick={handleBulkUpload}
-                className="px-3 py-2 rounded-lg text-sm font-medium disabled:opacity-50"
-                style={{ background: "var(--accent-primary)", color: "#fff" }}
-              >
-                {isSending ? "Sending..." : "Send"}
-              </button>
-            </div>
+                <h1 className="text-xl font-bold mb-4">Single Student Upload</h1>
 
-            <button
-              onClick={() => navigate("/students/upload")}
-              className="px-3 py-2 rounded-lg text-sm font-medium"
-              style={{
-                background: "var(--bg-tertiary)",
-                color: "var(--text-tertiary)",
-                border: "1px solid var(--border-secondary)",
-              }}
-            >
-              Single Upload
-            </button>
-          </div>
-        </div>
-      </div>
+                <form onSubmit={handleSubmit} className="space-y-8">
+                    {/* Personal Details */}
+                    <Section title="Personal Details">
+                        <div className="grid grid-cols-2 gap-4">
+                            <Input name="name" label="Name" required onChange={handleChange} />
+                            <Input required name="admissionNo" label="Admission No" onChange={handleChange} />
+                            <Input required name="rollNo" label="Roll No" onChange={handleChange} />
+                            <Input required name="section" label="Section" onChange={handleChange} />
+                            <SelectInput
+                                name="class"
+                                label="Class"
+                                required
+                                options={classOptions}
+                                onChange={handleChange}
+                            />
+                            <Input required name="session" label="Session" onChange={handleChange} />
+                            <Input required name="gender" label="Gender" onChange={handleChange} />
+                            <Input required type="date" name="dob" label="Date of Birth" onChange={handleChange} />
+                            <Input name="aadhaar" label="Aadhaar" onChange={handleChange} />
+                            <Input name="studentMobile" label="Mobile" onChange={handleChange} />
+                            <Input name="studentEmail" label="Email" onChange={handleChange} />
+                            <Input name="citizenship" label="Citizenship" onChange={handleChange} />
+                        </div>
+                    </Section>
 
-      {/* Content */}
-      <div className="max-w-7xl mx-auto p-4 md:p-6">
-        <div
-          className="w-full rounded-2xl overflow-hidden"
-          style={{ background: "var(--card-bg)", border: "1px solid var(--border-primary)" }}
-        >
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead
-                style={{
-                  background: "var(--bg-tertiary)",
-                  color: "var(--text-tertiary)",
-                }}
-              >
-                <tr>
-                  <th className="text-left px-4 py-3">Name</th>
-                  <th className="text-left px-4 py-3">Admission No</th>
-                  <th className="text-left px-4 py-3">Class</th>
-                  <th className="text-left px-4 py-3">Section</th>
-                  <th className="text-left px-4 py-3">Roll No</th>
-                  <th className="text-left px-4 py-3">Phone</th>
-                </tr>
-              </thead>
-              <tbody>
-                {students?.length ? (
-                  students.map((s: any) => (
-                    <tr
-                      key={s.id}
-                      className="cursor-pointer hover:opacity-90"
-                      style={{ borderTop: "1px solid var(--border-secondary)" }}
-                      onClick={() => navigate(`/students/details/${s.id}`)}
+                    {/* Previous Education */}
+                    <Section title="Previous Education">
+                        <div className="grid grid-cols-2 gap-4">
+                            <Input name="previousSchoolName" label="School Name" onChange={handleChange} />
+                            <Input name="previousClassPassed" label="Class Passed" onChange={handleChange} />
+                            <Input name="previousClassMarks" label="Marks" onChange={handleChange} />
+                            <Input name="previousClassYear" label="Year" onChange={handleChange} />
+                            <Input name="previousBoard" label="Board" onChange={handleChange} />
+                        </div>
+                    </Section>
+
+                    {/* Address */}
+                    <Section title="Address">
+                        <div className="grid grid-cols-2 gap-4">
+                            <Input name="permanentAddress" label="Permanent Address" onChange={handleChange} />
+                            <Input name="temporaryAddress" label="Temporary Address" onChange={handleChange} />
+                        </div>
+                    </Section>
+
+                    {/* Father Details */}
+                    <Section title="Father Details">
+                        <div className="grid grid-cols-2 gap-4">
+                            <Input required name="fatherName" label="Name" onChange={handleChange} />
+                            <Input required name="fatherOccupation" label="Occupation" onChange={handleChange} />
+                            <Input name="fatherEmail" label="Email" onChange={handleChange} />
+                            <Input required name="fatherMobile" label="Mobile" onChange={handleChange} />
+                            <Input name="fatherAadhaar" label="Aadhaar" onChange={handleChange} />
+                            <Input name="fatherPan" label="PAN" onChange={handleChange} />
+                            <Input name="fatherPassport" label="Passport" onChange={handleChange} />
+                        </div>
+                    </Section>
+
+                    {/* Mother Details */}
+                    <Section title="Mother Details">
+                        <div className="grid grid-cols-2 gap-4">
+                            <Input required name="motherName" label="Name" onChange={handleChange} />
+                            <Input name="motherOccupation" label="Occupation" onChange={handleChange} />
+                            <Input name="motherEmail" label="Email" onChange={handleChange} />
+                            <Input name="motherMobile" label="Mobile" onChange={handleChange} />
+                            <Input name="motherAadhaar" label="Aadhaar" onChange={handleChange} />
+                            <Input name="motherPan" label="PAN" onChange={handleChange} />
+                            <Input name="motherPassport" label="Passport" onChange={handleChange} />
+                        </div>
+                    </Section>
+
+                    {/* Fees */}
+                    <Section title="Fee Details">
+                        <div className="grid grid-cols-2 gap-4">
+                            <Input type="number" name="discount" label="Discount" onChange={handleChange} />
+                            <Input type="number" name="lateFine" label="Late Fine" onChange={handleChange} />
+                            <Input type="number" name="currentYearTotal" label="Current Year Total" onChange={handleChange} />
+                            <Input type="number" name="currentYearTotalPaid" label="Current Year Total Paid" onChange={handleChange} />
+                            <Input type="number" name="currentYearTotalBalance" label="Current Year Total Balance" onChange={handleChange} />
+                            <Input type="number" name="lastYearTotal" label="Last Year Total" onChange={handleChange} />
+                            <Input type="number" name="lastYearTotalPaid" label="Last Year Total Paid" onChange={handleChange} />
+                            <Input type="number" name="lastYearTotalBalance" label="Last Year Total Balance" onChange={handleChange} />
+                            <Input name="remark" label="Remark" onChange={handleChange} />
+                        </div>
+                    </Section>
+
+                    <button
+                        type="submit"
+                        className="px-4 py-2 rounded-lg font-medium"
+                        style={{
+                            background: "var(--accent-primary)",
+                            color: "#fff",
+                        }}
                     >
-                      <td className="px-4 py-3">{s.name}</td>
-                      <td className="px-4 py-3">{s.admissionNo || "—"}</td>
-                      <td className="px-4 py-3">{s.class || "—"}</td>
-                      <td className="px-4 py-3">{s.section || "—"}</td>
-                      <td className="px-4 py-3">{s.rollNo || "—"}</td>
-                      <td className="px-4 py-3">{s.studentMobile || "—"}</td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td className="px-4 py-8 text-center" colSpan={6} style={{ color: "var(--text-secondary)" }}>
-                      No students yet.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+                        Submit
+                    </button>
+                </form>
+            </div>
         </div>
-      </div>
-    </div>
-  );
+    );
 }
+

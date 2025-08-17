@@ -67,7 +67,7 @@ export interface StudentForm {
 
   branchId: string;
   rollNo: string;
-
+  session:string;
   // Personal
   name: string;
   admissionNo?: string | null;
@@ -154,3 +154,41 @@ export interface StudentForm {
   photoUrl?: string | null;
   barcodeUrl?: string | null;
 }
+
+
+// src/constants/classOptions.ts
+
+export type ClassType =
+  | "NURSERY"
+  | "LKG"
+  | "UKG"
+  | "FIRST"
+  | "SECOND"
+  | "THIRD"
+  | "FOURTH"
+  | "FIFTH"
+  | "SIXTH"
+  | "SEVENTH"
+  | "EIGHTH"
+  | "NINTH"
+  | "TENTH"
+  | "ELEVENTH"
+  | "TWELFTH";
+
+export const classOptions: { value: ClassType; label: string }[] = [
+  { value: "NURSERY", label: "Nursery" },
+  { value: "LKG", label: "LKG" },
+  { value: "UKG", label: "UKG" },
+  { value: "FIRST", label: "1st" },
+  { value: "SECOND", label: "2nd" },
+  { value: "THIRD", label: "3rd" },
+  { value: "FOURTH", label: "4th" },
+  { value: "FIFTH", label: "5th" },
+  { value: "SIXTH", label: "6th" },
+  { value: "SEVENTH", label: "7th" },
+  { value: "EIGHTH", label: "8th" },
+  { value: "NINTH", label: "9th" },
+  { value: "TENTH", label: "10th" },
+  { value: "ELEVENTH", label: "11th" },
+  { value: "TWELFTH", label: "12th" },
+];

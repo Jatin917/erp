@@ -83,12 +83,15 @@ export const createSchool = async (authdata: {
   
     return data;
   };
-  export const createStudent = async (studentData: any) => {
+  export const createStudentApi = async (studentData: any) => {
+    console.log("student data ", studentData);
     const email = getCreatedBy();
+    const branchId = JSON.parse(localStorage.getItem("auth-store") as  string).state.user.branchId;
     const payload = {
       ...studentData,
       createdBy: email,
       task: "CREATE_STUDENT",
+      branchId
     };
   
     const { data } = await API.post("/student/create-student", payload);
