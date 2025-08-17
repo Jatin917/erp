@@ -1,9 +1,19 @@
 import { Navigate } from "react-router-dom";
-import { useAuthStore } from "../store/authStore";
-import type { JSX } from "react/jsx-runtime";
+import { type ReactNode } from "react";
 
-export default function PrivateRoute({ children }: { children: JSX.Element }) {
-  const token = useAuthStore((s) => s.token);
+export default function PrivateRoute({ children }: { children: ReactNode }) {
+  let token: string | null = null;
+
+  try {
+    const stored = localStorage.getItem("auth-store");
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      token = parsed?.state?.token ?? null;
+    }
+  } catch (e) {
+    console.error("Failed to parse auth-store:", e);
+  }
+
   if (!token) return <Navigate to="/login" replace />;
-  return children;
+  return <>{children}</>;
 }

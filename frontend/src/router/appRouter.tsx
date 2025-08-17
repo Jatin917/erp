@@ -1,7 +1,7 @@
-
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import PrivateRoute from "./privateRouter";
 import AppShell from "../components/layout/AppShell";
+
 import Dashboard from "../pages/Dashboard/Dashboard";
 import StudentsPage from "../pages/Students/StudentsPage";
 import ClassesPage from "../pages/Class/ClassPage";
@@ -14,21 +14,36 @@ import AuthLayout from "../pages/auth/authLayout";
 import PublicRoute from "./publickRouter";
 import LoginPage from "../pages/auth/login";
 import SchoolCreationPage from "../pages/School/SchoolCreationPage";
+import StudentList from "../pages/Students/studentList";
+import StudentDetails from "../pages/Students/StudentDetail";
+import StudentUpload from "../pages/Students/StudentUpload";
+// import ChangePasswordPage from "../pages/auth/changePassword"; // ⬅️ add this
 
 export default function AppRouter() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* public */}
+        {/* Public routes */}
         <Route element={<AuthLayout />}>
-          <Route path="/login" element={
-            <PublicRoute>
+          <Route
+            path="/login"
+            element={
+              <PublicRoute>
                 <LoginPage />
-            </PublicRoute>
-          } />
+              </PublicRoute>
+            }
+          />
+          {/* <Route
+            path="/change-password"
+            element={
+              <PublicRoute>
+                <ChangePasswordPage />
+              </PublicRoute>
+            }
+          /> */}
         </Route>
 
-        {/* protected */}
+        {/* Protected routes */}
         <Route
           path="/"
           element={
@@ -39,6 +54,10 @@ export default function AppRouter() {
         >
           <Route index element={<Dashboard />} />
           <Route path="students" element={<StudentsPage />} />
+          <Route path="students/list" element={<StudentList />} />
+          <Route path="students/details/:id" element={<StudentDetails />} />
+          <Route path="students/upload" element={<StudentUpload />} />
+
           <Route path="classes" element={<ClassesPage />} />
           <Route path="fees" element={<FeesPage />} />
           <Route path="sessions" element={<SessionsPage />} />
@@ -48,6 +67,7 @@ export default function AppRouter() {
           <Route path="school" element={<SchoolCreationPage />} />
         </Route>
 
+        {/* Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

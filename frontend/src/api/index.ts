@@ -17,6 +17,11 @@ API.interceptors.request.use(async (req)=>{
     return req;
 })
 
+const getCreatedBy = () => {
+  return JSON.parse(localStorage.getItem("auth-store") || "{}")?.state?.user?.email || null;
+};
+
+
 export const loginApi = async (authdata: { email: string; password: string; setupKey: string | null }) => {
     const { data } = await API.post("auth/login", authdata);
     return data;
@@ -78,7 +83,45 @@ export const createSchool = async (authdata: {
   
     return data;
   };
+  export const createStudent = async (studentData: any) => {
+    const email = getCreatedBy();
+    const payload = {
+      ...studentData,
+      createdBy: email,
+      task: "CREATE_STUDENT",
+    };
   
+    const { data } = await API.post("/student/create-student", payload);
+    return data;
+  };
+  // Bulk upload students (with file)
+export const bulkUploadStudents = async (formData: FormData) => {
+  const email = getCreatedBy();
+
+  formData.append("createdBy", email);
+  formData.append("task", "BULK_UPLOAD_STUDENTS");
+
+  const { data } = await API.post("/student/bulk-upload", formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+
+  return data;
+};
+
+// Fetch students
+export const fetchStudents = async (filters: Record<string, any> = {}) => {
+  const email = getCreatedBy();
+
+  const params = {
+    ...filters,
+    createdBy: email,
+    task: "FETCH_STUDENTS",
+  };
+
+  const { data } = await API.get("/student/fetch", { params });
+  return data;
+};
+
 
 
 // Permission

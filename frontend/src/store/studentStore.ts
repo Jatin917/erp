@@ -1,30 +1,49 @@
 // store/studentStore.ts
 import { create } from "zustand";
+import type { StudentForm } from "../api/types";
 
-export interface StudentBasic {
-  id: string;
-  studentName: string;
-  rollNo?: string;
-  branchId?: string;
-  barcodeUrl?: string;
-}
 
 interface StudentState {
-  students: StudentBasic[];
-  setStudents: (students: StudentBasic[]) => void;
-  addStudent: (student: StudentBasic) => void;
-  removeStudent: (id: string) => void;
-  reset: () => void;
+  studentForm: StudentForm;
+  studentsArray: StudentForm[];
+
+  setField: (key: keyof StudentForm, value: any) => void;
+  resetForm: () => void;
+
+  setStudents: (students: StudentForm[]) => void;
+  appendStudents: (students: StudentForm[]) => void;
+  clearStudents: () => void;
 }
 
+const emptyForm: StudentForm = {
+  branchId: "",
+  rollNo: "",
+  name: "",
+  discount: 0,
+  lateFine: 0,
+  currentYearTotal: 0,
+  currentYearTotalPaid: 0,
+  currentYearTotalBalance: 0,
+  lastYearTotal: 0,
+  lastYearTotalPaid: 0,
+  lastYearTotalBalance: 0,
+};
+
 export const useStudentStore = create<StudentState>((set) => ({
-  students: [],
-  setStudents: (students) => set({ students }),
-  addStudent: (student) =>
-    set((state) => ({ students: [...state.students, student] })),
-  removeStudent: (id) =>
+  studentForm: emptyForm,
+  studentsArray: [],
+
+  setField: (key, value) =>
     set((state) => ({
-      students: state.students.filter((s) => s.id !== id),
+      studentForm: { ...state.studentForm, [key]: value },
     })),
-  reset: () => set({ students: [] }),
+
+  resetForm: () => set({ studentForm: emptyForm }),
+
+  setStudents: (students) => set({ studentsArray: students }),
+  appendStudents: (students) =>
+    set((state) => ({
+      studentsArray: [...state.studentsArray, ...students],
+    })),
+  clearStudents: () => set({ studentsArray: [] }),
 }));

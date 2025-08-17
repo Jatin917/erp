@@ -1,24 +1,34 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useStudentStore } from "../../store/studentStore";
-import { useUploadStudentsFromXlsx } from "../../hooks/studentQuery";
 
 export default function StudentsPage() {
   const navigate = useNavigate();
   const { studentsArray:students } = useStudentStore();
-  const branchId = JSON.parse(localStorage.getItem("auth-store") as string).state.user.branchId;
+  const branchId = null;
   const [file, setFile] = useState<File | null>(null);
   const [isSending, setIsSending] = useState(false);
-  const {mutate:bulkUploadStudents} = useUploadStudentsFromXlsx();
+
   const handleBulkUpload = async () => {
     if (!file) return;
-    setIsSending(true);
-    const formData = new FormData();
-    formData.append("file", file);
-    // include branchId or anything else your backend expects
-    formData.append("branchId", branchId || "");
-    bulkUploadStudents(formData);
-    setIsSending(false);
+    try {
+      setIsSending(true);
+      const formData = new FormData();
+      formData.append("file", file);
+      // include branchId or anything else your backend expects
+      formData.append("branchId", branchId || "");
+
+      const r = await fetch(`/api/students/bulk-upload`, {
+        method: "POST",
+        body: formData,
+      });
+      if (!r.ok) throw new Error("Upload failed");
+      alert("Bulk upload request sent");
+    } catch (e:any) {
+      alert(e.message || "Failed to upload");
+    } finally {
+      setIsSending(false);
+    }
   };
 
   return (
@@ -27,7 +37,7 @@ export default function StudentsPage() {
       style={{ background: "var(--bg-primary)", color: "var(--text-primary)" }}
     >
       {/* Top bar */}
-     { branchId && <div
+      <div
         className="w-full sticky top-0 z-10"
         style={{
           background: "var(--bg-secondary)",
@@ -72,7 +82,7 @@ export default function StudentsPage() {
             </button>
           </div>
         </div>
-      </div>}
+      </div>
 
       {/* Content */}
       <div className="max-w-7xl mx-auto p-4 md:p-6">
