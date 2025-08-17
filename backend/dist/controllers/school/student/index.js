@@ -3,7 +3,7 @@ import path, { dirname } from "path";
 import fs from "fs";
 import QRCode from "qrcode";
 import bcrypt from "bcrypt";
-import { defaultPassword, prisma } from "../../../server.js"; // your prisma instance
+import { defaultPassword, LIMIT, prisma } from "../../../server.js"; // your prisma instance
 import { HTTP_STATUS } from "../../../lib/http-codes.js";
 import XLSX from "xlsx";
 import { ClassEnum } from "../../../../generated/prisma/index.js";
@@ -503,18 +503,65 @@ export const bulkUploadStudents = async (req, res) => {
 };
 export const fetchStudents = async (req, res) => {
     try {
-        const { createdBy, task, studentId, ...filters } = req.query;
-        // Build dynamic where clause for Prisma
+        const { createdBy, task, page, studentId, ...filters } = req.query;
+        // Build dynamic where clause
         if (studentId)
             filters.id = studentId;
-        console.log("students ", studentId, filters.id);
         const whereClause = {
             ...Object.fromEntries(Object.entries(filters).map(([key, value]) => [key, String(value)])),
         };
-        const students = await prisma.student.findMany({
+        // Pagination logic
+        const pageNumber = parseInt(page, 10) || 1;
+        const pageSize = parseInt(LIMIT, 10) || 10;
+        const studentsRaw = await prisma.student.findMany({
             where: whereClause,
+            skip: (pageNumber - 1) * pageSize,
+            take: pageSize,
+            orderBy: { createdAt: "desc" },
+            include: {
+                enrollments: {
+                    orderBy: { createdAt: "desc" },
+                    take: 1,
+                    select: {
+                        class: {
+                            select: {
+                                name: true,
+                                section: true
+                            },
+                        },
+                        rollNo: true
+                    },
+                },
+            },
         });
-        res.status(200).json({ success: true, data: students });
+        const students = studentsRaw.map(student => {
+            const latest = student.enrollments[0];
+            console.log("student ", student);
+            return {
+                id: student.id,
+                name: student.name,
+                email: student.email,
+                phone: student.fatherMobile,
+                admissionNo: student.admissionNo,
+                section: latest?.class.section,
+                // add any other student fields you want to expose here
+                barcodeUrl: student.barcodeUrl,
+                rollNo: latest?.rollNo || null,
+                class: latest?.class?.name || null,
+            };
+        });
+        // Get total count for frontend (optional but useful)
+        const total = await prisma.student.count({ where: whereClause });
+        res.status(200).json({
+            success: true,
+            data: students,
+            pagination: {
+                total,
+                page: pageNumber,
+                limit: pageSize,
+                totalPages: Math.ceil(total / pageSize),
+            },
+        });
     }
     catch (err) {
         console.error("Error fetching students:", err);

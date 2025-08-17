@@ -85,9 +85,8 @@ export const login = async (req, res) => {
         if (!email || !password || !role) {
             return res.status(400).json({ message: "Please enter required fields" });
         }
-        let user = await prisma.user.findFirst({ where: { email, role: { has: role } } });
+        let user = await prisma.user.findFirst({ where: { email, role: { has: role } }, include: { principalAssignment: true } });
         // First user creation (SuperAdmin bootstrap)
-        console.log("super admin ", SUPERADMIN_EMAIL, SUPERADMIN_PASSWORD, email, password, setupKey, SUPERADMIN_EMAIL === email, SUPERADMIN_PASSWORD === setupKey);
         const userCount = await prisma.user.count();
         if (userCount === 0) {
             if (email === SUPERADMIN_EMAIL &&
@@ -103,6 +102,7 @@ export const login = async (req, res) => {
                         isEmailVerified: true,
                         isPhoneVerified: false,
                     },
+                    include: { principalAssignment: true }
                 });
             }
             else {
@@ -125,12 +125,16 @@ export const login = async (req, res) => {
             expiresIn: "1h",
         });
         // Remove duplicate property assignments and avoid overwriting with spread
+        let branchId = null;
+        if (user && user.principalAssignment) {
+            branchId = user.principalAssignment.id;
+        }
         return res.status(200).json({
             success: true,
             message: "Logged in successfully",
             token,
             user: { name: user.name,
-                email: user.email, permissions: user.permissions, roles: user.role }
+                email: user.email, permissions: user.permissions, roles: user.role, branchId }
         });
     }
     catch (error) {
