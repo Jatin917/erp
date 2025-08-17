@@ -4,6 +4,7 @@ import { HTTP_STATUS } from "../../../lib/http-codes.js";
 import { defaultPassword, emailVerified, prisma } from "../../../server.js";
 import multer from "multer";
 import path from "path";
+import bcrypt from 'bcrypt';
 import fs from "fs";
 // Updated createBranch to accept tx for transactions
 const createBranch = async (tx, address, principalId, name, schoolId) => {
@@ -45,11 +46,12 @@ const findOrCreateUser = async (role, userData, tx) => {
             throw new Error(`${role} email is not verified. Please verify first.`);
         }
         const roles = [role];
+        const hashedPassword = await bcrypt.hash(defaultPassword, 10);
         const newUser = await tx.user.create({
             data: {
                 name: userData.name,
                 email: userData.email,
-                password: defaultPassword, // If no password, maybe generate a temp one
+                password: hashedPassword, // If no password, maybe generate a temp one
                 role: roles,
                 isEmailVerified: true,
                 isPhoneVerified: false,
