@@ -23,7 +23,8 @@ export const isPermitted = async (req, res, next) => {
             });
         }
         if (user.permissions.includes(task) || user.permissions.includes("ALL")) {
-            console.log("yha tak chala");
+            const { task, createdBy, ...data } = req.body;
+            req.body = data;
             return next(); // ✅ Stop execution after calling next()
         }
         return res.status(HTTP_STATUS.FORBIDDEN).json({

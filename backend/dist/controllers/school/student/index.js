@@ -30,7 +30,7 @@ async function generateBarcode(student) {
     fs.mkdirSync(qrDir, { recursive: true });
     // Define full path for the barcode image
     const qrPath = path.join(qrDir, `${student.id}.png`);
-    console.log("qrPath ", qrPath, qrText);
+    console.log("qrPath ", qrPath, qrText, student);
     // Generate and save the QR code image
     try {
         const buffer = await QRCode.toBuffer(qrText, { width: 350 });
@@ -61,6 +61,7 @@ async function findOrCreateUser(role, name, email, phone) {
     }
     else {
         const hashedPwd = await bcrypt.hash(defaultPassword, 10);
+        console.log("name is ", name);
         return prisma.user.create({
             data: {
                 name,
@@ -152,8 +153,8 @@ function mapClassInput(input) {
 // ----------------------
 export const createStudent = async (req, res) => {
     try {
-        const data = req.body;
-        const { session, class: classAsParam, branchId, rollNo } = data;
+        let dataFromBody = req.body;
+        const { session, class: classAsParam, branchId, rollNo, dob, ...data } = dataFromBody;
         const normalizedSession = normalizeSession(session);
         const student = await prisma.$transaction(async (tx) => {
             // ---------- 1. Check Academic Session ----------
@@ -164,7 +165,7 @@ export const createStudent = async (req, res) => {
                 throw new Error("Academic Session does not exist");
             }
             // ---------- 2. Create Student User ----------
-            const studentUser = await findOrCreateUser("STUDENT", data.studentName, data.studentEmail, data.studentMobile ? String(data.studentMobile) : null);
+            const studentUser = await findOrCreateUser("STUDENT", data.name, data.studentEmail, data.studentMobile ? String(data.studentMobile) : null);
             // ---------- 3. Create Parent Users ----------
             let fatherParent = null;
             if (data.fatherName || data.fatherEmail || data.fatherMobile) {
@@ -185,33 +186,91 @@ export const createStudent = async (req, res) => {
                 }
             }
             // ---------- 4. Create Student Record ----------
+            console.log("dob ", dob);
             const student = await tx.student.create({
                 data: {
-                    name: String(data.studentName),
-                    user: studentUser
-                        ? { connect: { id: String(studentUser.id) } }
-                        : undefined,
-                    father: fatherParent
-                        ? { connect: { id: String(fatherParent.id) } }
-                        : undefined,
-                    mother: motherParent
-                        ? { connect: { id: String(motherParent.id) } }
-                        : undefined,
-                    branch: {
-                        connect: { id: branchId } // keep as is
-                    },
-                    studentId: data.studentId ? String(data.studentId) : null,
-                    admissionNo: data.AdmissionNo ? String(data.AdmissionNo) : null,
-                    fatherMobileNo: data.fatherMobileNo ? String(data.fatherMobileNo) : null,
-                    motherMobileNo: data.motherMobileNo ? String(data.motherMobileNo) : null,
-                    rollNo: rollNo ? String(rollNo) : null,
-                    lastYearTotal: data.totalLastYearFees ? parseFloat(data.totalLastYearFees) : 0,
-                    lastYearTotalBalance: data.totalLastRemainingBalance ? parseFloat(data.totalLastRemainingBalance) : 0,
-                    lastYearTotalPaid: data.totalLastYearPaid ? parseFloat(data.totalLastYearPaid) : 0,
-                    currentYearTotal: data.totalCurrentYearFees ? parseFloat(data.totalCurrentYearFees) : 0,
-                    currentYearTotalPaid: data.totalCurrentYearPaid ? parseFloat(data.totalCurrentYearPaid) : 0,
-                    currentYearTotalBalance: data.currentYearTotalRemaningBalance ? parseFloat(data.currentYearTotalRemaningBalance) : 0,
-                    ...data,
+                    // ---------- Keep connect relations ----------
+                    user: studentUser ? { connect: { id: String(studentUser.id) } } : undefined,
+                    father: fatherParent ? { connect: { id: String(fatherParent.id) } } : undefined,
+                    mother: motherParent ? { connect: { id: String(motherParent.id) } } : undefined,
+                    branch: { connect: { id: branchId } },
+                    rollNo,
+                    class: classAsParam,
+                    // ---------- Map fields from data ----------
+                    name: String(data.name),
+                    studentId: data.studentId || null,
+                    admissionNo: data.admissionNo || null,
+                    section: data.section || null,
+                    gender: data.gender || null,
+                    dob: dob ? new Date(dob) : null,
+                    aadhaar: data.aadhaar || null,
+                    birthCertificateUrl: data.birthCertificateUrl || null,
+                    abcId: data.abcId || null,
+                    sssmId: data.sssmId || null,
+                    familySssmId: data.familySssmId || null,
+                    minority: data.minority || null,
+                    scStObc: data.scStObc || null,
+                    bpl: data.bpl || null,
+                    scStObcCertificateUrl: data.scStObcCertificateUrl || null,
+                    bplCertificateUrl: data.bplCertificateUrl || null,
+                    specialChild: data.specialChild ? Boolean(data.specialChild) : false,
+                    allergies: data.allergies || null,
+                    studentEmail: data.studentEmail || null,
+                    studentMobile: data.studentMobile || null,
+                    citizenship: data.citizenship || null,
+                    visaNo: data.visaNo || null,
+                    visaType: data.visaType || null,
+                    visaValidity: data.visaValidity ? new Date(data.visaValidity) : null,
+                    // Father / Mother details
+                    fatherName: data.fatherName || null,
+                    fatherOccupation: data.fatherOccupation || null,
+                    fatherEmail: data.fatherEmail || null,
+                    fatherMobile: data.fatherMobile || null,
+                    fatherAadhaar: data.fatherAadhaar || null,
+                    fatherIdUrl: data.fatherIdUrl || null,
+                    fatherPan: data.fatherPan || null,
+                    fatherPassport: data.fatherPassport || null,
+                    fatherCitizenship: data.fatherCitizenship || null,
+                    fatherVisaNo: data.fatherVisaNo || null,
+                    fatherVisaType: data.fatherVisaType || null,
+                    fatherVisaValidity: data.fatherVisaValidity ? new Date(data.fatherVisaValidity) : null,
+                    motherName: data.motherName || null,
+                    motherOccupation: data.motherOccupation || null,
+                    motherEmail: data.motherEmail || null,
+                    motherMobile: data.motherMobile || null,
+                    motherAadhaar: data.motherAadhaar || null,
+                    motherIdUrl: data.motherIdUrl || null,
+                    motherPan: data.motherPan || null,
+                    motherPassport: data.motherPassport || null,
+                    motherCitizenship: data.motherCitizenship || null,
+                    motherVisaNo: data.motherVisaNo || null,
+                    motherVisaType: data.motherVisaType || null,
+                    motherVisaValidity: data.motherVisaValidity ? new Date(data.motherVisaValidity) : null,
+                    // Fees
+                    discount: data.discount ? parseFloat(data.discount) : 0,
+                    lateFine: data.lateFine ? parseFloat(data.lateFine) : 0,
+                    remark: data.remark || null,
+                    currentYearTotal: data.currentYearTotal ? parseFloat(data.currentYearTotal) : 0,
+                    currentYearTotalPaid: data.currentYearTotalPaid ? parseFloat(data.currentYearTotalPaid) : 0,
+                    currentYearTotalBalance: data.currentYearTotalBalance ? parseFloat(data.currentYearTotalBalance) : 0,
+                    lastYearTotal: data.lastYearTotal ? parseFloat(data.lastYearTotal) : 0,
+                    lastYearTotalPaid: data.lastYearTotalPaid ? parseFloat(data.lastYearTotalPaid) : 0,
+                    lastYearTotalBalance: data.lastYearTotalBalance ? parseFloat(data.lastYearTotalBalance) : 0,
+                    // Previous education & address
+                    previousSchoolName: data.previousSchoolName || null,
+                    previousClassPassed: data.previousClassPassed || null,
+                    previousClassMarks: data.previousClassMarks || null,
+                    previousClassYear: data.previousClassYear || null,
+                    previousBoard: data.previousBoard || null,
+                    migrationCertificateUrl: data.migrationCertificateUrl || null,
+                    tcNo: data.tcNo || null,
+                    permanentAddress: data.permanentAddress || null,
+                    temporaryAddress: data.temporaryAddress || null,
+                    // Extras
+                    result: data.result || null,
+                    resultStatus: data.resultStatus || null,
+                    photoUrl: data.photoUrl || null,
+                    barcodeUrl: data.barcodeUrl || null,
                 },
                 include: { user: true, enrollments: true, branch: true },
             });
