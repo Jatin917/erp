@@ -17,7 +17,6 @@ interface StudentState {
 }
 
 const emptyForm: StudentForm = {
-  id: "",
   branchId: "",
   rollNo: "",
   admissionNo: "",

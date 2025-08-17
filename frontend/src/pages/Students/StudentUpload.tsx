@@ -4,6 +4,7 @@ import { useStudentStore } from "../../store/studentStore";
 import { useUploadStudent } from "../../hooks/studentQuery";
 import { classOptions } from "../../api/types";
 import { SelectInput } from "../../components/common/selectorInput";
+import { academicSessions } from "../../services";
 
 export default function StudentUploadPage() {
     const { setField, studentForm } = useStudentStore();
@@ -40,7 +41,13 @@ export default function StudentUploadPage() {
                                 options={classOptions}
                                 onChange={handleChange}
                             />
-                            <Input required name="session" label="Session" onChange={handleChange} />
+                            <SelectInput
+                                name="session"
+                                label="Academic Session"
+                                required
+                                options={academicSessions}
+                                onChange={handleChange}
+                            />
                             <Input required name="gender" label="Gender" onChange={handleChange} />
                             <Input required type="date" name="dob" label="Date of Birth" onChange={handleChange} />
                             <Input name="aadhaar" label="Aadhaar" onChange={handleChange} />
