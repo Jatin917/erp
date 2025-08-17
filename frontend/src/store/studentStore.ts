@@ -6,12 +6,13 @@ import type { StudentForm } from "../api/types";
 interface StudentState {
   studentForm: StudentForm;
   studentsArray: StudentForm[];
-
+  totalPages:Number
   setField: (key: keyof StudentForm, value: any) => void;
   resetForm: () => void;
 
   setStudents: (students: StudentForm[]) => void;
   appendStudents: (students: StudentForm[]) => void;
+  setTotalPage:(page:Number) =>void;
   clearStudents: () => void;
 }
 
@@ -32,6 +33,7 @@ const emptyForm: StudentForm = {
 export const useStudentStore = create<StudentState>((set) => ({
   studentForm: emptyForm,
   studentsArray: [],
+  totalPages:0,
 
   setField: (key, value) =>
     set((state) => ({
@@ -45,5 +47,6 @@ export const useStudentStore = create<StudentState>((set) => ({
     set((state) => ({
       studentsArray: [...state.studentsArray, ...students],
     })),
+  setTotalPage:(totalPages:Number)=>set({totalPages}),
   clearStudents: () => set({ studentsArray: [] }),
 }));

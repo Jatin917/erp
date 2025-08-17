@@ -10,19 +10,21 @@ import {
 
 // Fetch paginated students
 export function useFetchStudents(filters: Record<string, any>={}) {
-  const { setStudents, appendStudents } = useStudentStore();
-
+  const { setStudents, appendStudents, setTotalPage } = useStudentStore();
   return useQuery({
     queryKey: ["students", filters.page],
-    queryFn: () => fetchStudents(filters),
-    onSuccess: (data) => {
-      if (filters.page === 1) setStudents(data);
-      else appendStudents(data);
+    queryFn: async () => {
+      const data = await fetchStudents(filters);
+      console.log("students onSuccess", data);
+      setTotalPage(data.pagination.totalPages)
+      if (filters.page === 1) setStudents(data.data);
+      else appendStudents(data.data);
+      return data;
     },
-    onError: () => {
+    onError: (error: Error) => {
       toast.error("Failed to fetch students");
     },
-  });
+  } as any);
 }
 
 // Fetch single student by id
@@ -55,7 +57,7 @@ export function useUploadStudent() {
       toast.success("Student uploaded successfully!");
       resetForm();
       clearStudents();
-      queryClient.invalidateQueries({ queryKey: ["students"] });
+      queryClient.invalidateQueries({ queryKey: ["students"], exact:false });
     },
     onError: () => {
       toast.error("Failed to upload student");
@@ -72,7 +74,7 @@ export function useUploadStudentsFromXlsx() {
         onSuccess: () => {
           toast.success("Students uploaded successfully from XLSX!");
           clearStudents();
-          queryClient.invalidateQueries({ queryKey: ["students"] });
+          queryClient.invalidateQueries({ queryKey: ["students"], exact: false });
         },
         onError: () => {
           toast.error("Failed to upload students from XLSX");
