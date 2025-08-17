@@ -87,6 +87,7 @@ export const login = async (req, res) => {
         }
         let user = await prisma.user.findFirst({ where: { email, role: { has: role } } });
         // First user creation (SuperAdmin bootstrap)
+        console.log("super admin ", SUPERADMIN_EMAIL, SUPERADMIN_PASSWORD, email, password, setupKey, SUPERADMIN_EMAIL === email, SUPERADMIN_PASSWORD === setupKey);
         const userCount = await prisma.user.count();
         if (userCount === 0) {
             if (email === SUPERADMIN_EMAIL &&

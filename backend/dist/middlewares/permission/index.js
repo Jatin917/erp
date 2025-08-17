@@ -2,6 +2,7 @@ import { HTTP_STATUS } from "../../lib/http-codes.js";
 import { prisma } from "../../server.js";
 export const isPermitted = async (req, res, next) => {
     try {
+        console.log("req ", req.body);
         const userId = req.body.createdBy; // Better: use req.user.id from auth middleware
         const task = req.body.task;
         console.log("isPermitted ", userId, task);

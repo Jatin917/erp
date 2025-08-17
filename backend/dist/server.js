@@ -14,10 +14,10 @@ const ENV = process.env.ENV;
 export const JWT_SECRET = process.env.JWT_SECRET || 'secret';
 export const SUPERADMIN_EMAIL = process.env.SUPER_ADMIN_EMAIL;
 export const SUPERADMIN_PASSWORD = process.env.SUPER_ADMIN_PASSWORD;
+export const defaultPassword = process.env.DEFAULT_PASSWORD || "secret";
 const app = express();
 export const otpStorage = new Map();
 export const emailVerified = new Map();
-export const defaultPassword = process.env.DEFAULT_PASSWORD || "secret";
 // set up server
 app.use(cors({ origin: '*' }));
 app.set('view engine', 'ejs');

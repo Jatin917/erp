@@ -1,42 +1,54 @@
 // @ts-nocheck
-import path from "path";
+import path, { dirname } from "path";
 import fs from "fs";
 import QRCode from "qrcode";
 import bcrypt from "bcrypt";
 import { defaultPassword, prisma } from "../../../server.js"; // your prisma instance
 import { HTTP_STATUS } from "../../../lib/http-codes.js";
-import * as XLSX from "xlsx";
+import XLSX from "xlsx";
+import { ClassEnum } from "../../../../generated/prisma/index.js";
+import { fileURLToPath } from "url";
+import { connect } from "http2";
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 function getStudentDir(sid, bid, admissionNo) {
     // All must be string for path.join
-    return path.join(__dirname, '..', 'uploads', String(sid), String(bid), String(admissionNo));
+    return path.join(__dirname, '..', "..", "..", "..", 'uploads', String(sid), String(bid), String(admissionNo));
 }
 // ----------------------
 // Generate Barcode
 // ----------------------
 async function generateBarcode(student) {
-    const qrText = `${student.id}|${student.branchId}|${student.user.name}|${student.rollNo}|${student.enrollments.id || ""}|${student.sessionId || ""}`;
-    // Store under /uploads/{schoolId}/{branchId}/barcodes/{studentId}.png
-    const qrDir = getStudentDir(student.schoolId, student.branchId, student.admissionNo);
+    // Prepare the QR text
+    const lastEnrollment = student.enrollments.at(-1);
+    const sessionId = lastEnrollment ? lastEnrollment.sessionId : "";
+    const qrText = `${student.id}|${student.branchId}|${student.name}|${student.rollNo}|${lastEnrollment?.id || ""}|${sessionId}`;
+    // Define the folder where barcode will be saved
+    // Example: backend/src/controllers/school/uploads/{schoolId}/{branchId}/{studentId}/
+    const qrDir = getStudentDir(student.branch.schoolId, student.branchId, student.admissionNo);
+    // Ensure the folder exists
+    fs.mkdirSync(qrDir, { recursive: true });
+    // Define full path for the barcode image
     const qrPath = path.join(qrDir, `${student.id}.png`);
-    await new Promise((resolve, reject) => {
-        QRCode.toFile(qrPath, qrText, {
-            type: "png",
-            width: 350,
-            margin: 1,
-            color: { dark: "#000", light: "#FFF" },
-        }, (err) => {
-            if (err)
-                return reject(err);
-            resolve(true);
-        });
-    });
-    return `uploads/${student.schoolId}/${student.branchId}/barcodes/${student.id}.png`;
+    console.log("qrPath ", qrPath, qrText);
+    // Generate and save the QR code image
+    try {
+        const buffer = await QRCode.toBuffer(qrText, { width: 350 });
+        fs.writeFileSync(qrPath, buffer);
+        console.log("QR code generated:", qrPath, buffer);
+    }
+    catch (err) {
+        console.error("Failed to generate QR code:", err);
+    }
+    console.log("image is ");
+    // Return relative path for frontend usage
+    return path.join('..', "..", "..", "..", "uploads", student.branch.schoolId, student.branchId, student.admissionNo || student.id, `${student.id}.png`);
 }
 // ----------------------
 // Create / Find User Helper
 // ----------------------
 async function findOrCreateUser(role, name, email, phone) {
-    if (!email && !phone)
+    if (!email)
         return null;
     let user = await prisma.user.findFirst({
         where: { OR: [{ email }, { phone }] },
@@ -63,7 +75,7 @@ async function findOrCreateUser(role, name, email, phone) {
     }
 }
 async function createEnrollment(tx, // 👈 accept tx here
-studentId, className, branchId, section, sessionId, rollNo) {
+className, branchId, studentId, section, sessionId, rollNo) {
     // Ensure class exists (or create)
     let cls = await tx.class.findFirst({
         where: { name: className, section, branchId },
@@ -100,6 +112,41 @@ function normalizeSession(session) {
     // If end is only 4 digits but not complete, we assume full
     return `${start}-${end}`;
 }
+function mapClassInput(input) {
+    if (!input)
+        return null;
+    const trimmed = input.trim().toUpperCase();
+    switch (trimmed) {
+        case "NURSERY": return ClassEnum.NURSERY;
+        case "LKG": return ClassEnum.LKG;
+        case "UKG": return ClassEnum.UKG;
+        case "I":
+        case "FIRST": return ClassEnum.FIRST;
+        case "II":
+        case "SECOND": return ClassEnum.SECOND;
+        case "III":
+        case "THIRD": return ClassEnum.THIRD;
+        case "IV":
+        case "FOURTH": return ClassEnum.FOURTH;
+        case "V":
+        case "FIFTH": return ClassEnum.FIFTH;
+        case "VI":
+        case "SIXTH": return ClassEnum.SIXTH;
+        case "VII":
+        case "SEVENTH": return ClassEnum.SEVENTH;
+        case "VIII":
+        case "EIGHTH": return ClassEnum.EIGHTH;
+        case "IX":
+        case "NINTH": return ClassEnum.NINTH;
+        case "X":
+        case "TENTH": return ClassEnum.TENTH;
+        case "XI":
+        case "ELEVENTH": return ClassEnum.ELEVENTH;
+        case "XII":
+        case "TWELFTH": return ClassEnum.TWELFTH;
+        default: return null; // invalid class input
+    }
+}
 // ----------------------
 // Main Create Student Function
 // ----------------------
@@ -107,110 +154,178 @@ export const createStudent = async (req, res) => {
     try {
         const data = req.body;
         const { session, class: classAsParam, branchId, rollNo } = data;
-        const normalized = normalizeSession(session);
-        await prisma.$transaction(async (tx) => {
-            // ---------- 1. Check Session ----------
+        const normalizedSession = normalizeSession(session);
+        const student = await prisma.$transaction(async (tx) => {
+            // ---------- 1. Check Academic Session ----------
             const sessionIsThere = await tx.academicSession.findFirst({
-                where: { name: normalized },
+                where: { name: normalizedSession },
             });
             if (!sessionIsThere) {
                 throw new Error("Academic Session does not exist");
             }
             // ---------- 2. Create Student User ----------
-            const studentUser = await findOrCreateUser("STUDENT", data.studentName, data.studentEmail, data.studentMobile);
-            if (!studentUser)
-                throw new Error("No student user Found");
+            const studentUser = await findOrCreateUser("STUDENT", data.studentName, data.studentEmail, data.studentMobile ? String(data.studentMobile) : null);
             // ---------- 3. Create Parent Users ----------
             let fatherParent = null;
-            let motherParent = null;
             if (data.fatherName || data.fatherEmail || data.fatherMobile) {
-                const fatherUser = await findOrCreateUser("FATHER", data.fatherName, data.fatherEmail, data.fatherMobile);
+                const fatherUser = await findOrCreateUser("FATHER", data.fatherName, data.fatherEmail, data.fatherMobile ? String(data.fatherMobile) : null);
                 if (fatherUser) {
                     fatherParent = await tx.parent.create({
-                        data: { type: "FATHER", userId: fatherUser.id },
+                        data: { type: "FATHER", userId: String(fatherUser.id) },
                     });
                 }
             }
+            let motherParent = null;
             if (data.motherName || data.motherEmail || data.motherMobile) {
-                const motherUser = await findOrCreateUser("MOTHER", data.motherName, data.motherEmail, data.motherMobile);
+                const motherUser = await findOrCreateUser("MOTHER", data.motherName, data.motherEmail, data.motherMobile ? String(data.motherMobile) : null);
                 if (motherUser) {
                     motherParent = await tx.parent.create({
-                        data: { type: "MOTHER", userId: motherUser.id },
+                        data: { type: "MOTHER", userId: String(motherUser.id) },
                     });
                 }
             }
-            // ---------- 4. Create Student ----------
+            // ---------- 4. Create Student Record ----------
             const student = await tx.student.create({
                 data: {
-                    ...data, // pass extra fields as is
-                    userId: studentUser.id,
-                    fatherId: fatherParent?.id,
-                    motherId: motherParent?.id,
+                    name: String(data.studentName),
+                    user: studentUser
+                        ? { connect: { id: String(studentUser.id) } }
+                        : undefined,
+                    father: fatherParent
+                        ? { connect: { id: String(fatherParent.id) } }
+                        : undefined,
+                    mother: motherParent
+                        ? { connect: { id: String(motherParent.id) } }
+                        : undefined,
+                    branch: {
+                        connect: { id: branchId } // keep as is
+                    },
+                    studentId: data.studentId ? String(data.studentId) : null,
+                    admissionNo: data.AdmissionNo ? String(data.AdmissionNo) : null,
+                    fatherMobileNo: data.fatherMobileNo ? String(data.fatherMobileNo) : null,
+                    motherMobileNo: data.motherMobileNo ? String(data.motherMobileNo) : null,
+                    rollNo: rollNo ? String(rollNo) : null,
+                    lastYearTotal: data.totalLastYearFees ? parseFloat(data.totalLastYearFees) : 0,
+                    lastYearTotalBalance: data.totalLastRemainingBalance ? parseFloat(data.totalLastRemainingBalance) : 0,
+                    lastYearTotalPaid: data.totalLastYearPaid ? parseFloat(data.totalLastYearPaid) : 0,
+                    currentYearTotal: data.totalCurrentYearFees ? parseFloat(data.totalCurrentYearFees) : 0,
+                    currentYearTotalPaid: data.totalCurrentYearPaid ? parseFloat(data.totalCurrentYearPaid) : 0,
+                    currentYearTotalBalance: data.currentYearTotalRemaningBalance ? parseFloat(data.currentYearTotalRemaningBalance) : 0,
+                    ...data,
                 },
-                include: { user: true },
+                include: { user: true, enrollments: true, branch: true },
             });
             // ---------- 5. Enrollment ----------
-            await createEnrollment(tx, classAsParam, branchId, student.id, data.section, sessionIsThere.id, rollNo);
+            const classValue = mapClassInput(classAsParam);
+            if (!classValue)
+                throw new Error(`Invalid class: ${classAsParam}`);
+            await createEnrollment(tx, classValue, String(branchId), String(student.id), data.section ? String(data.section) : null, String(sessionIsThere.id), rollNo ? String(rollNo) : null);
             // ---------- 6. Barcode ----------
             const barcodeUrl = await generateBarcode(student);
             await tx.student.update({
-                where: { id: student.id },
+                where: { id: String(student.id) },
                 data: { barcodeUrl },
             });
-            // ---------- 7. FeeDocs ----------
-            let tuitionFee = 0;
-            let admissionFee = 0;
-            if (!data.currentYearAdmissionFee && !data.currentYearTuitionFee) {
-                // fallback when both are not provided
-                tuitionFee = data.currentYearTotal || 0;
+            // ---------- 7. Current Year Fee ----------
+            let tuitionFee = data.currentYearTuitionFee
+                ? parseFloat(String(data.currentYearTuitionFee))
+                : 0;
+            let admissionFee = data.currentYearAdmissionFee
+                ? parseFloat(String(data.currentYearAdmissionFee))
+                : 0;
+            if (!tuitionFee && !admissionFee) {
+                tuitionFee = data.currentYearTotal ? parseFloat(String(data.currentYearTotal)) : 0;
             }
-            else {
-                tuitionFee = data.currentYearTuitionFee || 0;
-                admissionFee = data.currentYearAdmissionFee || 0;
-            }
-            await tx.feeDoc.create({
+            const currentFeeDoc = await tx.feeDoc.create({
                 data: {
-                    studentId: student.id,
-                    sessionId: sessionIsThere.id,
+                    student: { connect: { id: String(student.id) } },
+                    session: { connect: { id: String(sessionIsThere.id) } },
                     admissionFee,
                     tuitionFee,
                     totalPayable: admissionFee + tuitionFee,
-                    dueInSession: admissionFee + tuitionFee - (data.currentYearTotalPaid || 0),
+                    paidInSession: data.currentYearTotalPaid
+                        ? parseFloat(String(data.currentYearTotalPaid))
+                        : 0,
+                    dueInSession: admissionFee + tuitionFee - (data.currentYearTotalPaid
+                        ? parseFloat(String(data.currentYearTotalPaid))
+                        : 0),
                 },
             });
-            // ---------- 8. Last year fees (optional) ----------
+            // ---------- 8. Last Year Fee (optional) ----------
             if (data.lastYearAdmissionFee || data.lastYearTuitionFee || data.lastYearTotal) {
                 const lastSession = await tx.academicSession.findFirst({
-                    where: { branchId, isCurrent: false },
+                    where: { branchId: String(branchId), isCurrent: false },
                     orderBy: { createdAt: "desc" },
                 });
                 if (lastSession) {
                     await tx.feeDoc.create({
                         data: {
-                            studentId: student.id,
-                            sessionId: lastSession.id,
-                            admissionFee: data.lastYearAdmissionFee || 0,
-                            tuitionFee: data.lastYearTuitionFee || data.lastYearTotal || 0,
-                            totalPayable: (data.lastYearAdmissionFee || 0) +
-                                (data.lastYearTuitionFee || data.lastYearTotal || 0),
-                            dueInSession: data.lastYearTotalBalance || 0,
+                            student: { connect: { id: String(student.id) } },
+                            session: { connect: { id: String(lastSession.id) } },
+                            admissionFee: data.lastYearAdmissionFee
+                                ? parseFloat(String(data.lastYearAdmissionFee))
+                                : 0,
+                            tuitionFee: data.lastYearTuitionFee
+                                ? parseFloat(String(data.lastYearTuitionFee))
+                                : data.lastYearTotal
+                                    ? parseFloat(String(data.lastYearTotal))
+                                    : 0,
+                            totalPayable: (data.lastYearAdmissionFee
+                                ? parseFloat(String(data.lastYearAdmissionFee))
+                                : 0) +
+                                (data.lastYearTuitionFee
+                                    ? parseFloat(String(data.lastYearTuitionFee))
+                                    : data.lastYearTotal
+                                        ? parseFloat(String(data.lastYearTotal))
+                                        : 0),
+                            paidInSession: data.lastYearTotalPaid
+                                ? parseFloat(String(data.lastYearTotalPaid))
+                                : 0,
+                            dueInSession: data.lastYearTotalBalance
+                                ? parseFloat(String(data.lastYearTotalBalance))
+                                : 0,
                         },
                     });
                 }
                 else {
-                    // log for debugging but don’t mix with current session
-                    console.warn(`No lastSession found for branch ${branchId}, student ${student.id}`);
+                    await tx.feeDoc.update({
+                        where: { id: currentFeeDoc.id },
+                        data: {
+                            tuitionFee: {
+                                increment: data.lastYearTotal
+                                    ? parseFloat(String(data.lastYearTotal))
+                                    : 0,
+                            },
+                            totalPayable: {
+                                increment: data.lastYearTotal
+                                    ? parseFloat(String(data.lastYearTotal))
+                                    : 0,
+                            },
+                            paidInSession: {
+                                increment: data.lastYearTotalPaid
+                                    ? parseFloat(String(data.lastYearTotalPaid))
+                                    : 0,
+                            },
+                            dueInSession: {
+                                increment: data.lastYearTotalBalance
+                                    ? parseFloat(String(data.lastYearTotalBalance))
+                                    : 0,
+                            },
+                        },
+                    });
                 }
             }
+            return student;
         });
-        return res.status(HTTP_STATUS.CREATED).json({
+        return res.status(201).json({
             success: true,
             message: "Student created successfully",
+            studentId: student.id,
         });
     }
     catch (error) {
         console.error(error);
-        return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
+        return res.status(500).json({
             success: false,
             message: error.message,
         });
@@ -223,6 +338,7 @@ export const bulkUploadStudents = async (req, res) => {
                 .status(400)
                 .json({ success: false, message: "No file uploaded" });
         }
+        const { branchId } = req.body;
         const filePath = req.file.path; // multer stores file temporarily
         const workbook = XLSX.readFile(filePath);
         const sheetName = workbook.SheetNames[0];
@@ -230,15 +346,24 @@ export const bulkUploadStudents = async (req, res) => {
         let results = [];
         for (const row of sheetData) {
             try {
+                const session = row.session;
+                const classAsParam = row.class;
+                const normalizedSession = normalizeSession(session);
                 const student = await prisma.$transaction(async (tx) => {
+                    const sessionIsThere = await tx.academicSession.findFirst({
+                        where: { name: normalizedSession },
+                    });
+                    if (!sessionIsThere) {
+                        throw new Error("Academic Session does not exist");
+                    }
                     // 1. Student User
-                    const studentUser = await findOrCreateUser("STUDENT", row.studentName, row.studentEmail, row.studentMobile);
-                    if (!studentUser)
-                        throw new Error("Student user creation failed");
+                    const studentUser = await findOrCreateUser("STUDENT", row.studentName, row.studentEmail, row.studentMobile ? String(row.studentMobile) : null);
+                    // skipping this part student email and mobile are not always available
+                    // if (!studentUser) throw new Error("Student user creation failed");
                     // 2. Father (if any)
                     let fatherParent = null;
                     if (row.fatherName || row.fatherEmail || row.fatherMobile) {
-                        const fatherUser = await findOrCreateUser("FATHER", row.fatherName, row.fatherEmail, row.fatherMobile);
+                        const fatherUser = await findOrCreateUser("FATHER", row.fatherName, row.fatherEmail, row.fatherMobile ? String(row.fatherMobile) : null);
                         if (fatherUser) {
                             fatherParent = await tx.parent.create({
                                 data: { type: "FATHER", userId: fatherUser.id },
@@ -248,7 +373,7 @@ export const bulkUploadStudents = async (req, res) => {
                     // 3. Mother (if any)
                     let motherParent = null;
                     if (row.motherName || row.motherEmail || row.motherMobile) {
-                        const motherUser = await findOrCreateUser("MOTHER", row.motherName, row.motherEmail, row.motherMobile);
+                        const motherUser = await findOrCreateUser("MOTHER", row.motherName, row.motherEmail, row.motherMobile ? String(row.motherMobile) : null);
                         if (motherUser) {
                             motherParent = await tx.parent.create({
                                 data: { type: "MOTHER", userId: motherUser.id },
@@ -258,29 +383,45 @@ export const bulkUploadStudents = async (req, res) => {
                     // 4. Student record
                     const student = await tx.student.create({
                         data: {
-                            userId: studentUser.id,
-                            branchId: row.branchId,
-                            rollNo: row.rollNo,
-                            studentId: row.studentId,
-                            studentEmail: row.studentEmail,
-                            studentMobile: row.studentMobile,
-                            fatherName: row.fatherName,
-                            fatherEmail: row.fatherEmail,
-                            fatherMobile: row.fatherMobile,
-                            motherName: row.motherName,
-                            motherEmail: row.motherEmail,
-                            motherMobile: row.motherMobile,
-                            lastYearTotal: row.totalLastYearFees,
-                            lastYearTotalBalance: row.totalLastRemainingBalance,
-                            lastYearTotalPaid: row.totalLastYearPaid,
-                            currentYearTotal: row.totalCurrentYearFees,
-                            currentYearTotalPaid: row.totalCurrentYearPaid,
-                            currentYearTotalBalance: row.totalCurrentYearRemaningBalance,
-                            fatherId: fatherParent?.id || null,
-                            motherId: motherParent?.id || null,
+                            name: row.studentName,
+                            user: studentUser
+                                ? { connect: { id: String(studentUser.id) } }
+                                : undefined,
+                            branch: {
+                                connect: { id: branchId } // keep as is
+                            },
+                            admissionNo: row.AdmissionNo ? String(row.AdmissionNo) : null,
+                            rollNo: row.rollNo ? String(row.rollNo) : null,
+                            studentId: row.studentId ? String(row.studentId) : null,
+                            studentEmail: row.studentEmail ? String(row.studentEmail) : null,
+                            studentMobile: row.studentMobile ? String(row.studentMobile) : null,
+                            fatherName: row.fatherName ? String(row.fatherName) : null,
+                            fatherEmail: row.fatherEmail ? String(row.fatherEmail) : null,
+                            fatherMobile: row.fatherMobile ? String(row.fatherMobile) : null,
+                            motherName: row.motherName ? String(row.motherName) : null,
+                            motherEmail: row.motherEmail ? String(row.motherEmail) : null,
+                            motherMobile: row.motherMobile ? String(row.motherMobile) : null,
+                            lastYearTotal: row.totalLastYearFees ? parseFloat(row.totalLastYearFees) : 0,
+                            lastYearTotalBalance: row.totalLastRemainingBalance ? parseFloat(row.totalLastRemainingBalance) : 0,
+                            lastYearTotalPaid: row.totalLastYearPaid ? parseFloat(row.totalLastYearPaid) : 0,
+                            currentYearTotal: row.totalCurrentYearFees ? parseFloat(row.totalCurrentYearFees) : 0,
+                            currentYearTotalPaid: row.totalCurrentYearPaid ? parseFloat(row.totalCurrentYearPaid) : 0,
+                            currentYearTotalBalance: row.currentYearTotalRemaningBalance ? parseFloat(row.currentYearTotalRemaningBalance) : 0,
+                            father: fatherParent
+                                ? { connect: { id: String(fatherParent.id) } }
+                                : undefined,
+                            mother: motherParent
+                                ? { connect: { id: String(motherParent.id) } }
+                                : undefined,
                         },
-                        include: { user: true },
+                        include: { user: true, enrollments: true, branch: true },
                     });
+                    // ---------- 5. Enrollment ----------
+                    const classValue = mapClassInput(classAsParam);
+                    if (!classValue)
+                        throw new Error(`Invalid class: ${classAsParam}`);
+                    await createEnrollment(tx, classValue, branchId, student.id, row.section, sessionIsThere.id, row.rollNo ? String(row.rollNo) : null);
+                    const sessionId = sessionIsThere.id;
                     // 5. Barcode
                     const barcodeUrl = await generateBarcode(student);
                     await tx.student.update({
@@ -288,26 +429,27 @@ export const bulkUploadStudents = async (req, res) => {
                         data: { barcodeUrl },
                     });
                     // 6. Current year fees
+                    // ---------- Current Year Fees ----------
                     let tuitionFee = 0;
                     let admissionFee = 0;
                     if (!row.currentYearAdmissionFee && !row.currentYearTuitionFee) {
-                        tuitionFee = row.currentYearTotal || 0;
+                        tuitionFee = parseFloat(row.currentYearTotal || "0");
                     }
                     else {
-                        tuitionFee = row.currentYearTuitionFee || 0;
-                        admissionFee = row.currentYearAdmissionFee || 0;
+                        tuitionFee = parseFloat(row.currentYearTuitionFee || "0");
+                        admissionFee = parseFloat(row.currentYearAdmissionFee || "0");
                     }
-                    await tx.feeDoc.create({
+                    const currentFeeDoc = await tx.feeDoc.create({
                         data: {
-                            studentId: student.id,
-                            sessionId: row.sessionId,
+                            student: { connect: { id: student.id } }, // use relation
+                            session: { connect: { id: sessionId } },
                             admissionFee,
                             tuitionFee,
                             totalPayable: admissionFee + tuitionFee,
-                            dueInSession: (admissionFee + tuitionFee) - (row.currentYearTotalPaid || 0),
+                            dueInSession: admissionFee + tuitionFee - parseFloat(row.currentYearTotalPaid || "0"),
                         },
                     });
-                    // 7. Last year fees (optional)
+                    // ---------- Last Year Fees (optional) ----------
                     if (row.lastYearAdmissionFee || row.lastYearTuitionFee || row.lastYearTotal) {
                         const lastSession = await tx.academicSession.findFirst({
                             where: { branchId: row.branchId, isCurrent: false },
@@ -316,18 +458,26 @@ export const bulkUploadStudents = async (req, res) => {
                         if (lastSession) {
                             await tx.feeDoc.create({
                                 data: {
-                                    studentId: student.id,
-                                    sessionId: lastSession.id,
-                                    admissionFee: row.lastYearAdmissionFee || 0,
-                                    tuitionFee: row.lastYearTuitionFee || row.lastYearTotal || 0,
-                                    totalPayable: (row.lastYearAdmissionFee || 0) + (row.lastYearTuitionFee || row.lastYearTotal || 0),
-                                    dueInSession: row.lastYearTotalBalance || 0,
+                                    student: { connect: { id: student.id } },
+                                    session: { connect: { id: sessionId } },
+                                    // sessionId: lastSession.id,
+                                    admissionFee: parseFloat(row.lastYearAdmissionFee || "0"),
+                                    tuitionFee: parseFloat(row.lastYearTuitionFee || row.lastYearTotal || "0"),
+                                    totalPayable: parseFloat(row.lastYearAdmissionFee || "0") + parseFloat(row.lastYearTuitionFee || row.lastYearTotal || "0"),
+                                    dueInSession: parseFloat(row.lastYearTotalBalance || "0"),
                                 },
                             });
                         }
                         else {
-                            // fallback: don't mix with current session
-                            console.warn(`No lastSession found for branch ${row.branchId}, student ${student.id}`);
+                            await tx.feeDoc.update({
+                                where: { id: currentFeeDoc.id },
+                                data: {
+                                    tuitionFee: { increment: parseFloat(row.lastYearTotal || "0") },
+                                    totalPayable: { increment: parseFloat(row.lastYearTotal || "0") },
+                                    paidInSession: { increment: parseFloat(row.lastYearTotalPaid || "0") },
+                                    dueInSession: { increment: parseFloat(row.lastYearTotalBalance || "0") },
+                                },
+                            });
                         }
                     }
                     return student;
@@ -383,8 +533,8 @@ export const bulkUploadStudents = async (req, res) => {
 //     if(!row['section']) row['section'] = "A";
 //     console.log('ROW:', row);
 //     const {totalLastYearFees, totalLastYearPaid, totalLastRemainingBalance, totalCurrentYearFees, totalCurrentYearPaid, totalCurrentYearRemaningBalance, totalOfLastAndCurrent, ...cleanedRow} =row;
-//     const totalBalancePayable = parseFloat(totalLastRemainingBalance) || 0 + parseFloat(totalCurrentYearRemaningBalance) || 0;
-//     const totalPayableYearly = parseFloat(totalCurrentYearPaid) || 0;
+//     const totalBalancePayable = parseparseFloat(totalLastRemainingBalance) || 0 + parseparseFloat(totalCurrentYearRemaningBalance) || 0;
+//     const totalPayableYearly = parseparseFloat(totalCurrentYearPaid) || 0;
 //     const session = row['Academic Session'] || row['session'] || row['Session'];
 //     // Defensive with AdmissionNo header
 //     const admissionNo = String(row.AdmissionNo || row['AdmissionNo'] || row['Admission No'] || row['admissionNo'] || '').trim();

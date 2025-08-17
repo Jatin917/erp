@@ -1,1 +1,1 @@
-{"version":3,"file":"index.d.ts","sourceRoot":"","sources":["../../../../src/controllers/school/student/index.ts"],"names":[],"mappings":"AA4IA,eAAO,MAAM,aAAa,GAAU,KAAK,GAAG,EAAE,KAAK,GAAG,iBAsJnD,CAAC;AAIJ,eAAO,MAAM,kBAAkB,GAAU,KAAK,GAAG,EAAE,KAAK,GAAG,iBAkJ1D,CAAC"}
+{"version":3,"file":"index.d.ts","sourceRoot":"","sources":["../../../../src/controllers/school/student/index.ts"],"names":[],"mappings":"AAiMA,eAAO,MAAM,aAAa,GAAU,KAAK,GAAG,EAAE,KAAK,GAAG,iBA0NrD,CAAC;AAKF,eAAO,MAAM,kBAAkB,GAAU,KAAK,GAAG,EAAE,KAAK,GAAG,iBA2L1D,CAAC"}
