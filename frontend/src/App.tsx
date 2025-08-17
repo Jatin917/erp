@@ -8,15 +8,15 @@ import { useEffect } from 'react';
 function App() {
   const queryClient = new QueryClient();
   const {login} = useAuthStore();
-  useEffect(()=>{
-    if(!localStorage.getItem("auth-store")){
-      return;
-    }
-    const authStore = JSON.parse(localStorage.getItem("auth-store"));
-    const token = authStore.state.token;
-    const user = authStore.state.user;
-    if(token && user){
-      login({token, user});
+  useEffect(() => {
+    const authStoreString = localStorage.getItem("auth-store");
+    if (authStoreString) {
+      const authStore = JSON.parse(authStoreString);
+      const token = authStore?.state?.token;
+      const user = authStore?.state?.user;
+      if (token && user) {
+        login({ token, user });
+      }
     }
   },[])
   // Use the new dark mode hook for Tailwind v4

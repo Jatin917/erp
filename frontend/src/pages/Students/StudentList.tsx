@@ -26,7 +26,7 @@ export default function StudentList() {
                   className="border-t border-border-primary hover:bg-bg-secondary dark:hover:bg-bg-primary transition"
                 >
                   <td className="p-3">{s.name}</td>
-                  <td className="p-3">{s.className}</td>
+                  <td className="p-3">{s.class}</td>
                   <td className="p-3">{s.rollNo}</td>
                   <td className="p-3">
                     <button

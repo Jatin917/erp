@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useStudentStore } from "../../store/studentStore";
-import { useFetchStudents, useUploadStudentsFromXlsx } from "../../hooks/studentQuery";
+import { useUploadStudentsFromXlsx } from "../../hooks/studentQuery";
 
 export default function StudentsPage() {
   const navigate = useNavigate();
@@ -23,7 +23,7 @@ export default function StudentsPage() {
     setIsSending(false);
   };
   // const [filters, setFilters] = useState<Record<string, any>>({page:page});
-  const { isLoading, error } = useFetchStudents({ page });
+  // const { isLoading, error } = useFetchStudents({ page });
   // Pagination handlers
   const handlePrev = () => {
     if (page > 1) setPage(page - 1);
@@ -185,7 +185,7 @@ export default function StudentsPage() {
               <div className="flex justify-between items-center px-4 py-3 border-t border-[var(--border-secondary)]">
                 <button
                   disabled={page === 1}
-                  onClick={() => setPage((p) => p - 1)}
+                  onClick={handlePrev}
                   className="px-3 py-2 rounded-lg text-sm font-medium disabled:opacity-50"
                   style={{
                     background: "var(--bg-tertiary)",
@@ -196,11 +196,11 @@ export default function StudentsPage() {
                   Prev
                 </button>
                 <span className="text-sm" style={{ color: "var(--text-secondary)" }}>
-                  Page {page} of {totalPages}
+                  Page {String(page)} of {String(totalPages)}
                 </span>
                 <button
                   disabled={page === totalPages}
-                  onClick={() => setPage((p) => p + 1)}
+                  onClick={handleNext}
                   className="px-3 py-2 rounded-lg text-sm font-medium disabled:opacity-50"
                   style={{
                     background: "var(--bg-tertiary)",

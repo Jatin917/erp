@@ -14,7 +14,7 @@ import AuthLayout from "../pages/auth/authLayout";
 import PublicRoute from "./publickRouter";
 import LoginPage from "../pages/auth/login";
 import SchoolCreationPage from "../pages/School/SchoolCreationPage";
-import StudentList from "../pages/Students/studentList";
+import StudentList from "../pages/Students/StudentList";
 import StudentDetails from "../pages/Students/StudentDetail";
 import StudentUpload from "../pages/Students/StudentUpload";
 // import ChangePasswordPage from "../pages/auth/changePassword"; // ⬅️ add this

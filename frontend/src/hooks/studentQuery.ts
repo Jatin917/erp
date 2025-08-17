@@ -24,6 +24,7 @@ export function useFetchStudents(filters: Record<string, any>={}) {
     },
     onError: (error: Error) => {
       toast.error("Failed to fetch students");
+      console.log(error.message);
     },
   } as any);
 }
