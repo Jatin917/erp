@@ -10,10 +10,9 @@ export default function StudentFeesPage() {
   const [filters, setFilters] = useState<any>({});
   const {studentsArray} = useStudentStore();
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
-  console.log("students array ", studentsArray);
     //@ts-ignore
     const { isLoading, error } = useFetchStudents({ filters });
-
+  console.log("selected student is ", selectedStudent);
   return (
     <div className="min-h-screen bg-[#212529] text-white p-6">
       <h1 className="text-2xl font-bold mb-6">Student Fees Management</h1>

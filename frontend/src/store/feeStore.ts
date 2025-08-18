@@ -49,7 +49,6 @@ type FeeTransactionState = {
   remarks: string;
   mode: string;
   referenceId: string;
-  createdById: string;
 
   setField: <K extends keyof FeeTransactionState>(key: K, value: FeeTransactionState[K]) => void;
   resetFields: () => void;
@@ -63,7 +62,6 @@ export const useFeeTransactionStore = create<FeeTransactionState>()(
       remarks: "",
       mode: "",
       referenceId: "",
-      createdById: "",
 
       setField: (key, value) =>
         set({ [key]: value } as unknown as Pick<FeeTransactionState, keyof FeeTransactionState>),
@@ -74,7 +72,6 @@ export const useFeeTransactionStore = create<FeeTransactionState>()(
           remarks: "",
           mode: "",
           referenceId: "",
-          createdById: "",
         }),
     }),
     { name: "fee-transaction-store" }

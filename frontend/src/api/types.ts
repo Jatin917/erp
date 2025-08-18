@@ -203,3 +203,26 @@ export interface ContactInfo {
   isVerifiedPhone: boolean;
   assignMyself: boolean;
 }
+
+export interface Option {
+  value: string;
+  label: string;
+}
+
+export type PaymentMode =
+  "CASH" |
+  "UPI" |
+  "ONLINE" |
+  "BANK_TRANSFER" |
+  "CHEQUE" |
+  "CARD"
+
+  export const paymentModeOptions: { value: PaymentMode; label: string }[] = [
+    { value: "CASH", label: "Cash" },
+    { value: "UPI", label: "UPI" },
+    { value: "ONLINE", label: "Online" },
+    { value: "BANK_TRANSFER", label: "Bank Transfer" },
+    { value: "CHEQUE", label: "Cheque" },
+    { value: "CARD", label: "Card" },
+  ];
+  

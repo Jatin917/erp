@@ -1,4 +1,4 @@
-import { useState } from "react";
+import {  useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useStudentStore } from "../../store/studentStore";
 import { useFetchStudents, useUploadStudentsFromXlsx } from "../../hooks/studentQuery";
@@ -157,7 +157,7 @@ export default function StudentsPage() {
                               <img
                                 src={barcodeSrc}
                                 alt="Barcode"
-                                className="h-10 w-auto object-contain"
+                                className="h-24 w-auto object-contain"
                               />
                             ) : (
                               "—"

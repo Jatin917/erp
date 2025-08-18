@@ -1,31 +1,57 @@
+import { paymentModeOptions, } from "../../api/types";
+import { useSubmitFeeTransaction } from "../../hooks/feeQuery";
+import { useFeeTransactionStore } from "../../store/feeStore";
+import { Input } from "../common/Input";
+import { SelectInput } from "../common/selectorInput";
+
 interface Props {
     student: any;
   }
   
   export default function FeeTransactionForm({ student }: Props) {
+    const {amountPaid, remarks, referenceId, setField} = useFeeTransactionStore();
+    const {mutate:feeTransactionApi} = useSubmitFeeTransaction();
     const handleSubmit = (e: React.FormEvent) => {
       e.preventDefault();
-      // TODO: Send transaction to backend
-      alert("Fee transaction created!");
+      feeTransactionApi(student.studentId);
     };
-  
     return (
       <div className="bg-[#2a2d32] p-4 rounded-2xl shadow-md">
         <h2 className="text-lg font-semibold mb-3">Create Fee Transaction</h2>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <input
+          <Input
+            name="amountPaid"
+            label="Amount"
+            value={amountPaid}
+            required={true}
             type="number"
             placeholder="Amount"
-            className="w-full p-2 rounded bg-[#1e1f23] text-white outline-none"
+            onChange={(e)=>setField("amountPaid", e.target.value)}
           />
-          <input
+          <Input
+            name="remarks"
+            label="Remarks"
+            value={remarks}
+            required={true}
             type="text"
-            placeholder="Payment Method (Cash/UPI/Bank)"
-            className="w-full p-2 rounded bg-[#1e1f23] text-white outline-none"
+            placeholder="Remarks"
+            onChange={(e)=>setField("remarks", e.target.value)}
           />
-          <input
-            type="date"
-            className="w-full p-2 rounded bg-[#1e1f23] text-white outline-none"
+          <SelectInput
+            name="mode"
+            label="Mode"
+            required={true}
+            options={paymentModeOptions}
+            onChange={(e)=>setField("mode", e.target.value)}
+          />
+          <Input
+            name="referenceId"
+            label="Reference Id"
+            value={referenceId}
+            required={false}
+            type="text"
+            placeholder="Reference Id"
+            onChange={(e)=>setField("referenceId", e.target.value)}
           />
           <button
             type="submit"

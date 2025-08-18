@@ -124,7 +124,7 @@ export const fetchStudents = async (filters: Record<string, any> = {}) => {
     task: "FETCH_STUDENTS",
   };
 
-  const { data } = await API.get("/student/fetch", { params });
+  const { data } = await API.get("/student/fetch/", { params });
   return data;
 };
 

@@ -46,22 +46,24 @@ export const useSubmitFeeDoc = (): UseMutationResult<
 export const useSubmitFeeTransaction = (): UseMutationResult<
   any, // replace with your API response type
   Error,
-  void,
+  string, // studentId passed as argument to mutate()
   unknown
 > => {
   const resetTransaction = useFeeTransactionStore((state) => state.resetFields);
   const getTransaction = useFeeTransactionStore.getState;
 
-  return useMutation<any, Error, void>({
-    mutationFn: async () => {
+  return useMutation<any, Error, string>({
+    mutationFn: async (studentId) => {
+      const transaction = getTransaction();
+
       const payload = {
-        studentId: getTransaction().studentId,
-        amountPaid: getTransaction().amountPaid,
-        remarks: getTransaction().remarks,
-        mode: getTransaction().mode,
-        referenceId: getTransaction().referenceId,
-        createdById: getTransaction().createdById,
+        studentId, // ✅ use passed arg instead of store
+        amountPaid: transaction.amountPaid,
+        remarks: transaction.remarks,
+        mode: transaction.mode,
+        referenceId: transaction.referenceId,
       };
+
       return feeTransactionApi(payload);
     },
     onSuccess: () => {

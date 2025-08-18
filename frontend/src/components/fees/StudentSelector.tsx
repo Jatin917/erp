@@ -15,14 +15,19 @@ interface Props {
       ? 'bg-[#2a2b30] text-gray-400 cursor-not-allowed' 
       : 'bg-[#1e1f23] text-white cursor-pointer'
     }`}
-  onChange={(e) => {
-    const student = students.find((s:any) => s.id === Number(e.target.value));
-    onSelectStudent(student || null);
-  }}
+    onChange={(e) => {
+      const student = students.find((s: any) => {
+        const isMatch = s.studentId === e.target.value;
+        return isMatch; // ✅ This is essential
+      });
+    
+      onSelectStudent(student || null);
+    }}
+    
 >
   <option value="">-- Select --</option>
   {students.map((s:any) => (
-    <option key={s.id} value={s.id}>
+    <option key={s.studentId} value={s.studentId}>
       {s.name} (Roll No: {s.rollNo})
     </option>
   ))}

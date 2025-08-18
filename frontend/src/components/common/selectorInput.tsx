@@ -1,9 +1,5 @@
 import React from "react";
-
-interface Option {
-  value: string;
-  label: string;
-}
+import type { Option } from "../../api/types";
 
 export function SelectInput({
   name,

@@ -460,12 +460,12 @@ export const bulkUploadStudents = async (req, res) => {
                             motherName: row.motherName ? String(row.motherName) : null,
                             motherEmail: row.motherEmail ? String(row.motherEmail) : null,
                             motherMobile: row.motherMobile ? String(row.motherMobile) : null,
-                            lastYearTotal: row.totalLastYearFees ? parseFloat(row.totalLastYearFees) : 0,
-                            lastYearTotalBalance: row.totalLastRemainingBalance ? parseFloat(row.totalLastRemainingBalance) : 0,
-                            lastYearTotalPaid: row.totalLastYearPaid ? parseFloat(row.totalLastYearPaid) : 0,
-                            currentYearTotal: row.totalCurrentYearFees ? parseFloat(row.totalCurrentYearFees) : 0,
-                            currentYearTotalPaid: row.totalCurrentYearPaid ? parseFloat(row.totalCurrentYearPaid) : 0,
-                            currentYearTotalBalance: row.currentYearTotalRemaningBalance ? parseFloat(row.currentYearTotalRemaningBalance) : 0,
+                            lastYearTotal: row.lastYearTotal ? parseFloat(row.lastYearTotal) : 0,
+                            lastYearTotalBalance: row.lastYearTotalBalance ? parseFloat(row.lastYearTotalBalance) : 0,
+                            lastYearTotalPaid: row.lastYearTotalPaid ? parseFloat(row.lastYearTotalPaid) : 0,
+                            currentYearTotal: row.currentYearTotal ? parseFloat(row.currentYearTotal) : 0,
+                            currentYearTotalPaid: row.currentYearTotalPaid ? parseFloat(row.currentYearTotalPaid) : 0,
+                            currentYearTotalBalance: row.currentYearTotalBalance ? parseFloat(row.currentYearTotalBalance) : 0,
                             father: fatherParent
                                 ? { connect: { id: String(fatherParent.id) } }
                                 : undefined,
@@ -597,7 +597,7 @@ export const fetchStudents = async (req, res) => {
                         },
                         include: {
                             student: {
-                                select: { name: true, rollNo: true, id: true }
+                                select: { name: true, rollNo: true, id: true, currentYearTotal: true, currentYearTotalBalance: true, currentYearTotalPaid: true, lastYearTotal: true, lastYearTotalBalance: true, lastYearTotalPaid: true }
                             }
                         }
                     }
@@ -608,6 +608,9 @@ export const fetchStudents = async (req, res) => {
                 name: enrollment.student.name,
                 rollNo: enrollment.student.rollNo,
                 studentId: enrollment.student.id,
+                totalFeesPaid: enrollment.student.currentYearTotalPaid + enrollment.student.lastYearTotalPaid,
+                totalPayable: enrollment.student.currentYearTotal + enrollment.student.lastYearTotal,
+                totalBalanceRemaining: enrollment.student.currentYearTotalBalance + enrollment.student.lastYearTotalBalance,
             })));
             return res.status(HTTP_STATUS.OK).json({
                 message: "Done",
