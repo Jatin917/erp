@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { roleDefaults } from "../../lib/permission";
+// import { roleDefaults } from "../../lib/permission";
 import { useUiStore } from "../../store/useUiStore";
 import { useLogin } from "../../hooks/authQuery";
 
@@ -7,10 +7,10 @@ export default function LoginPage() {
   const { darkMode: isDarkMode } = useUiStore();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState("");
-  const [setupKey, setSetupKey] = useState("");
+  // const [role, setRole] = useState("");
+  // const [setupKey, setSetupKey] = useState("");
 
-  const roleOptions = Object.keys(roleDefaults);
+  // const roleOptions = Object.keys(roleDefaults);
   const { mutate: login } = useLogin();
   useEffect(() => {
     if (isDarkMode) {
@@ -22,10 +22,10 @@ export default function LoginPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const data: any = { email, password, role };
-    if (role === "SUPERADMIN") {
-      data.setupKey = setupKey;
-    }
+    const data: any = { email, password };
+    // if (role === "SUPERADMIN") {
+    //   data.setupKey = setupKey;
+    // }
     login(data);
   };
 
@@ -54,7 +54,7 @@ export default function LoginPage() {
           required
         />
 
-        <select
+        {/* <select
           className="w-full px-4 py-2 border rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
           value={role}
           onChange={(e) => setRole(e.target.value)}
@@ -66,9 +66,9 @@ export default function LoginPage() {
               {r}
             </option>
           ))}
-        </select>
+        </select> */}
 
-        {role === "SUPERADMIN" && (
+        {/* {role === "SUPERADMIN" && (
           <input
             type="text"
             placeholder="Setup Key"
@@ -76,7 +76,7 @@ export default function LoginPage() {
             value={setupKey}
             onChange={(e) => setSetupKey(e.target.value)}
           />
-        )}
+        )} */}
 
         <div className="text-right">
           <a href="/forgot-password" className="text-sm text-blue-500 hover:underline">
