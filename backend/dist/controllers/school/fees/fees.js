@@ -42,21 +42,42 @@ export const feeDoc = async (req, res) => {
 };
 export const feeTransaction = async (req, res) => {
     try {
-        let { studentId, amountPaid, remarks, mode, createdById, referenceId } = req.body;
-        const feeDocs = await prisma.feeDoc.findMany({ where: { studentId },
-            orderBy: { createdAt: 'desc' }
+        let { studentId, amountPaid, remarks, mode, createdBy, referenceId } = req.body;
+        const data = await prisma.user.findFirst({
+            where: { email: createdBy },
+            select: { id: true },
+        });
+        //   console.log("data in backend ", data);
+        if (!data) {
+            return res.status(HTTP_STATUS.CONFLICT).json({
+                message: "Sorry you can't submit fees",
+                success: false,
+            });
+        }
+        const createdById = data.id;
+        const feeDocs = await prisma.feeDoc.findMany({
+            where: { studentId },
+            orderBy: { createdAt: 'desc' },
         });
         const totalDue = feeDocs.reduce((acc, feeDoc) => acc + (feeDoc.dueInSession || 0), 0);
         if (amountPaid > totalDue) {
-            return res.status(HTTP_STATUS.CONFLICT).json({ message: "Exceeded Amount Can't be paid ", success: false, AmountToPaid: totalDue });
+            return res.status(HTTP_STATUS.CONFLICT).json({
+                message: "Exceeded Amount Can't be paid",
+                success: false,
+                AmountToPaid: totalDue,
+            });
         }
         let amount = amountPaid;
+        // ✅ START transaction
         await prisma.$transaction(async (tx) => {
+            // Pay off feeDocs
             let i = 0;
             while (amountPaid > 0 && i < feeDocs.length) {
                 const feeDoc = feeDocs[i];
-                if (!feeDoc)
+                if (!feeDoc) {
+                    i++;
                     continue;
+                }
                 if (feeDoc.dueInSession > 0) {
                     const payment = Math.min(amountPaid, feeDoc.dueInSession);
                     feeDoc.paidInSession += payment;
@@ -72,19 +93,48 @@ export const feeTransaction = async (req, res) => {
                 }
                 i++;
             }
+            // Update student balances
+            const student = await tx.student.findUnique({ where: { id: studentId } });
+            if (student && student.lastYearTotalBalance > 0) {
+                amount -= student.lastYearTotalBalance;
+                await tx.student.update({
+                    where: { id: studentId },
+                    data: {
+                        lastYearTotalPaid: {
+                            increment: student.lastYearTotalBalance,
+                        },
+                        lastYearTotalBalance: 0,
+                    },
+                });
+            }
+            if (student && amount > 0 && student.currentYearTotalBalance > 0) {
+                amount -= student.currentYearTotalBalance;
+                await tx.student.update({
+                    where: { id: studentId },
+                    data: {
+                        currentYearTotalPaid: {
+                            increment: student.currentYearTotalBalance,
+                        },
+                        currentYearTotalBalance: 0,
+                    },
+                });
+            }
+            // ✅ Create feeTransaction with relations
+            await tx.feeTransaction.create({
+                data: {
+                    student: { connect: { id: studentId } },
+                    createdBy: { connect: { id: createdById } },
+                    amountPaid,
+                    remarks,
+                    mode: mode,
+                    referenceId,
+                },
+            });
         });
-        let student = await prisma.student.findUnique({ where: { id: studentId } });
-        if (student && student?.lastYearTotalBalance > 0) {
-            amount -= student.lastYearTotalBalance;
-            student.lastYearTotalPaid += student.lastYearTotalBalance;
-            student.lastYearTotalBalance = 0;
-        }
-        if (student && amount > 0 && student.currentYearTotalBalance > 0) {
-            amount -= student.currentYearTotalBalance;
-            student.currentYearTotalPaid += student.currentYearTotalBalance;
-            student.currentYearTotalBalance = 0;
-        }
-        return res.status(HTTP_STATUS.OK).json({ message: "Deposited", success: true });
+        return res.status(HTTP_STATUS.OK).json({
+            message: "Deposited",
+            success: true,
+        });
     }
     catch (error) {
         console.log(error);

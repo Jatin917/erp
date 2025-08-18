@@ -654,9 +654,8 @@ export const fetchStudents = async (req, res) => {
         });
         // Get total count
         let total = 0;
-        if (pageNumber !== -1)
-            total = await prisma.student.count({ where: whereClause });
-        res.status(200).json({
+        total = await prisma.student.count({ where: whereClause });
+        res.status(HTTP_STATUS.OK).json({
             success: true,
             data: students,
             pagination: {
