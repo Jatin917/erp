@@ -562,6 +562,7 @@ export const bulkUploadStudents = async (req, res) => {
 };
 export const fetchStudents = async (req, res) => {
     try {
+        console.log("filters ", req.query);
         const { createdBy, task, page, studentId, ...filters } = req.query;
         // Build dynamic where clause
         if (studentId)
@@ -570,32 +571,72 @@ export const fetchStudents = async (req, res) => {
             ...Object.fromEntries(Object.entries(filters).map(([key, value]) => [key, String(value)])),
         };
         // Pagination logic
-        const pageNumber = parseInt(page, 10) || 1;
+        const pageNumber = parseInt(page, 10);
         const pageSize = parseInt(LIMIT, 10) || 10;
-        const studentsRaw = await prisma.student.findMany({
-            where: whereClause,
-            skip: (pageNumber - 1) * pageSize,
-            take: pageSize,
-            orderBy: { createdAt: "desc" },
-            include: {
-                enrollments: {
-                    orderBy: { createdAt: "desc" },
-                    take: 1,
-                    select: {
-                        class: {
-                            select: {
-                                name: true,
-                                section: true
-                            },
+        let studentsRaw;
+        if (pageNumber === -1) {
+            // Return ALL students (no pagination)
+            studentsRaw = await prisma.class.findMany({
+                where: {
+                    name: filters.class,
+                    section: filters.section,
+                    enrollments: {
+                        some: {
+                            session: {
+                                name: filters.session
+                            }
+                        }
+                    }
+                },
+                include: {
+                    enrollments: {
+                        where: {
+                            session: {
+                                name: filters.session
+                            }
                         },
-                        rollNo: true
+                        include: {
+                            student: {
+                                select: { name: true, rollNo: true, id: true }
+                            }
+                        }
+                    }
+                }
+            });
+            // ✅ Extract only student names
+            const studentNames = studentsRaw.flatMap((cls) => cls.enrollments.map((enrollment) => ({
+                name: enrollment.student.name,
+                rollNo: enrollment.student.rollNo,
+                studentId: enrollment.student.id,
+            })));
+            return res.status(HTTP_STATUS.OK).json({
+                message: "Done",
+                success: true,
+                data: studentNames
+            });
+        }
+        else {
+            // Normal paginated fetch
+            studentsRaw = await prisma.student.findMany({
+                where: whereClause,
+                skip: (pageNumber - 1) * pageSize,
+                take: pageSize,
+                orderBy: { createdAt: "desc" },
+                include: {
+                    enrollments: {
+                        orderBy: { createdAt: "desc" },
+                        take: 1,
+                        select: {
+                            class: { select: { name: true, section: true } },
+                            rollNo: true,
+                        },
                     },
                 },
-            },
-        });
-        const students = studentsRaw.map(student => {
+            });
+        }
+        // Map student data
+        const students = studentsRaw.map((student) => {
             const latest = student.enrollments[0];
-            console.log("student ", student);
             return {
                 id: student.id,
                 name: student.name,
@@ -603,22 +644,23 @@ export const fetchStudents = async (req, res) => {
                 phone: student.fatherMobile,
                 admissionNo: student.admissionNo,
                 section: latest?.class.section,
-                // add any other student fields you want to expose here
                 barcodeUrl: student.barcodeUrl,
                 rollNo: latest?.rollNo || null,
                 class: latest?.class?.name || null,
             };
         });
-        // Get total count for frontend (optional but useful)
-        const total = await prisma.student.count({ where: whereClause });
+        // Get total count
+        let total = 0;
+        if (pageNumber !== -1)
+            total = await prisma.student.count({ where: whereClause });
         res.status(200).json({
             success: true,
             data: students,
             pagination: {
                 total,
                 page: pageNumber,
-                limit: pageSize,
-                totalPages: Math.ceil(total / pageSize),
+                limit: pageNumber === -1 ? total : pageSize,
+                totalPages: pageNumber === -1 ? 1 : Math.ceil(total / pageSize),
             },
         });
     }
