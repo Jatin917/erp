@@ -64,6 +64,7 @@ export default function AppRouter() {
           <Route path="users" element={<UsersPage />} />
           <Route path="reports" element={<ReportsPage />} />
           <Route path="settings" element={<SettingsPage />} />
+          <Route path="fee-transaction" element={<FeesPage />} />
           <Route path="school" element={<SchoolCreationPage />} />
         </Route>
 

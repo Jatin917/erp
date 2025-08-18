@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useStudentStore } from "../../store/studentStore";
-import { useUploadStudentsFromXlsx } from "../../hooks/studentQuery";
+import { useFetchStudents, useUploadStudentsFromXlsx } from "../../hooks/studentQuery";
 
 export default function StudentsPage() {
   const navigate = useNavigate();
@@ -23,7 +23,8 @@ export default function StudentsPage() {
     setIsSending(false);
   };
   // const [filters, setFilters] = useState<Record<string, any>>({page:page});
-  // const { isLoading, error } = useFetchStudents({ page });
+  //@ts-ignore
+  const { isLoading, error } = useFetchStudents({ page });
   // Pagination handlers
   const handlePrev = () => {
     if (page > 1) setPage(page - 1);

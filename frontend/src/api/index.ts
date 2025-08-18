@@ -114,9 +114,12 @@ export const bulkUploadStudents = async (formData: FormData) => {
 // Fetch students
 export const fetchStudents = async (filters: Record<string, any> = {}) => {
   const email = getCreatedBy();
-
+  let p = filters;
+  if(filters.filters){
+    p = filters.filters;
+  }
   const params = {
-    ...filters,
+    ...p,
     createdBy: email,
     task: "FETCH_STUDENTS",
   };
@@ -124,6 +127,25 @@ export const fetchStudents = async (filters: Record<string, any> = {}) => {
   const { data } = await API.get("/student/fetch", { params });
   return data;
 };
+
+
+
+export const feeDocApi = async (payload:any) => {
+  const email = getCreatedBy();
+    payload.createdBy = email;
+    payload.task = "CREATE_FEE_DOC";
+
+    const response = await API.post("/student/fee-doc", payload);
+    return response.data;
+    
+  };
+export const feeTransactionApi = async (payload:any) =>{
+  const email = getCreatedBy();
+  payload.createdBy= email;
+  payload.task= "RECORD_FEE_TRANSACTION";
+const { data } = await API.post("/student/fee-transaction", payload);
+return data;
+}
 
 
 

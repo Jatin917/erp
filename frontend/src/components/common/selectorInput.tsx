@@ -13,7 +13,7 @@ export function SelectInput({
   onChange,
 }: {
   name: string;
-  label: string;
+  label?: string;
   required?: boolean;
   options: Option[];
   onChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;

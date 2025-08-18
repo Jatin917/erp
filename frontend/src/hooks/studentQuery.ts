@@ -11,14 +11,14 @@ import type { StudentForm } from "../api/types";
 
 // Fetch paginated students
 export function useFetchStudents(filters: Record<string, any>={}) {
-  const { setStudents, appendStudents, setTotalPage } = useStudentStore();
+  const { setStudents, appendStudents, setTotalPage, resetForm } = useStudentStore();
   return useQuery({
-    queryKey: ["students", filters.page],
+    queryKey: ["students", JSON.stringify(filters)],
     queryFn: async () => {
       const data = await fetchStudents(filters);
-      console.log("students onSuccess", data);
-      setTotalPage(data.pagination.totalPages)
-      if (filters.page === 1) setStudents(data.data);
+      console.log("students onSuccess", data, filters.filters.page==="-1", typeof(filters.filters.page));
+      if(data.pagination) setTotalPage(data.pagination.totalPages)
+      if (filters.page === 1 || filters.filters.page==="-1") setStudents(data.data);
       else appendStudents(data.data);
       return data;
     },

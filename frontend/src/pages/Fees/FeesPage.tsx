@@ -1,36 +1,40 @@
-import Section from "../../components/common/Section";
-import DataTable from "../../components/common/DataTable";
-import Tag from "../../components/common/Tag";
-import Button from "../../components/common/Button";
-import PermissionGuard from "../../components/layout/PermissionGuard";
+import { useState } from "react";
+import FeesFilter from "../../components/fees/FeesFilter";
+import StudentSelector from "../../components/fees/StudentSelector";
+import StudentDetails from "../../components/fees/StudentDetail";
+import FeeTransactionForm from "../../components/fees/FeeTransactionForm";
+import { useFetchStudents } from "../../hooks/studentQuery";
+import { useStudentStore } from "../../store/studentStore";
 
-export default function FeesPage() {
-  const rows = [
-    { id: 1, name: "Aarav Sharma", className: "Grade 6", head: "Tuition", amount: 15000, paid: 12000, mode: "UPI" },
-  ];
+export default function StudentFeesPage() {
+  const [filters, setFilters] = useState<any>({});
+  const {studentsArray} = useStudentStore();
+  const [selectedStudent, setSelectedStudent] = useState<any>(null);
+  console.log("students array ", studentsArray);
+    //@ts-ignore
+    const { isLoading, error } = useFetchStudents({ filters });
+
   return (
-    <div className="space-y-4">
-      <Section
-        title="Fee Management"
-        action={
-          <PermissionGuard allowPermissions={["RECORD_FEE_TRANSACTION"]}>
-            <Button>New Transaction</Button>
-          </PermissionGuard>
-        }
-      />
-      <PermissionGuard allowPermissions={["VIEW_FEE_SUMMARY"]}>
-        <DataTable
-          columns={[
-            { key: "name", header: "Student" },
-            { key: "className", header: "Class" },
-            { key: "head", header: "Head" },
-            { key: "amount", header: "Payable", render: (v) => `₹ ${v.toLocaleString()}` },
-            { key: "paid", header: "Paid", render: (v) => `₹ ${v.toLocaleString()}` },
-            { key: "mode", header: "Mode", render: (v) => <Tag tone="slate">{v}</Tag> },
-          ]}
-          data={rows}
-        />
-      </PermissionGuard>
+    <div className="min-h-screen bg-[#212529] text-white p-6">
+      <h1 className="text-2xl font-bold mb-6">Student Fees Management</h1>
+
+      {/* Filter Section */}
+      <div className="mb-6">
+        <FeesFilter onFilterChange={setFilters} />
+      </div>
+
+      {/* Student Selector */}
+      <div className="mb-6">
+        <StudentSelector students={studentsArray} filters={filters} onSelectStudent={setSelectedStudent} />
+      </div>
+
+      {/* Student Details + Transaction Form */}
+      {selectedStudent && (
+        <div className="space-y-6">
+          <StudentDetails student={selectedStudent} />
+          <FeeTransactionForm student={selectedStudent} />
+        </div>
+      )}
     </div>
   );
 }
