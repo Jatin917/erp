@@ -3,6 +3,7 @@ export declare const JWT_SECRET: string;
 export declare const SUPERADMIN_EMAIL: string | undefined;
 export declare const SUPERADMIN_PASSWORD: string | undefined;
 export declare const defaultPassword: string;
+export declare const PHOTO_URL: string;
 export declare const otpStorage: Map<string, {
     otp: number;
     expiresAt: number;

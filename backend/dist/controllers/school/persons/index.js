@@ -81,11 +81,11 @@ export const changePassword = async (req, res) => {
 };
 export const login = async (req, res) => {
     try {
-        const { email, password, setupKey, role } = req.body;
-        if (!email || !password || !role) {
+        const { email, password, setupKey } = req.body;
+        if (!email || !password) {
             return res.status(400).json({ message: "Please enter required fields" });
         }
-        let user = await prisma.user.findFirst({ where: { email, role: { has: role } }, include: { principalAssignment: true } });
+        let user = await prisma.user.findFirst({ where: { email }, include: { principalAssignment: true } });
         // First user creation (SuperAdmin bootstrap)
         const userCount = await prisma.user.count();
         if (userCount === 0) {

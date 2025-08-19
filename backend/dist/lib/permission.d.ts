@@ -23,4 +23,17 @@ export declare const roleDefaults: {
     readonly FATHER: readonly ["VIEW_NOTIFICATIONS"];
     readonly MOTHER: readonly ["VIEW_NOTIFICATIONS"];
 };
+export declare const rolesAre: {
+    readonly SUPERADMIN: "SUPERADMIN";
+    readonly DIRECTOR: "DIRECTOR";
+    readonly PRINCIPAL: "PRINCIPAL";
+    readonly TEACHER: "TEACHER";
+    readonly LIBRARIAN: "LIBRARIAN";
+    readonly RECEPTIONIST: "RECEPTIONIST";
+    readonly ACCOUNTANT: "ACCOUNTANT";
+    readonly SCHOOL_ADMIN: "SCHOOL_ADMIN";
+    readonly STUDENT: "STUDENT";
+    readonly FATHER: "FATHER";
+    readonly MOTHER: "MOTHER";
+};
 //# sourceMappingURL=permission.d.ts.map

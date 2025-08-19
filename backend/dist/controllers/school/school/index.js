@@ -6,6 +6,7 @@ import multer from "multer";
 import path from "path";
 import bcrypt from 'bcrypt';
 import fs from "fs";
+import { roleDefaults, rolesAre } from "../../../lib/permission.js";
 // Updated createBranch to accept tx for transactions
 const createBranch = async (tx, address, principalId, name, schoolId) => {
     try {
@@ -122,6 +123,77 @@ export const createSchool = async (req, res) => {
         if (file && fs.existsSync(file.path)) {
             fs.unlinkSync(file.path); // clean temp file if error
         }
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({
+            success: false,
+            message: error.message,
+        });
+    }
+};
+export const getSchools = async (req, res) => {
+    let { roles, createdBy } = req.query;
+    roles = JSON.parse(roles);
+    let schools = [];
+    try {
+        if (!roles || !createdBy) {
+            return res
+                .status(HTTP_STATUS.BAD_REQUEST)
+                .json({ success: false, message: "Fill required fields" });
+        }
+        const user = await prisma.user.findFirst({ where: { email: createdBy } });
+        if (!user) {
+            return res
+                .status(HTTP_STATUS.BAD_REQUEST)
+                .json({ success: false, message: "User not found" });
+        }
+        // SUPERADMIN: return all branches
+        if (roles.includes(rolesAre.SUPERADMIN)) {
+            const branches = await prisma.branch.findMany();
+            schools = branches.map(branch => ({
+                label: `${branch.name} ${branch.address}`, // Combine name and address into label
+                value: branch.id, // Set the value as branch id
+            }));
+            return res.status(HTTP_STATUS.OK).json({
+                success: true,
+                message: "Found All Branches",
+                schools,
+            });
+        }
+        // DIRECTOR: get schools + their branches
+        if (roles.includes(rolesAre.DIRECTOR)) {
+            const foundSchools = await prisma.school.findMany({
+                where: { createdById: user.id },
+                include: { branches: true },
+            });
+            // Flatten all branches from all schools and format them
+            foundSchools.forEach((school) => {
+                if (school.branches?.length) {
+                    school.branches.forEach((branch) => {
+                        schools.push({
+                            label: `${branch.name} ${branch.address}`,
+                            value: branch.id,
+                        });
+                    });
+                }
+            });
+        }
+        // PRINCIPAL: get branches directly assigned
+        if (roles.includes(rolesAre.PRINCIPAL)) {
+            const foundBranches = await prisma.branch.findMany({
+                where: { principalId: user.id },
+            });
+            schools = foundBranches.map((branch) => ({
+                label: `${branch.name} ${branch.address}`,
+                value: branch.id,
+            }));
+        }
+        return res.status(HTTP_STATUS.OK).json({
+            success: true,
+            message: "Found All Branches",
+            schools,
+        });
+    }
+    catch (error) {
+        console.log(error);
         return res.status(HTTP_STATUS.BAD_REQUEST).json({
             success: false,
             message: error.message,

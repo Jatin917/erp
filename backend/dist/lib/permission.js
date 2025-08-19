@@ -137,4 +137,17 @@ export const roleDefaults = {
         "VIEW_NOTIFICATIONS"
     ],
 };
+export const rolesAre = {
+    SUPERADMIN: "SUPERADMIN",
+    DIRECTOR: "DIRECTOR",
+    PRINCIPAL: "PRINCIPAL",
+    TEACHER: "TEACHER",
+    LIBRARIAN: "LIBRARIAN",
+    RECEPTIONIST: "RECEPTIONIST",
+    ACCOUNTANT: "ACCOUNTANT",
+    SCHOOL_ADMIN: "SCHOOL_ADMIN",
+    STUDENT: "STUDENT",
+    FATHER: "FATHER",
+    MOTHER: "MOTHER",
+};
 //# sourceMappingURL=permission.js.map

@@ -19,6 +19,7 @@ export const JWT_SECRET = process.env.JWT_SECRET || 'secret';
 export const SUPERADMIN_EMAIL = process.env.SUPER_ADMIN_EMAIL;
 export const SUPERADMIN_PASSWORD = process.env.SUPER_ADMIN_PASSWORD;
 export const defaultPassword = process.env.DEFAULT_PASSWORD || "secret";
+export const PHOTO_URL = process.env.PHOTO_URL || `http://localhost:${PORT}`;
 const app = express();
 export const otpStorage = new Map();
 export const emailVerified = new Map();

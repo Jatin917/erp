@@ -2,9 +2,17 @@ import { HTTP_STATUS } from "../../lib/http-codes.js";
 import { prisma } from "../../server.js";
 export const isPermitted = async (req, res, next) => {
     try {
-        console.log("req ", req.body);
-        const userId = req.body.createdBy; // Better: use req.user.id from auth middleware
-        const task = req.body.task;
+        console.log("req ", req.body, req.query);
+        let userId = null; // Better: use req.user.id from auth middleware
+        let task = null;
+        if (req.body) {
+            userId = req.body.createdBy;
+            task = req.body.task;
+        }
+        else if (req.query) {
+            userId = req.query.createdBy;
+            task = req.query.task;
+        }
         console.log("isPermitted ", userId, task);
         if (!userId || !task) {
             return res.status(HTTP_STATUS.BAD_REQUEST).json({
@@ -16,6 +24,7 @@ export const isPermitted = async (req, res, next) => {
             where: { email: userId },
             select: { permissions: true }
         });
+        console.log("user permissions ", user?.permissions);
         if (!user || !Array.isArray(user.permissions)) {
             return res.status(HTTP_STATUS.FORBIDDEN).json({
                 success: false,
@@ -23,8 +32,10 @@ export const isPermitted = async (req, res, next) => {
             });
         }
         if (user.permissions.includes(task) || user.permissions.includes("ALL")) {
-            const { task, createdBy, ...data } = req.body;
-            req.body = data;
+            if (req.body) {
+                const { task, createdBy, ...data } = req.body;
+                req.body = data;
+            }
             return next(); // ✅ Stop execution after calling next()
         }
         return res.status(HTTP_STATUS.FORBIDDEN).json({
