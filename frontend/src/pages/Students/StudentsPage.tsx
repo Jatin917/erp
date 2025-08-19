@@ -2,6 +2,9 @@ import {  useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useStudentStore } from "../../store/studentStore";
 import { useFetchStudents, useUploadStudentsFromXlsx } from "../../hooks/studentQuery";
+import { useFetchSchools } from "../../hooks/schoolQuery";
+import { SelectInput } from "../../components/common/selectorInput";
+import type { Option } from "../../api/types";
 
 export default function StudentsPage() {
   const navigate = useNavigate();
@@ -12,6 +15,12 @@ export default function StudentsPage() {
   const [isSending, setIsSending] = useState(false);
   const { mutate: bulkUploadStudents } = useUploadStudentsFromXlsx();
   const [page, setPage] = useState(1);
+  const [selectedSchool, setSelectedSchool] = useState<string>("");
+  const queryParams: Record<string, any> = { page };
+  if (selectedSchool) {
+    queryParams.branchId = selectedSchool;
+  }
+
 
   const handleBulkUpload = async () => {
     if (!file) return;
@@ -24,7 +33,9 @@ export default function StudentsPage() {
   };
   // const [filters, setFilters] = useState<Record<string, any>>({page:page});
   //@ts-ignore
-  const { isLoading, error } = useFetchStudents({ page });
+  const { isLoading, error } = useFetchStudents({ queryParams });
+  //@ts-ignore
+  const {data:schools, isLoading:loading} = useFetchSchools();
   // Pagination handlers
   const handlePrev = () => {
     if (page > 1) setPage(page - 1);
@@ -96,8 +107,15 @@ export default function StudentsPage() {
       {/* Scrollable Content Area */}
       <div className="flex-1 w-full ">
         <div className="max-w-7xl mx-auto p-4 md:p-6">
+          {schools && <SelectInput 
+            name="schools"
+            label="Schools"
+            required={false}
+            options={schools as Option[]}
+            onChange={(e)=>setSelectedSchool(e.target.value)}
+          />}
           <div
-            className="w-full rounded-2xl overflow-hidden flex flex-col"
+            className="mt-[10px] w-full rounded-2xl overflow-hidden flex flex-col"
             style={{
               background: "var(--card-bg)",
               border: "1px solid var(--border-primary)",

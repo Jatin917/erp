@@ -53,12 +53,26 @@ interface Props {
             placeholder="Reference Id"
             onChange={(e)=>setField("referenceId", e.target.value)}
           />
-          <button
-            type="submit"
-            className="w-full py-2 rounded bg-[#4dabf7] hover:bg-blue-500 text-black font-semibold"
-          >
-            Submit Transaction
-          </button>
+          <div className="flex justify-between gap-4">
+  <button
+    type="submit"
+    className="w-full py-2 rounded bg-[#4dabf7] hover:bg-blue-500 text-black font-semibold"
+  >
+    Submit Transaction
+  </button>
+
+  <button
+    type="button"
+    className="w-full py-2 rounded bg-[#42f57e] hover:bg-green-500 text-black font-semibold"
+    onClick={() => {
+      // Replace this with navigation or modal logic
+      console.log("Viewing receipt for:", student.studentId);
+    }}
+  >
+    View Receipt
+  </button>
+</div>
+
         </form>
       </div>
     );

@@ -83,8 +83,20 @@ export const createSchool = async (authdata: {
   
     return data;
   };
-  export const createStudentApi = async (studentData: any) => {
-    console.log("student data ", studentData);
+
+export const fetchSchools = async()=>{
+  const email = getCreatedBy();
+  const roles = JSON.parse(localStorage.getItem("auth-store") as string).state.roles;
+  const payload: { createdBy: string; roles: string } = {
+    createdBy: email,
+    roles:JSON.stringify(roles)
+  };
+
+  const { data } = await API.get("/school/get-schools", { params: payload });
+  return data;
+}
+export const createStudentApi = async (studentData: any) => {
+  console.log("student data ", studentData);
     const email = getCreatedBy();
     const branchId = JSON.parse(localStorage.getItem("auth-store") as  string).state.user.branchId;
     const payload = {
@@ -115,6 +127,9 @@ export const bulkUploadStudents = async (formData: FormData) => {
 export const fetchStudents = async (filters: Record<string, any> = {}) => {
   const email = getCreatedBy();
   let p = filters;
+  if(filters.queryParams){
+    p = filters.queryParams
+  }
   if(filters.filters){
     p = filters.filters;
   }

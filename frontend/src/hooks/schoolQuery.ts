@@ -1,7 +1,8 @@
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import type { AxiosError } from "axios";
-import { createSchool as createSchoolApi } from "../api/index"; // <- API call
+import { createSchool as createSchoolApi, fetchSchools } from "../api/index"; // <- API call
+import { useSchoolStore } from "../store/schoolStore";
 // import type { ApiError } from "../api/types"; // { message: string }
 
 // Payload type (adjust fields as per your API)
@@ -38,6 +39,29 @@ export const useCreateSchool = () => {
         error?.message ||
         "Failed to create school";
       toast.error(message);
+    },
+  });
+};
+
+export const useFetchSchools = () => {
+  const { setSchools } = useSchoolStore();
+
+  return useQuery<
+    { schools: { label: string; value: string }[] }, // Expected data format
+    Error // Error type
+  >({
+    queryKey: ["schools"],
+    queryFn: async () => {
+      const response = await fetchSchools(); // Ensure this returns { schools: [...] }
+      return response.schools;
+    },
+    // @ts-ignore
+    onSuccess: (data:any) => {
+      setSchools(data); // Assuming setSchools expects this format
+    },
+    onError: (error:any) => {
+      const errorMessage = error?.response?.data?.message || error.message || "Failed to fetch schools";
+      toast.error(errorMessage);
     },
   });
 };

@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { SelectInput } from "../common/selectorInput";
+import { academicSessions } from "../../services";
 
 interface SchoolDetailsFormProps {
   onNext: () => void;
@@ -91,22 +93,13 @@ export default function SchoolDetailsForm({
           required
         />
       </div>
-
-      {/* Current Session */}
-      <div>
-        <label className="block text-sm font-medium mb-1 dark:text-gray-200">
-          Current Academic Session <span className="text-red-500">*</span>
-        </label>
-        <input
-          type="text"
-          value={currentSession}
+        <SelectInput 
+          name="currentSession"
+          label="Current Session"
+          required={true}
+          options={academicSessions}
           onChange={(e) => setCurrentSession(e.target.value)}
-          className="w-full border px-3 py-2 rounded-md dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100"
-          placeholder="e.g. 2025-26"
-          required
         />
-      </div>
-
       {/* Next Button */}
       <button
         onClick={handleNext}

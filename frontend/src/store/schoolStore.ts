@@ -14,6 +14,9 @@ interface SchoolState {
   currentSession:string;
   director: ContactInfo;
   principal: ContactInfo;
+  schools:any[];
+  setSchools: (schools: any[]) => void;
+  clearSchools: () => void;
   updateField: (field: keyof SchoolState, value: any) => void;
   updateRoleField: (role: ContactRole, field: keyof ContactInfo, value: any) => void;
   resetVerification: (role: ContactRole, type: ContactType) => void;
@@ -42,7 +45,10 @@ export const useSchoolStore = create<SchoolState>((set) => ({
     isVerifiedPhone: false,
     assignMyself: false,
   },
-
+  schools: [],
+// for whole schools
+  setSchools: (schools) => set({ schools }),
+  clearSchools: () => set({ schools: [] }),
   // ✅ Update top-level school fields
   updateField: (field, value) =>
     set((state) => ({
@@ -70,3 +76,4 @@ export const useSchoolStore = create<SchoolState>((set) => ({
       },
     })),
 }));
+

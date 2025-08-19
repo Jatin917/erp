@@ -11,7 +11,7 @@ import type { StudentForm } from "../api/types";
 
 // Fetch paginated students
 export function useFetchStudents(filters: Record<string, any>={}) {
-  const { setStudents, appendStudents, setTotalPage } = useStudentStore();
+  const { setStudents, setTotalPage } = useStudentStore();
   return useQuery({
     queryKey: ["students", JSON.stringify(filters)],
     queryFn: async () => {
@@ -19,8 +19,8 @@ export function useFetchStudents(filters: Record<string, any>={}) {
       try{
         data = await fetchStudents(filters);
         if(data.pagination) setTotalPage(data.pagination.totalPages)
-        if (filters.page === 1 || (filters.filters && filters.filters.page==="-1")) setStudents(data.data);
-        else appendStudents(data.data);
+          setStudents(data.data);
+        // else appendStudents(data.data);
         return data;
       }
       catch(err){
