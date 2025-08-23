@@ -226,3 +226,5 @@ export type PaymentMode =
     { value: "CARD", label: "Card" },
   ];
   
+  export type SchoolType =
+    {name:string, id:string, logo:string}

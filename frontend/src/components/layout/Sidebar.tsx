@@ -1,26 +1,31 @@
 import { Link, useLocation } from "react-router-dom";
 import { useMemo } from "react";
-import { LayoutDashboard, Users, School, DollarSign, Calendar, Shield, FileText, Settings, X, ChevronRight } from "lucide-react";
+import { LayoutDashboard, Users, School, DollarSign, Calendar, Shield, FileText, Settings, ChevronRight } from "lucide-react";
 import { useAuthStore } from "../../store/authStore";
 import { useUiStore } from "../../store/useUiStore";
 import PermissionGuard from "./PermissionGuard";
+import { useSchoolStore } from "@/store/schoolStore";
+import { parseUrl } from "@/lib/utils";
 
 const nav = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard, roles: null },
-  { to: "/school", label: "School", icon: School, roles: ["SUPERADMIN", "DIRECTOR", "PRINCIPAL","TEACHER","SCHOOL_ADMIN","RECEPTIONIST"] },
-  { to: "/students", label: "Students", icon: Users, roles: ["SUPERADMIN","DIRECTOR","PRINCIPAL","TEACHER","SCHOOL_ADMIN","RECEPTIONIST"] },
-  { to: "/classes", label: "Classes", icon: School, roles: ["SUPERADMIN","DIRECTOR","PRINCIPAL","TEACHER","SCHOOL_ADMIN"] },
-  { to: "/fees", label: "Fees", icon: DollarSign, roles: ["SUPERADMIN","DIRECTOR","PRINCIPAL","ACCOUNTANT","SCHOOL_ADMIN"] },
-  { to: "/sessions", label: "Sessions", icon: Calendar, roles: ["SUPERADMIN","DIRECTOR","PRINCIPAL","SCHOOL_ADMIN"] },
-  { to: "/users", label: "Users", icon: Shield, roles: ["SUPERADMIN","DIRECTOR","PRINCIPAL","SCHOOL_ADMIN"] },
-  { to: "/reports", label: "Reports", icon: FileText, roles: ["SUPERADMIN","DIRECTOR","PRINCIPAL","ACCOUNTANT","SCHOOL_ADMIN"] },
+  { to: "/school", label: "School", icon: School, roles: ["SUPERADMIN", "DIRECTOR", "PRINCIPAL", "TEACHER", "SCHOOL_ADMIN", "RECEPTIONIST"] },
+  { to: "/students", label: "Students", icon: Users, roles: ["SUPERADMIN", "DIRECTOR", "PRINCIPAL", "TEACHER", "SCHOOL_ADMIN", "RECEPTIONIST"] },
+  { to: "/classes", label: "Classes", icon: School, roles: ["SUPERADMIN", "DIRECTOR", "PRINCIPAL", "TEACHER", "SCHOOL_ADMIN"] },
+  { to: "/fees", label: "Fees", icon: DollarSign, roles: ["SUPERADMIN", "DIRECTOR", "PRINCIPAL", "ACCOUNTANT", "SCHOOL_ADMIN"] },
+  { to: "/sessions", label: "Sessions", icon: Calendar, roles: ["SUPERADMIN", "DIRECTOR", "PRINCIPAL", "SCHOOL_ADMIN"] },
+  { to: "/users", label: "Users", icon: Shield, roles: ["SUPERADMIN", "DIRECTOR", "PRINCIPAL", "SCHOOL_ADMIN"] },
+  { to: "/reports", label: "Reports", icon: FileText, roles: ["SUPERADMIN", "DIRECTOR", "PRINCIPAL", "ACCOUNTANT", "SCHOOL_ADMIN"] },
   { to: "/settings", label: "Settings", icon: Settings, roles: null },
 ];
 
 export default function Sidebar() {
   const { roles } = useAuthStore();
-  const { sidebarOpen, setSidebar } = useUiStore();
+  const { sidebarOpen } = useUiStore();
   const loc = useLocation();
+  const {activeSchool} = useSchoolStore();
+
+
 
   const items = useMemo(
     () => nav.filter((n) => !n.roles || n.roles.some((r) => roles.includes(r as any))),
@@ -28,23 +33,40 @@ export default function Sidebar() {
   );
 
   return (
-    <aside className={`${sidebarOpen ? "translate-x-0" : "-translate-x-full"} fixed z-40 h-full w-72 bg-sidebar backdrop-blur border-r border-primary p-3 transition-transform ease-in-out md:static md:translate-x-0`}>
-      <div className="flex items-center justify-between mb-2">
-        <Link to="/" className="flex items-center gap-2 font-semibold text-primary">
-          <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-accent text-white font-bold">SE</span>
-          <span>School ERP</span>
-        </Link>
-        <button onClick={() => setSidebar(false)} className="md:hidden p-2 rounded-xl hover:bg-card text-secondary transition-colors">
-          <X className="h-5 w-5" />
-        </button>
+    <aside
+      className={`${sidebarOpen ? "translate-x-0" : "-translate-x-full"} fixed z-40 h-full w-72 bg-sidebar backdrop-blur border-r border-primary p-3 transition-transform ease-in-out md:static md:translate-x-0 flex flex-col`}
+    >
+      {/* Centered logo + name */}
+      <div className="flex flex-col h-auto items-center justify-center">
+        {activeSchool?.logo ? (
+          <img
+            src={parseUrl(activeSchool.logo)}
+            alt={activeSchool.name}
+            className="h-20 w-20 rounded-xl object-cover"
+          />
+        ) : (
+          <span className="inline-flex h-20 w-20 items-center justify-center rounded-xl bg-accent text-white font-bold">
+            SE
+          </span>
+        )}
+        <span className="mt-2 font-semibold text-primary">
+          {activeSchool?.name || "School ERP"}
+        </span>
       </div>
-
-      <nav className="mt-2 space-y-1">
+  
+      {/* Navigation */}
+      <nav className="mt-4 space-y-1">
         {items.map((n) => {
           const active = loc.pathname === n.to;
           const Icon = n.icon;
           return (
-            <Link key={n.to} to={n.to} className={`group flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-card text-secondary transition-colors ${active ? "bg-card text-primary" : ""}`}>
+            <Link
+              key={n.to}
+              to={n.to}
+              className={`group flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-card text-secondary transition-colors ${
+                active ? "bg-card text-primary" : ""
+              }`}
+            >
               <Icon className="h-5 w-5 opacity-80" />
               <span className="font-medium">{n.label}</span>
               <ChevronRight className="ml-auto h-4 w-4 opacity-0 group-hover:opacity-100" />
@@ -52,11 +74,13 @@ export default function Sidebar() {
           );
         })}
       </nav>
-
-      {/* Example: a fee widget visible only to roles with fee summary permission */}
+  
+      {/* Quick stats at bottom */}
       <PermissionGuard allowPermissions={["VIEW_FEE_SUMMARY"]}>
-        <div className="mt-6 p-3 rounded-2xl bg-card border border-primary">
-          <div className="text-xs uppercase tracking-wider opacity-60 text-secondary">Quick Stats</div>
+        <div className="mt-auto p-3 rounded-2xl bg-card border border-primary">
+          <div className="text-xs uppercase tracking-wider opacity-60 text-secondary">
+            Quick Stats
+          </div>
           <div className="mt-2 grid grid-cols-2 gap-2 text-sm">
             <div className="p-2 rounded-xl bg-secondary border border-primary">
               <div className="opacity-60 text-secondary">Students</div>
@@ -71,4 +95,5 @@ export default function Sidebar() {
       </PermissionGuard>
     </aside>
   );
+  
 }

@@ -1,6 +1,6 @@
 // stores/schoolStore.ts
 import { create } from "zustand";
-import type { ContactInfo } from "../api/types";
+import type { ContactInfo, SchoolType } from "../api/types";
 
 type ContactRole = "director" | "principal";
 type ContactType = "email" | "phone";
@@ -15,7 +15,9 @@ interface SchoolState {
   director: ContactInfo;
   principal: ContactInfo;
   schools:any[];
-  setSchools: (schools: any[]) => void;
+  activeSchool:SchoolType;
+  setSchools: (schools: SchoolType[]) => void;
+  setActiveSchool:(school:SchoolType)=>void;
   clearSchools: () => void;
   updateField: (field: keyof SchoolState, value: any) => void;
   updateRoleField: (role: ContactRole, field: keyof ContactInfo, value: any) => void;
@@ -46,6 +48,8 @@ export const useSchoolStore = create<SchoolState>((set) => ({
     assignMyself: false,
   },
   schools: [],
+  activeSchool:{name:"", id:"",logo:""},
+  setActiveSchool:(school)=>set({activeSchool:school}),
 // for whole schools
   setSchools: (schools) => set({ schools }),
   clearSchools: () => set({ schools: [] }),

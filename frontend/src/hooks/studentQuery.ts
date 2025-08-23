@@ -42,6 +42,7 @@ export function useSampleSheetBulkUpload() {
       return data;
     },
     enabled: false, // 🚀 don't fetch automatically
+    // @ts-ignore
     onError: (error: Error) => {
       toast.error("Failed to download sheet");
       console.log(error.message);

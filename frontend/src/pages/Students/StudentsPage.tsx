@@ -1,28 +1,24 @@
 import {  useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useStudentStore } from "../../store/studentStore";
-import { useFetchStudents, useUploadStudentsFromXlsx } from "../../hooks/studentQuery";
-import { useFetchSchools } from "../../hooks/schoolQuery";
-import { SelectInput } from "../../components/common/selectorInput";
-import type { Option } from "../../api/types";
+import { useFetchStudents} from "../../hooks/studentQuery";
+import { parseUrl } from "@/lib/utils";
+import { useSchoolStore } from "@/store/schoolStore";
 
 export default function StudentsPage() {
   const navigate = useNavigate();
   const { studentsArray: students, totalPages } = useStudentStore();
-  console.log("students array is ", students);
   const [page, setPage] = useState(1);
-  const [selectedSchool, setSelectedSchool] = useState<string>("");
+  const {activeSchool} = useSchoolStore();
   const queryParams: Record<string, any> = { page };
-  if (selectedSchool) {
-    queryParams.branchId = selectedSchool;
+  if (activeSchool) {
+    queryParams.branchId = activeSchool.id;
   }
 
 
   // const [filters, setFilters] = useState<Record<string, any>>({page:page});
   //@ts-ignore
   const { isLoading, error } = useFetchStudents({ queryParams });
-  //@ts-ignore
-  const {data:schools, isLoading:loading} = useFetchSchools();
   // Pagination handlers
   const handlePrev = () => {
     if (page > 1) setPage(page - 1);
@@ -36,17 +32,9 @@ export default function StudentsPage() {
       className="w-full flex flex-col overflow-hidden"
       style={{ background: "var(--bg-primary)", color: "var(--text-primary)" }}
     >
-  
       {/* Scrollable Content Area */}
-      <div className="flex-1 w-full ">
-        <div className="max-w-7xl mx-auto p-4 md:p-6">
-          {schools && <SelectInput 
-            name="schools"
-            label="Schools"
-            required={false}
-            options={schools as Option[]}
-            onChange={(e)=>setSelectedSchool(e.target.value)}
-          />}
+      <div className="flex-1 w-full">
+  
           <div
             className="mt-[10px] w-full rounded-2xl overflow-hidden flex flex-col"
             style={{
@@ -79,44 +67,36 @@ export default function StudentsPage() {
                 </thead>
                 <tbody>
                   {students?.length ? (
-                    students.map((s: any, i: number) => {
-                      const barcodeSrc = s.barcodeUrl
-                        ? `${import.meta.env.VITE_BACKEND_URL_STATIC}/${s.barcodeUrl.replace(
-                            /\\/g,
-                            "/"
-                          )}`
-                        : null;
-                      return (
-                        <tr
-                          key={s.id}
-                          className={`cursor-pointer hover:bg-[var(--bg-secondary)] transition-colors ${
-                            i % 2 === 0
-                              ? "bg-[var(--card-bg)]"
-                              : "bg-[var(--bg-secondary)]"
-                          }`}
-                          style={{ borderTop: "1px solid var(--border-secondary)" }}
-                          onClick={() => navigate(`/students/details/${s.id}`)}
-                        >
-                          <td className="px-4 py-3">{s.name}</td>
-                          <td className="px-4 py-3">{s.admissionNo || "—"}</td>
-                          <td className="px-4 py-3">{s.class || "—"}</td>
-                          <td className="px-4 py-3">{s.section || "—"}</td>
-                          <td className="px-4 py-3">{s.rollNo || "—"}</td>
-                          <td className="px-4 py-3">{s.phone || "—"}</td>
-                          <td className="px-4 py-3">
-                            {barcodeSrc ? (
-                              <img
-                                src={barcodeSrc}
-                                alt="Barcode"
-                                className="h-24 w-auto object-contain"
-                              />
-                            ) : (
-                              "—"
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })
+                    students.map((s: any, i: number) => (
+                      <tr
+                        key={s.id}
+                        className={`cursor-pointer hover:bg-[var(--bg-secondary)] transition-colors ${
+                          i % 2 === 0
+                            ? "bg-[var(--card-bg)]"
+                            : "bg-[var(--bg-secondary)]"
+                        }`}
+                        style={{ borderTop: "1px solid var(--border-secondary)" }}
+                        onClick={() => navigate(`/students/details/${s.id}`)}
+                      >
+                        <td className="px-4 py-3">{s.name}</td>
+                        <td className="px-4 py-3">{s.admissionNo || "—"}</td>
+                        <td className="px-4 py-3">{s.class || "—"}</td>
+                        <td className="px-4 py-3">{s.section || "—"}</td>
+                        <td className="px-4 py-3">{s.rollNo || "—"}</td>
+                        <td className="px-4 py-3">{s.phone || "—"}</td>
+                        <td className="px-4 py-3">
+                          {s.barcodeUrl ? (
+                            <img
+                              src={parseUrl(s.barcodeUrl)}
+                              alt="Barcode"
+                              className="h-24 w-auto object-contain"
+                            />
+                          ) : (
+                            "—"
+                          )}
+                        </td>
+                      </tr>
+                    ))
                   ) : (
                     <tr>
                       <td
@@ -167,7 +147,7 @@ export default function StudentsPage() {
           </div>
         </div>
       </div>
-      </div>
   );
+  
   
 }

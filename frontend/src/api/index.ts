@@ -1,5 +1,6 @@
 import axios from "axios";
 import type { Permission, Role } from "./types";
+import { PermissionConstant } from "@/lib/permission";
 
 export const API=axios.create({
     baseURL:import.meta.env.VITE_BACKEND_URL
@@ -132,6 +133,31 @@ export const downloadSampleSheetForBulkUpload = async () => {;
 
   return data;
 };
+
+export const createClassApi = async (authdata:any) =>{
+  const email = getCreatedBy();
+  authdata = {...authdata, email, task:PermissionConstant.CREATE_CLASS};
+  const {data} = await API.post("/school/create-class", authdata);
+  return data;
+}
+export const createSectionApi = async (authdata:any) =>{
+  const email = getCreatedBy();
+  authdata = {...authdata, email, task:PermissionConstant.CREATE_CLASS};
+  const {data} = await API.post("/school/create-section", authdata);
+  return data;
+}
+export const getAllClassApi = async (params:any) =>{
+  const email = getCreatedBy();
+  params = {...params, email, task:PermissionConstant.VIEW_CLASS};
+  const {data} = await API.get("/school/get-class", {params});
+  return data;
+}
+export const getAllSectionApi = async (params:any) =>{
+  const email = getCreatedBy();
+  params = {...params, email, task:PermissionConstant.VIEW_CLASS};
+  const {data} = await API.get("/school/get-section", {params});
+  return data;
+}
 
 // Fetch students
 export const fetchStudents = async (filters: Record<string, any> = {}) => {

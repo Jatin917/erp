@@ -1,8 +1,9 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import type { AxiosError } from "axios";
-import { createSchool as createSchoolApi, fetchSchools } from "../api/index"; // <- API call
-import { useSchoolStore } from "../store/schoolStore";
+import { createClassApi, createSchool as createSchoolApi, createSectionApi, fetchSchools, getAllClassApi, getAllSectionApi } from "@/api/index"; // <- API call
+import { useSchoolStore } from "@/store/schoolStore";
+import type { SchoolType } from "@/api/types";
 // import type { ApiError } from "../api/types"; // { message: string }
 
 // Payload type (adjust fields as per your API)
@@ -13,7 +14,7 @@ export type CreateSchoolPayload = {
   director: {
     name?:string;
     email:string
-  };
+};
   principal:{
     name?:string;
     email:string;
@@ -44,24 +45,90 @@ export const useCreateSchool = () => {
 };
 
 export const useFetchSchools = () => {
-  const { setSchools } = useSchoolStore();
+  const { setSchools, setActiveSchool } = useSchoolStore();
 
-  return useQuery<
-    { schools: { label: string; value: string }[] }, // Expected data format
-    Error // Error type
-  >({
+  return useQuery<SchoolType[], Error>({
     queryKey: ["schools"],
     queryFn: async () => {
-      const response = await fetchSchools(); // Ensure this returns { schools: [...] }
-      return response.schools;
+      const data = await fetchSchools();
+      setSchools(data.schools)
+      return data.schools;
     },
+    staleTime: 0, // always refetch on mount
+    refetchOnMount: "always", // important!
+    refetchOnWindowFocus: false, // optional
     // @ts-ignore
-    onSuccess: (data:any) => {
-      setSchools(data); // Assuming setSchools expects this format
+    onSuccess: (schools:SchoolType[]) => {
+      setSchools(schools);
+      if (schools.length === 1) {
+        setActiveSchool(schools[0]);
+      }
     },
-    onError: (error:any) => {
-      const errorMessage = error?.response?.data?.message || error.message || "Failed to fetch schools";
-      toast.error(errorMessage);
+  });
+};
+
+
+
+
+export const useGetAllClasses = () =>
+  useQuery({
+    queryKey: ["classes"],
+    queryFn: getAllClassApi,
+    // @ts-ignore
+    onError: (err: any) => {
+      toast.error("Failed to fetch classes");
+      console.log(err);
+    },
+  });
+
+// Fetch all sections (optionally filtered by branch)
+export const useGetAllSections = (filters: Object) =>
+  useQuery({
+    queryKey: ["sections", filters],
+    queryFn: () => getAllSectionApi(filters),
+    enabled: !!filters,
+    // @ts-ignore
+    onError: (err: any) => {
+      toast.error("Failed to fetch sections");
+      console.log(err);
+    },
+  });
+
+// Create a class
+export const useCreateSection = () => {
+  return useMutation({
+    mutationFn: (payload: { name: string; branchId: string }) =>
+      createSectionApi(payload),
+
+    onSuccess: (data: any) => {
+      toast.success(data.message || "Section created successfully");
+    },
+
+    onError: (error: any) => {
+      const message =
+        error?.response?.data?.message ||
+        error?.message ||
+        "Failed to create section";
+      toast.error(message);
+    },
+  });
+};
+// Create a section
+export const useCreateClass = () => {
+  return useMutation({
+    mutationFn: (payload: { name: string; branchId: string; sectionIds: string[] }) =>
+      createClassApi(payload),
+
+    onSuccess: (data: any) => {
+      toast.success(data.message || "Class created successfully");
+    },
+
+    onError: (error: any) => {
+      const message =
+        error?.response?.data?.message ||
+        error?.message ||
+        "Failed to create class";
+      toast.error(message);
     },
   });
 };
