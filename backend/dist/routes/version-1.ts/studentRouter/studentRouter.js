@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { isPermitted } from "../../../middlewares/permission/index.js";
-import { bulkUploadStudents, createStudent, fetchStudents } from "../../../controllers/school/student/index.js";
+import { bulkUploadStudents, createStudent, downloadSampleSheetForBulkUpload, fetchStudents } from "../../../controllers/school/student/index.js";
 import multer from "multer";
 import { feeDoc, feeTransaction } from "../../../controllers/school/fees/fees.js";
 export const studentRouter = Router();
@@ -11,4 +11,5 @@ studentRouter.post("/bulk-upload", upload.single("file"), isPermitted, bulkUploa
 studentRouter.get("/fetch", fetchStudents);
 studentRouter.post("/fee-transaction", isPermitted, feeTransaction);
 studentRouter.post("/fee-doc", isPermitted, feeDoc);
+studentRouter.get("/download-bulk-sample", isPermitted, downloadSampleSheetForBulkUpload);
 //# sourceMappingURL=studentRouter.js.map

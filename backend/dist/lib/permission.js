@@ -22,7 +22,8 @@ export const permissions = {
         "VIEW_STUDENT",
         "EDIT_STUDENT",
         "DELETE_STUDENT",
-        "BULK_UPLOAD_STUDENTS"
+        "BULK_UPLOAD_STUDENTS",
+        "GET_BULK_UPLOAD_SHEET"
     ],
     parent: [
         "CREATE_PARENT",

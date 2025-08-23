@@ -122,6 +122,16 @@ export const bulkUploadStudents = async (formData: FormData) => {
 
   return data;
 };
+export const downloadSampleSheetForBulkUpload = async () => {;
+  const email = getCreatedBy();
+  let params = {};
+  params = {...params, "createdBy": email};
+  params = {...params, "task": "GET_BULK_UPLOAD_SHEET"};
+
+  const { data } = await API.get("/student/download-bulk-sample", {params}, );
+
+  return data;
+};
 
 // Fetch students
 export const fetchStudents = async (filters: Record<string, any> = {}) => {

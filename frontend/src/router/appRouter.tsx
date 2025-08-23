@@ -17,6 +17,7 @@ import SchoolCreationPage from "../pages/School/SchoolCreationPage";
 import StudentList from "../pages/Students/StudentList";
 import StudentDetails from "../pages/Students/StudentDetail";
 import StudentUpload from "../pages/Students/StudentUpload";
+import StudentUploadPage from "@/pages/Students/StudentBulkUpload";
 // import ChangePasswordPage from "../pages/auth/changePassword"; // ⬅️ add this
 
 export default function AppRouter() {
@@ -66,6 +67,7 @@ export default function AppRouter() {
           <Route path="settings" element={<SettingsPage />} />
           <Route path="fee-transaction" element={<FeesPage />} />
           <Route path="school" element={<SchoolCreationPage />} />
+          <Route path="student-bulk-upload" element={<StudentUploadPage />} />
         </Route>
 
         {/* Fallback */}

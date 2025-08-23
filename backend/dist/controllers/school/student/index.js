@@ -671,6 +671,23 @@ export const fetchStudents = async (req, res) => {
         res.status(500).json({ error: "Failed to fetch students" });
     }
 };
+export const downloadSampleSheetForBulkUpload = (req, res) => {
+    try {
+        // Assume your sample file is in "uploads/sample-sheets/sample.xlsx"
+        const filePath = path.join(__dirname, "../../../../uploads/sample-sheets/sample.xlsx");
+        // Set headers so browser knows it’s a file download
+        res.download(filePath, "SampleSheet.xlsx", (err) => {
+            if (err) {
+                console.error("Error downloading file:", err);
+                res.status(500).send("Error downloading file");
+            }
+        });
+    }
+    catch (error) {
+        console.error("Server error:", error);
+        res.status(500).send("Internal server error");
+    }
+};
 // // ----------- UPDATE STUDENT -----------
 // router.put('/:id', async (req, res) => {
 //   const student = await Student.findByIdAndUpdate(req.params.id, req.body, { new: true });

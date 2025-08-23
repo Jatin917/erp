@@ -6,6 +6,7 @@ import {
   fetchStudents,
   bulkUploadStudents,
   createStudentApi,
+  downloadSampleSheetForBulkUpload,
 } from "../api/index"; // implement your API calls
 import type { StudentForm } from "../api/types";
 
@@ -33,6 +34,21 @@ export function useFetchStudents(filters: Record<string, any>={}) {
     },
   } as any);
 }
+export function useSampleSheetBulkUpload() {
+  return useQuery({
+    queryKey: ["bulkUploadSheet"],
+    queryFn: async () => {
+      const data = await downloadSampleSheetForBulkUpload();
+      return data;
+    },
+    enabled: false, // 🚀 don't fetch automatically
+    onError: (error: Error) => {
+      toast.error("Failed to download sheet");
+      console.log(error.message);
+    },
+  });
+}
+
 
 // Fetch single student by id
 // export function useFetchStudent(id: string) {

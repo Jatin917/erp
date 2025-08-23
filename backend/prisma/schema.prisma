@@ -86,6 +86,7 @@ enum Permission {
   EDIT_STUDENT
   DELETE_STUDENT
   BULK_UPLOAD_STUDENTS
+  GET_BULK_UPLOAD_SHEET
 
   // Parent
   CREATE_PARENT
@@ -182,6 +183,7 @@ model Branch {
   classes         Class[]
   students        Student[]
   academicSession AcademicSession[]
+  sections        Section[]
 }
 
 model Student {
@@ -309,12 +311,25 @@ model Class {
   name        ClassEnum
   branch      Branch   @relation(fields: [branchId], references: [id])
   branchId    String
-  section     String
   createdAt   DateTime @default(now())
 
   classTeacher ClassTeacher[]
   enrollments  Enrollment[]
+
+  section     Section?   @relation(fields: [sectionId], references: [id])
+  sectionId   String? // isko optional se hatana hain
 }
+
+model Section {
+  id        String   @id @default(uuid())
+  name      String
+  branch    Branch   @relation(fields: [branchId], references: [id])
+  branchId  String
+  createdAt DateTime @default(now())
+
+  classes   Class[]   // optional: a section may have 0 or many classes
+}
+
 
 model ClassTeacher {
   classId   String
