@@ -179,7 +179,7 @@ model Branch {
   principal       User?    @relation("PrincipalBranch", fields: [principalId], references: [id])
   principalId     String?  @unique
   createdAt       DateTime @default(now())
-
+  softwareCharge  Float    @default(0)
   classes         Class[]
   students        Student[]
   academicSession AcademicSession[]
