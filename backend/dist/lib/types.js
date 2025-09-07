@@ -49,4 +49,9 @@ export var Permission;
     Permission["SEND_NOTIFICATION"] = "SEND_NOTIFICATION";
     Permission["VIEW_NOTIFICATIONS"] = "VIEW_NOTIFICATIONS";
 })(Permission || (Permission = {}));
+export var OTP_TYPE;
+(function (OTP_TYPE) {
+    OTP_TYPE["SIGNIN_OTP"] = "SIGNIN_OTP";
+    OTP_TYPE["VERIFY_OTP"] = "VERIFY_OTP";
+})(OTP_TYPE || (OTP_TYPE = {}));
 //# sourceMappingURL=types.js.map

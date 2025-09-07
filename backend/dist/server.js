@@ -21,8 +21,7 @@ export const SUPERADMIN_PASSWORD = process.env.SUPER_ADMIN_PASSWORD;
 export const defaultPassword = process.env.DEFAULT_PASSWORD || "secret";
 export const PHOTO_URL = process.env.PHOTO_URL || `http://localhost:${PORT}`;
 const app = express();
-export const otpStorage = new Map();
-export const emailVerified = new Map();
+export const REDIS_URL = process.env.REDIS_URL || "redis://redis:6379";
 // set up server
 app.use(cors({ origin: '*' }));
 app.set('view engine', 'ejs');

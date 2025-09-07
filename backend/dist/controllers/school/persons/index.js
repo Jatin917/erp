@@ -1,11 +1,13 @@
 import { HTTP_STATUS } from "../../../lib/http-codes.js";
-import { emailVerified, JWT_SECRET, prisma, SUPERADMIN_EMAIL, SUPERADMIN_PASSWORD } from "../../../server.js";
+import { JWT_SECRET, prisma, SUPERADMIN_EMAIL, SUPERADMIN_PASSWORD } from "@src/server.js";
 import bcrypt from 'bcrypt';
 import { roleDefaults } from '../../../lib/permission.js';
-import { sendOtpEmailController } from "../../auth/otp.js";
-import { Permission } from '../../../lib/types.js';
+import { OTP_TYPE, Permission } from '@src/lib/types.js';
 import jwt from 'jsonwebtoken';
 import { Role } from "../../../../generated/prisma/index.js";
+import { TOKEN_TTL } from "@src/lib/contants.js";
+import { userInfo } from "os";
+import { isEmailVerified } from "@src/services/otp.js";
 export const registerUser = async (req, res) => {
     try {
         // Ensure req.body is parsed and is an object
@@ -14,8 +16,8 @@ export const registerUser = async (req, res) => {
         if (!name || !email || !role) {
             return res.status(HTTP_STATUS.NO_CONTENT).json({ success: false, message: "Please provide required fields" });
         }
-        const isEmailVerified = emailVerified.get(email)?.isVerified || false;
-        if (!isEmailVerified) {
+        const success = await isEmailVerified(email, OTP_TYPE.VERIFY_OTP);
+        if (!success) {
             return res.status(HTTP_STATUS.UNAUTHORIZED).json({ message: "Please Try Again" });
         }
         // isPhoneVerified = isPhoneVerified ?? false;
@@ -33,7 +35,7 @@ export const registerUser = async (req, res) => {
                 password: hashedPassword,
                 phone,
                 role: roles,
-                isEmailVerified,
+                isEmailVerified: Boolean(success),
                 isPhoneVerified: false,
                 permissions: { set: rolePermissionsEnum }
             }
@@ -81,8 +83,8 @@ export const changePassword = async (req, res) => {
 };
 export const login = async (req, res) => {
     try {
-        const { email, password, setupKey } = req.body;
-        if (!email || !password) {
+        const { email, password, setupKey, username } = req.body;
+        if ((!email && !username) || !password) {
             return res.status(400).json({ message: "Please enter required fields" });
         }
         let user = await prisma.user.findFirst({ where: { email }, include: { principalAssignment: true } });
@@ -121,8 +123,9 @@ export const login = async (req, res) => {
                 .status(401)
                 .json({ success: false, message: "Password is incorrect" });
         }
-        const token = jwt.sign({ userId: user.id, role: user.role }, JWT_SECRET, {
-            expiresIn: "1h",
+        const payload = { userId: user.id };
+        const token = jwt.sign(payload, JWT_SECRET, {
+            expiresIn: TOKEN_TTL,
         });
         // Remove duplicate property assignments and avoid overwriting with spread
         let branchId = null;
@@ -132,9 +135,9 @@ export const login = async (req, res) => {
         return res.status(200).json({
             success: true,
             message: "Logged in successfully",
-            token,
-            user: { name: user.name,
-                email: user.email, permissions: user.permissions, roles: user.role, branchId }
+            data: { accessToken: token,
+                user: { name: user.name,
+                    email: user.email, permissions: user.permissions, roles: user.role, branchId } }
         });
     }
     catch (error) {

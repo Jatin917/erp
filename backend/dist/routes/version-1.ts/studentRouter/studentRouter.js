@@ -8,7 +8,7 @@ const upload = multer({ dest: "uploads/" });
 studentRouter.post("/create-student", isPermitted, createStudent);
 studentRouter.post("/bulk-upload", upload.single("file"), isPermitted, bulkUploadStudents);
 //@ts-ignore
-studentRouter.get("/fetch", fetchStudents);
+studentRouter.get("/", isPermitted, fetchStudents);
 studentRouter.post("/fee-transaction", isPermitted, feeTransaction);
 studentRouter.post("/fee-doc", isPermitted, feeDoc);
 studentRouter.get("/download-bulk-sample", isPermitted, downloadSampleSheetForBulkUpload);

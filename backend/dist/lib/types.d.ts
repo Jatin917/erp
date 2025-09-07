@@ -39,4 +39,11 @@ export declare enum Permission {
     VIEW_NOTIFICATIONS = "VIEW_NOTIFICATIONS"
 }
 export type PermissionType = keyof typeof Permission;
+export interface PAYLOAD_TOKEN_TYPE {
+    userId: string;
+}
+export declare enum OTP_TYPE {
+    SIGNIN_OTP = "SIGNIN_OTP",
+    VERIFY_OTP = "VERIFY_OTP"
+}
 //# sourceMappingURL=types.d.ts.map
