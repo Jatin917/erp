@@ -3,14 +3,12 @@ import { prisma } from "../../server.js";
 export const isPermitted = async (req, res, next) => {
     try {
         console.log("req ", req.body, req.query);
-        let userId = null; // Better: use req.user.id from auth middleware
+        let userId = req.user.email; // Better: use req.user.id from auth middleware
         let task = null;
         if (req.body) {
-            userId = req.body.createdBy;
             task = req.body.task;
         }
         else if (req.query) {
-            userId = req.query.createdBy;
             task = req.query.task;
         }
         console.log("isPermitted ", userId, task);

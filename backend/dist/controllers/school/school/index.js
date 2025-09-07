@@ -141,7 +141,7 @@ export const createSchool = async (req, res) => {
 };
 export const getSchools = async (req, res) => {
     try {
-        const { createdBy: email } = req.query; // email of the "guy"
+        const { email } = req.user; // email of the "guy"
         if (!email) {
             return res.status(400).json({
                 success: false,
@@ -217,7 +217,7 @@ export const getSchools = async (req, res) => {
     }
 };
 export const getBranches = async (req, res) => {
-    let { createdBy } = req.query;
+    let { email: createdBy } = req.user;
     if (!createdBy) {
         return res
             .status(HTTP_STATUS.BAD_REQUEST)

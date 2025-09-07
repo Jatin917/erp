@@ -69,7 +69,7 @@ export const getAllSections = async (req, res) => {
         return res.status(200).json({
             message: "Sections fetched successfully",
             success: true,
-            data: sections,
+            data: { sections },
         });
     }
     catch (error) {
@@ -89,6 +89,7 @@ export const createOrUpdateClass = async (req, res) => {
         });
     }
     try {
+        let updatedClass = null;
         await prisma.$transaction(async (tx) => {
             // 1️⃣ Fetch existing class rows for this name and branch with enrollments
             const existingClasses = await tx.class.findMany({
@@ -118,7 +119,7 @@ export const createOrUpdateClass = async (req, res) => {
             }
             // 6️⃣ Create new class-section rows
             for (const sectionId of sectionsToAdd) {
-                await tx.class.create({
+                updatedClass = await tx.class.create({
                     data: {
                         name,
                         branch: { connect: { id: branchId } },
@@ -130,6 +131,12 @@ export const createOrUpdateClass = async (req, res) => {
         return res.status(200).json({
             message: "Class sections synchronized successfully",
             success: true,
+            class: updatedClass
+                ? (({ id, ...rest }) => ({
+                    ...rest,
+                    classId: id,
+                }))(updatedClass)
+                : null
         });
     }
     catch (error) {
@@ -190,7 +197,7 @@ export const updateSection = async (req, res) => {
 };
 export const deleteSection = async (req, res) => {
     try {
-        const { id } = req.params;
+        const { id } = req.query;
         if (!id) {
             return res
                 .status(HTTP_STATUS.BAD_REQUEST)
@@ -202,12 +209,12 @@ export const deleteSection = async (req, res) => {
             where: { sectionId },
             select: { id: true },
         });
-        if (!classes.length) {
-            return res.status(HTTP_STATUS.NOT_FOUND).json({
-                success: false,
-                message: "No classes found with this section",
-            });
-        }
+        // if (!classes.length) {
+        //   return res.status(HTTP_STATUS.NOT_FOUND).json({
+        //     success: false,
+        //     message: "No classes found with this section",
+        //   });
+        // }
         // Step 2: Check enrollments in those classes
         const classIds = classes.map((c) => c.id);
         const enrollmentCount = await prisma.enrollment.count({
@@ -229,7 +236,7 @@ export const deleteSection = async (req, res) => {
         });
         return res.status(HTTP_STATUS.OK).json({
             success: true,
-            message: "Section and its empty classes deleted successfully",
+            message: "Section Deleted",
         });
     }
     catch (error) {

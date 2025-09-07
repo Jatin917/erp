@@ -12,7 +12,6 @@ branchRouter.get("/fee-reciept", isPermitted, feeReciept);
 branchRouter.get("/get-schools", getSchools);
 branchRouter.get("/get-branches", getBranches);
 branchRouter.post("/create-class", isPermitted, createOrUpdateClass);
-branchRouter.post("/create-class", isPermitted, createOrUpdateClass);
 branchRouter.post("/create-section", isPermitted, createSection);
 branchRouter.patch("/update-section", isPermitted, updateSection);
 branchRouter.delete("/delete-section", isPermitted, deleteSection);

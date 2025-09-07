@@ -23,7 +23,8 @@ export const TokenCheck = async (req, res, next) => {
                 .json({ success: false, message: "User not found" });
         }
         // attach user to request
-        req.body = { ...req.body, createdBy: user.email };
+        // req.body = {...req.body, createdBy:user.email};
+        req.user = user;
         next();
     }
     catch (error) {
