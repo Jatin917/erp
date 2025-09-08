@@ -8,7 +8,7 @@ export const getAllClass = async (req, res) => {
         if (!branchId) {
             return res
                 .status(HTTP_STATUS.NOT_FOUND)
-                .json({ message: "Please Provide all branches", success: false });
+                .json({ message: "Please Provide branchId", success: false });
         }
         const where = { branchId };
         if (name) {
@@ -22,18 +22,22 @@ export const getAllClass = async (req, res) => {
                 },
             },
         });
-        // Transform format
-        const formatted = classes
-            .filter((cls) => cls.section) // exclude where section is null
-            .map((cls) => ({
-            classId: cls.id,
-            name: cls.name,
-            sectionId: cls.section && cls.section.id,
-            section: cls.section && cls.section.name,
-        }));
+        // ✅ Group by class name and collect section objects
+        const grouped = {};
+        for (const cls of classes) {
+            let entry = grouped[cls.name];
+            if (!entry) {
+                entry = { name: cls.name, sections: [] };
+                grouped[cls.name] = entry;
+            }
+            if (cls.section) {
+                entry.sections.push({ id: cls.section.id, name: cls.section.name });
+            }
+        }
+        const formatted = Object.values(grouped);
         return res
             .status(HTTP_STATUS.OK)
-            .json({ message: "Founded", success: true, data: formatted });
+            .json({ message: "Found", success: true, data: { classes: formatted } });
     }
     catch (error) {
         console.log(error);
@@ -89,54 +93,79 @@ export const createOrUpdateClass = async (req, res) => {
         });
     }
     try {
-        let updatedClass = null;
+        let updatedClasses = [];
         await prisma.$transaction(async (tx) => {
-            // 1️⃣ Fetch existing class rows for this name and branch with enrollments
+            // 1️⃣ Find all existing classes for this name + branch
             const existingClasses = await tx.class.findMany({
                 where: { name, branchId },
                 include: { enrollments: true },
             });
-            // 2️⃣ Extract valid sectionIds only
+            if (!existingClasses.length) {
+                return res.status(404).json({
+                    message: "Class not found",
+                    success: false,
+                });
+            }
+            // 2️⃣ Collect current sectionIds
             const existingSectionIds = existingClasses
                 .map((cls) => cls.sectionId)
-                .filter((id) => id !== null && id !== undefined);
-            // 3️⃣ Determine sections to add and remove
+                .filter((id) => !!id);
+            // 3️⃣ Calculate diffs
             const sectionsToAdd = sectionIds.filter((id) => !existingSectionIds.includes(id));
-            const sectionsToRemove = existingClasses.filter((cls) => cls.sectionId &&
-                !sectionIds.includes(cls.sectionId) &&
-                !sectionsToAdd.includes(cls.sectionId));
-            // 4️⃣ Check if sections to remove have students
+            const sectionsToRemove = existingClasses.filter((cls) => cls.sectionId && !sectionIds.includes(cls.sectionId));
+            // 4️⃣ Prevent removing sections that have enrolled students
             const sectionsWithStudents = sectionsToRemove.filter((cls) => cls.enrollments.length > 0);
             if (sectionsWithStudents.length > 0) {
                 const ids = sectionsWithStudents.map((cls) => cls.sectionId).join(", ");
                 throw new Error(`Cannot remove sections with enrolled students: ${ids}`);
             }
-            // 5️⃣ Delete old sections (safe to remove)
+            // 5️⃣ Remove unwanted sections
             if (sectionsToRemove.length > 0) {
                 await tx.class.deleteMany({
                     where: { id: { in: sectionsToRemove.map((cls) => cls.id) } },
                 });
             }
-            // 6️⃣ Create new class-section rows
+            // 6️⃣ Add missing sections
             for (const sectionId of sectionsToAdd) {
-                updatedClass = await tx.class.create({
+                const newCls = await tx.class.create({
                     data: {
                         name,
                         branch: { connect: { id: branchId } },
                         section: { connect: { id: sectionId } },
                     },
+                    include: { section: true },
                 });
+                updatedClasses.push(newCls);
             }
+            // 7️⃣ Update name for remaining classes (if enum name might change)
+            await tx.class.updateMany({
+                where: { branchId, name },
+                data: { name },
+            });
+            // Push remaining classes to response
+            const stillExisting = await tx.class.findMany({
+                where: { name, branchId },
+                include: { section: true },
+            });
+            updatedClasses = Array.from(new Map(updatedClasses.map((cls) => [cls.classId, cls])).values());
+            updatedClasses = [...updatedClasses, ...stillExisting];
         });
+        // ✅ Group response by class name
+        const grouped = {};
+        for (const cls of updatedClasses) {
+            let entry = grouped[cls.name];
+            if (!entry) {
+                entry = { name: cls.name, sections: [] };
+                grouped[cls.name] = entry;
+            }
+            if (cls.section) {
+                entry.sections.push({ id: cls.section.id, name: cls.section.name });
+            }
+        }
         return res.status(200).json({
             message: "Class sections synchronized successfully",
             success: true,
-            class: updatedClass
-                ? (({ id, ...rest }) => ({
-                    ...rest,
-                    classId: id,
-                }))(updatedClass)
-                : null
+            data: { classes: Object.values(grouped) },
         });
     }
     catch (error) {
