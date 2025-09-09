@@ -644,12 +644,16 @@ export const fetchStudents = async (req, res) => {
                 id: student.id,
                 name: student.name,
                 email: student.email,
-                phone: student.fatherMobile,
+                mobile: student.fatherMobile,
                 admissionNo: student.admissionNo,
                 section: latest?.class.section,
                 barcodeUrl: student.barcodeUrl,
                 rollNo: latest?.rollNo || null,
-                class: latest?.class?.name || null,
+                classLabel: latest?.class?.name || null,
+                fatherName: student.fatherName,
+                dob: student.dob,
+                gender: student.gender,
+                category: student.category,
             };
         });
         // Get total count
@@ -657,13 +661,13 @@ export const fetchStudents = async (req, res) => {
         total = await prisma.student.count({ where: whereClause });
         res.status(HTTP_STATUS.OK).json({
             success: true,
-            data: students,
-            pagination: {
-                total,
-                page: pageNumber,
-                limit: pageNumber === -1 ? total : pageSize,
-                totalPages: pageNumber === -1 ? 1 : Math.ceil(total / pageSize),
-            },
+            data: { students,
+                pagination: {
+                    total,
+                    page: pageNumber,
+                    limit: pageNumber === -1 ? total : pageSize,
+                    totalPages: pageNumber === -1 ? 1 : Math.ceil(total / pageSize),
+                }, }
         });
     }
     catch (err) {

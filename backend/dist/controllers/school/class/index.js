@@ -275,4 +275,24 @@ export const deleteSection = async (req, res) => {
             .json({ success: false, message: error.message });
     }
 };
+export const getClassNames = async (req, res) => {
+    try {
+        const { branchId } = req.query;
+        if (!branchId) {
+            return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: "branchId is required" });
+        }
+        const classes = await prisma.class.findMany({
+            where: { branchId },
+            distinct: ["name"], // ✅ ensures unique class names
+            select: { name: true },
+        });
+        // flatten into string array
+        const classNames = classes.map(c => c.name);
+        res.status(HTTP_STATUS.OK).json({ success: true, message: "Fetched Class Labels", data: { classNames } });
+    }
+    catch (error) {
+        console.error(error);
+        res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ message: "Server error", error: error.message });
+    }
+};
 //# sourceMappingURL=index.js.map

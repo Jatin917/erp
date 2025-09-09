@@ -2,8 +2,8 @@ import { Router } from "express";
 import { createSchool, getBranches, getSchools } from "../../../../controllers/school/school/index.js";
 import { isPermitted } from "../../../../middlewares/permission/index.js";
 import multer from "multer";
-import { feeDoc, feeReciept, feeTransaction } from "../../../../controllers/school/fees/fees.js";
-import { createOrUpdateClass, createSection, getAllClass, getAllSections, deleteSection, updateSection } from "../../../../controllers/school/class/index.js";
+import { feeDoc, feeReciept } from "../../../../controllers/school/fees/fees.js";
+import { createOrUpdateClass, createSection, getAllClass, getAllSections, deleteSection, updateSection, getClassNames } from "../../../../controllers/school/class/index.js";
 const branchRouter = Router();
 // @ts-ignore
 const upload = multer({ dest: "uploads/" });
@@ -17,5 +17,6 @@ branchRouter.patch("/update-section", isPermitted, updateSection);
 branchRouter.delete("/delete-section", isPermitted, deleteSection);
 branchRouter.get("/get-section", isPermitted, getAllSections);
 branchRouter.get("/get-class", isPermitted, getAllClass);
+branchRouter.get("/get-classNames", isPermitted, getClassNames);
 export { branchRouter };
 //# sourceMappingURL=index.js.map
