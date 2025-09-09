@@ -200,7 +200,7 @@ model Student {
   // ----- Personal Details -----
   name                 String
   admissionNo          String?
-  class                ClassEnum?
+  class                ClassEnum? // isko hatana hain as class -> className+section and we need enrollment things too so keeping its class as it is in student table in wrong
   section              String?
   gender               String?
   dob                  DateTime?
