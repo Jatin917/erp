@@ -99,7 +99,7 @@ export const login = async (req, res) => {
                     data: {
                         name: "System SuperAdmin",
                         role: ['SUPERADMIN'],
-                        permissions: Object.values(Permission), // all permissions
+                        permissions: ["ALL"], // all permissions
                         email,
                         password: hashedPassword,
                         isEmailVerified: true,

@@ -6,34 +6,39 @@ export const getAllClass = async (req, res) => {
         const { branchId, name } = req.query;
         if (!branchId) {
             return res
-                .status(HTTP_STATUS.NOT_FOUND)
-                .json({ message: "Please Provide branchId", success: false });
+                .status(HTTP_STATUS.BAD_REQUEST)
+                .json({ message: "Please provide branchId", success: false });
         }
         const where = { branchId };
         if (name) {
             where.name = name;
         }
-        const classes = await prisma.class.findMany({
+        // Fetch all class labels + related classes + their sections
+        const classLabels = await prisma.classLabel.findMany({
             where,
             include: {
-                section: {
-                    select: { id: true, name: true },
+                classes: {
+                    select: {
+                        section: { select: { id: true, name: true } },
+                    },
                 },
-                classLabel: {
-                    select: { name: true }
-                }
             },
         });
-        // ✅ Group by class name and collect section objects
+        // ✅ Group by class name and collect unique section objects
         const grouped = {};
-        for (const cls of classes) {
-            let entry = grouped[cls.classLabel.name];
+        for (const cls of classLabels) {
+            let entry = grouped[cls.name];
             if (!entry) {
-                entry = { name: cls.classLabel.name, sections: [] };
-                grouped[cls.classLabel.name] = entry;
+                entry = { name: cls.name, sections: [] };
+                grouped[cls.name] = entry;
             }
-            if (cls.section) {
-                entry.sections.push({ id: cls.section.id, name: cls.section.name });
+            for (const c of cls.classes) {
+                if (c.section) {
+                    // avoid duplicates
+                    if (!entry.sections.find((s) => s.id === c.section.id)) {
+                        entry.sections.push({ id: c.section.id, name: c.section.name });
+                    }
+                }
             }
         }
         const formatted = Object.values(grouped);
@@ -42,7 +47,7 @@ export const getAllClass = async (req, res) => {
             .json({ message: "Found", success: true, data: { classes: formatted } });
     }
     catch (error) {
-        console.log(error);
+        console.error(error);
         return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
             message: error.message,
             success: false,
@@ -314,7 +319,7 @@ export const createClassName = async (req, res) => {
         return res.status(HTTP_STATUS.CREATED).json({
             success: true,
             message: "Class created successfully",
-            data: newClass,
+            data: { classNames: newClass.name },
         });
     }
     catch (error) {

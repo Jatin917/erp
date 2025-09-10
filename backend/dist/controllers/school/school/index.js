@@ -168,6 +168,7 @@ export const getSchools = async (req, res) => {
                         select: {
                             id: true,
                             logoUrl: true,
+                            softwareCharge: true
                         },
                     },
                 },
@@ -182,6 +183,7 @@ export const getSchools = async (req, res) => {
                         select: {
                             id: true,
                             logoUrl: true,
+                            softwareCharge: true,
                         },
                     },
                 },
@@ -196,17 +198,20 @@ export const getSchools = async (req, res) => {
         const formatted = schools.map((school) => {
             const branchCount = school.branches.length;
             const logo = branchCount > 0 ? school.branches[0].logoUrl : null;
+            const softwareCharge = branchCount > 0 ? school.branches[0].softwareCharge : 0;
+            console.log(school.branches.length, softwareCharge, school.branches);
             return {
                 sid: school.id,
                 id: school.id, // same as sid
                 logo,
                 branchCount,
+                softwareCharge
             };
         });
         return res.status(200).json({
             success: true,
             message: "Schools fetched successfully",
-            data: formatted,
+            data: { schools: formatted },
         });
     }
     catch (error) {
@@ -215,6 +220,18 @@ export const getSchools = async (req, res) => {
             success: false,
             message: error.message,
         });
+    }
+};
+export const deleteSchool = async (req, res) => {
+    try {
+    }
+    catch (error) {
+    }
+};
+export const editSchool = async (req, res) => {
+    try {
+    }
+    catch (error) {
     }
 };
 export const getBranches = async (req, res) => {

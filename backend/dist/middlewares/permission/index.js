@@ -7,9 +7,9 @@ export const isPermitted = async (req, res, next) => {
         if (req.body) {
             task = req.body.task;
         }
-        else if (req.query) {
+        else if (req.query)
             task = req.query.task;
-        }
+        console.log("ispermitted ", task, userId);
         if (!userId || !task) {
             return res.status(HTTP_STATUS.BAD_REQUEST).json({
                 success: false,
