@@ -1,7 +1,6 @@
 import { error } from "console";
 import { HTTP_STATUS } from "../../../lib/http-codes.js";
 import { prisma } from "../../../server.js";
-import { connect } from "http2";
 export const getAllClass = async (req, res) => {
     try {
         const { branchId, name } = req.query;
@@ -20,15 +19,18 @@ export const getAllClass = async (req, res) => {
                 section: {
                     select: { id: true, name: true },
                 },
+                classLabel: {
+                    select: { name: true }
+                }
             },
         });
         // ✅ Group by class name and collect section objects
         const grouped = {};
         for (const cls of classes) {
-            let entry = grouped[cls.name];
+            let entry = grouped[cls.classLabel.name];
             if (!entry) {
-                entry = { name: cls.name, sections: [] };
-                grouped[cls.name] = entry;
+                entry = { name: cls.classLabel.name, sections: [] };
+                grouped[cls.classLabel.name] = entry;
             }
             if (cls.section) {
                 entry.sections.push({ id: cls.section.id, name: cls.section.name });
@@ -95,68 +97,66 @@ export const createOrUpdateClass = async (req, res) => {
     try {
         let updatedClasses = [];
         await prisma.$transaction(async (tx) => {
-            // 1️⃣ Find all existing classes for this name + branch
-            const existingClasses = await tx.class.findMany({
+            // 1️⃣ Ensure ClassLabel exists (create if not)
+            let classLabel = await tx.classLabel.findFirst({
                 where: { name, branchId },
+            });
+            if (!classLabel) {
+                return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: "No Class Exist with this name" });
+            }
+            // 2️⃣ Find all existing classes for this classLabel + branch
+            const existingClasses = await tx.class.findMany({
+                where: { classLabelId: classLabel.id, branchId },
                 include: { enrollments: true },
             });
-            if (!existingClasses.length) {
-                return res.status(404).json({
-                    message: "Class not found",
-                    success: false,
-                });
-            }
-            // 2️⃣ Collect current sectionIds
+            // 3️⃣ Collect current sectionIds
             const existingSectionIds = existingClasses
                 .map((cls) => cls.sectionId)
                 .filter((id) => !!id);
-            // 3️⃣ Calculate diffs
+            // 4️⃣ Calculate diffs
             const sectionsToAdd = sectionIds.filter((id) => !existingSectionIds.includes(id));
             const sectionsToRemove = existingClasses.filter((cls) => cls.sectionId && !sectionIds.includes(cls.sectionId));
-            // 4️⃣ Prevent removing sections that have enrolled students
+            // 5️⃣ Prevent removing sections that have enrolled students
             const sectionsWithStudents = sectionsToRemove.filter((cls) => cls.enrollments.length > 0);
             if (sectionsWithStudents.length > 0) {
                 const ids = sectionsWithStudents.map((cls) => cls.sectionId).join(", ");
                 throw new Error(`Cannot remove sections with enrolled students: ${ids}`);
             }
-            // 5️⃣ Remove unwanted sections
+            // 6️⃣ Remove unwanted sections
             if (sectionsToRemove.length > 0) {
                 await tx.class.deleteMany({
                     where: { id: { in: sectionsToRemove.map((cls) => cls.id) } },
                 });
             }
-            // 6️⃣ Add missing sections
+            // 7️⃣ Add missing sections
             for (const sectionId of sectionsToAdd) {
                 const newCls = await tx.class.create({
                     data: {
-                        name,
+                        classLabel: { connect: { id: classLabel.id } },
                         branch: { connect: { id: branchId } },
                         section: { connect: { id: sectionId } },
                     },
-                    include: { section: true },
+                    include: { section: true, classLabel: true },
                 });
                 updatedClasses.push(newCls);
             }
-            // 7️⃣ Update name for remaining classes (if enum name might change)
-            await tx.class.updateMany({
-                where: { branchId, name },
-                data: { name },
-            });
             // Push remaining classes to response
             const stillExisting = await tx.class.findMany({
-                where: { name, branchId },
-                include: { section: true },
+                where: { classLabelId: classLabel.id, branchId },
+                include: { section: true, classLabel: true },
             });
-            updatedClasses = Array.from(new Map(updatedClasses.map((cls) => [cls.classId, cls])).values());
             updatedClasses = [...updatedClasses, ...stillExisting];
         });
-        // ✅ Group response by class name
+        // ✅ Group response by classLabel name
         const grouped = {};
         for (const cls of updatedClasses) {
-            let entry = grouped[cls.name];
+            const labelName = cls.classLabel?.name;
+            if (!labelName)
+                continue;
+            let entry = grouped[labelName];
             if (!entry) {
-                entry = { name: cls.name, sections: [] };
-                grouped[cls.name] = entry;
+                entry = { name: labelName, sections: [] };
+                grouped[labelName] = entry;
             }
             if (cls.section) {
                 entry.sections.push({ id: cls.section.id, name: cls.section.name });
@@ -281,7 +281,7 @@ export const getClassNames = async (req, res) => {
         if (!branchId) {
             return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: "branchId is required" });
         }
-        const classes = await prisma.class.findMany({
+        const classes = await prisma.classLabel.findMany({
             where: { branchId },
             distinct: ["name"], // ✅ ensures unique class names
             select: { name: true },
@@ -293,6 +293,37 @@ export const getClassNames = async (req, res) => {
     catch (error) {
         console.error(error);
         res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ message: "Server error", error: error.message });
+    }
+};
+export const createClassName = async (req, res) => {
+    try {
+        const { name, branchId } = req.body;
+        if (!branchId) {
+            return res.status(HTTP_STATUS.BAD_REQUEST).json({
+                success: false,
+                message: "classLabelId and branchId are required",
+                data: null,
+            });
+        }
+        const newClass = await prisma.classLabel.create({
+            data: {
+                name,
+                branch: { connect: { id: branchId } },
+            }
+        });
+        return res.status(HTTP_STATUS.CREATED).json({
+            success: true,
+            message: "Class created successfully",
+            data: newClass,
+        });
+    }
+    catch (error) {
+        console.error("Error creating class:", error);
+        return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
+            success: false,
+            message: "Internal server error",
+            data: null,
+        });
     }
 };
 //# sourceMappingURL=index.js.map

@@ -88,11 +88,12 @@ export const login = async (req, res) => {
             return res.status(400).json({ message: "Please enter required fields" });
         }
         let user = await prisma.user.findFirst({ where: { email }, include: { principalAssignment: true } });
+        console.log("email ", email, password, SUPERADMIN_EMAIL, SUPERADMIN_PASSWORD);
         // First user creation (SuperAdmin bootstrap)
         const userCount = await prisma.user.count();
         if (userCount === 0) {
             if (email === SUPERADMIN_EMAIL &&
-                setupKey === SUPERADMIN_PASSWORD) {
+                password === SUPERADMIN_PASSWORD) {
                 const hashedPassword = await bcrypt.hash(password, 10);
                 user = await prisma.user.create({
                     data: {

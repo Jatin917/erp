@@ -185,7 +185,7 @@ export const feeReciept = async (req, res) => {
                 sessionId: currentSession.id,
             },
             include: {
-                class: true,
+                class: { select: { classLabel: { select: { name: true } } } },
                 session: true,
             },
         });
@@ -223,7 +223,7 @@ export const feeReciept = async (req, res) => {
                 student: {
                     name: student.name,
                     admissionNo: student.admissionNo,
-                    class: enrollment?.class.name,
+                    class: enrollment?.class.classLabel.name,
                     session
                 },
                 feeTransaction,

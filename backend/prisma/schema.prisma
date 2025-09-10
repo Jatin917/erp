@@ -186,6 +186,7 @@ model Branch {
   students        Student[]
   academicSession AcademicSession[]
   sections        Section[]
+  classLabels     ClassLabel[]
 }
 
 model Student {
@@ -309,17 +310,27 @@ model Parent {
 }
 
 model Class {
-  id          String   @id @default(uuid())
-  name        ClassEnum
+  id             String   @id @default(uuid())
+  classLabel     ClassLabel @relation(fields: [classLabelId], references: [id])
+  classLabelId   String //isko optional nhi rkhna hain
+  branch         Branch   @relation(fields: [branchId], references: [id])
+  branchId       String
+  createdAt      DateTime @default(now())
+
+  classTeacher   ClassTeacher[]
+  enrollments    Enrollment[]
+
+  section     Section   @relation(fields: [sectionId], references: [id])
+  sectionId   String // isko optional se hatana hain
+}
+
+model ClassLabel {
+  id          String @id @default(uuid())
+  name        String
   branch      Branch   @relation(fields: [branchId], references: [id])
   branchId    String
+  classes     Class[]
   createdAt   DateTime @default(now())
-
-  classTeacher ClassTeacher[]
-  enrollments  Enrollment[]
-
-  section     Section?   @relation(fields: [sectionId], references: [id])
-  sectionId   String? // isko optional se hatana hain
 }
 
 model Section {

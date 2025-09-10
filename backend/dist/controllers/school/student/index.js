@@ -765,19 +765,34 @@ export const getStudentDetail = async (req, res) => {
 };
 export const downloadSampleSheetForBulkUpload = (req, res) => {
     try {
-        // Assume your sample file is in "uploads/sample-sheets/sample.xlsx"
         const filePath = path.join(__dirname, "../../../../uploads/sample-sheets/sample.xlsx");
-        // Set headers so browser knows it’s a file download
-        res.download(filePath, "SampleSheet.xlsx", (err) => {
-            if (err) {
-                console.error("Error downloading file:", err);
-                res.status(500).send("Error downloading file");
-            }
+        if (!fs.existsSync(filePath)) {
+            return res.status(404).json({
+                success: false,
+                message: "File not found",
+                data: null,
+            });
+        }
+        // Read file as base64
+        const fileBuffer = fs.readFileSync(filePath);
+        const fileBase64 = fileBuffer.toString("base64");
+        return res.status(200).json({
+            success: true,
+            message: "Sample sheet downloaded successfully",
+            data: {
+                fileName: "SampleSheet.xlsx",
+                mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                fileContent: fileBase64,
+            },
         });
     }
     catch (error) {
         console.error("Server error:", error);
-        res.status(500).send("Internal server error");
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error",
+            data: null,
+        });
     }
 };
 // // ----------- UPDATE STUDENT -----------

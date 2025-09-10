@@ -14,9 +14,9 @@ const createBranch = async (tx, address, principalId, name, schoolId, softwareCh
     try {
         const branch = await tx.branch.create({
             data: {
-                principalId,
+                principal: { connect: { id: principalId } },
                 name,
-                schoolId,
+                school: { connect: { id: schoolId } },
                 address,
                 softwareCharge: parseFloat(softwareCharge)
             }
@@ -30,7 +30,6 @@ const createBranch = async (tx, address, principalId, name, schoolId, softwareCh
 };
 // ---------- Helper function for director/principal creation ----------
 const findOrCreateUser = async (role, userData, tx) => {
-    console.log("userdata is ", userData);
     const existingUser = await tx.user.findUnique({
         where: { email: userData.email },
     });
@@ -52,7 +51,6 @@ const findOrCreateUser = async (role, userData, tx) => {
         }
         const roles = [role];
         const hashedPassword = await bcrypt.hash(defaultPassword, 10);
-        console.log("user data ", userData);
         const newUser = await tx.user.create({
             data: {
                 name: userData.name,
@@ -72,30 +70,18 @@ export const createSchool = async (req, res) => {
     try {
         // Parse incoming body fields from multipart/form-data
         const schoolName = req.body.schoolName || req.body.name;
-        const principals = req.body.principals;
+        const principals = req.body.principals ? JSON.parse(req.body.principals) : null;
         const currentSession = req.body.currentSession;
+        const softwareCharges = req.body.softwareCharges;
         // Parse director & principal from JSON strings
-        const director = req.body.directors;
-        console.log("Parsed body:", { schoolName, director, currentSession });
+        const director = req.body.directors ? JSON.parse(req.body.directors) : null;
+        if (!director || !schoolName || !principals || !currentSession) {
+            return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: "Reuired Field Not Provided", success: false });
+        }
         let schoolId;
         let branchIds = [];
         await prisma.$transaction(async (tx) => {
-            const directorId = await findOrCreateUser("DIRECTOR", director[0], tx);
-            principals.forEach(async (principal) => {
-                const principalId = await findOrCreateUser("PRINCIPAL", { name: principal.name, email: principal.email, contact: principal.contact }, tx);
-                const branch = await createBranch(tx, principal.branch.address, principalId, schoolName, school.id, principal.softwareCharge);
-                if (!branch)
-                    throw new Error("Error creating branch");
-                let branchId = branch.id;
-                branchIds.push(branchId);
-                await tx.academicSession.create({
-                    data: {
-                        name: currentSession,
-                        branchId: branch.id,
-                        isCurrent: true,
-                    },
-                });
-            });
+            const directorId = await findOrCreateUser("DIRECTOR", director, tx);
             const school = await tx.school.create({
                 data: {
                     name: schoolName,
@@ -103,6 +89,21 @@ export const createSchool = async (req, res) => {
                 },
             });
             schoolId = school.id;
+            for (const principal of principals) {
+                const principalId = await findOrCreateUser("PRINCIPAL", { name: principal.name, email: principal.email, contact: principal.contact }, tx);
+                const branch = await createBranch(tx, principal.branch.address, principalId, schoolName, school.id, softwareCharges);
+                if (!branch)
+                    throw new Error("Error creating branch");
+                branchIds.push(branch.id);
+                await tx.academicSession.create({
+                    data: {
+                        name: currentSession,
+                        branchId: branch.id,
+                        isCurrent: true,
+                    },
+                });
+            }
+            console.log("file is ", file, school);
             if (!file) {
                 throw new Error("NO File Found. Please Try Again");
             }
