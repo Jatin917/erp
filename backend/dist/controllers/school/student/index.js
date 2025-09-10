@@ -562,83 +562,75 @@ export const bulkUploadStudents = async (req, res) => {
 };
 export const fetchStudents = async (req, res) => {
     try {
-        console.log("filters ", req.query);
-        const { createdBy, task, page, studentId, ...filters } = req.query;
-        // Build dynamic where clause
+        let { createdBy, task, page, studentId, class: className, section, session, ...filters } = req.query;
         if (studentId)
             filters.id = studentId;
+        console.log("filters ", createdBy, task, page, studentId, className, section, session, filters);
+        // Pagination
+        const pageNumber = parseInt(page, 10);
+        const pageSize = parseInt(LIMIT, 10) || 10;
+        // Base where clause (direct filters on student)
         const whereClause = {
             ...Object.fromEntries(Object.entries(filters).map(([key, value]) => [key, String(value)])),
         };
-        // Pagination logic
-        const pageNumber = parseInt(page, 10);
-        const pageSize = parseInt(LIMIT, 10) || 10;
         let studentsRaw;
-        if (pageNumber === -1) {
-            // Return ALL students (no pagination)
-            studentsRaw = await prisma.class.findMany({
-                where: {
-                    name: filters.class,
-                    section: filters.section,
-                    enrollments: {
-                        some: {
-                            session: {
-                                name: filters.session
-                            }
-                        }
-                    }
-                },
-                include: {
-                    enrollments: {
-                        where: {
-                            session: {
-                                name: filters.session
-                            }
-                        },
-                        include: {
-                            student: {
-                                select: { name: true, rollNo: true, id: true, currentYearTotal: true, currentYearTotalBalance: true, currentYearTotalPaid: true, lastYearTotal: true, lastYearTotalBalance: true, lastYearTotalPaid: true }
-                            }
-                        }
-                    }
-                }
-            });
-            // ✅ Extract only student names
-            const studentNames = studentsRaw.flatMap((cls) => cls.enrollments.map((enrollment) => ({
-                name: enrollment.student.name,
-                rollNo: enrollment.student.rollNo,
-                studentId: enrollment.student.id,
-                totalFeesPaid: enrollment.student.currentYearTotalPaid + enrollment.student.lastYearTotalPaid,
-                totalPayable: enrollment.student.currentYearTotal + enrollment.student.lastYearTotal,
-                totalBalanceRemaining: enrollment.student.currentYearTotalBalance + enrollment.student.lastYearTotalBalance,
-            })));
-            return res.status(HTTP_STATUS.OK).json({
-                message: "Done",
-                success: true,
-                data: studentNames
-            });
+        let enrollmentWhere = {};
+        if (session) {
+            enrollmentWhere.session = { name: session };
         }
-        else {
-            // Normal paginated fetch
+        if (className) {
+            enrollmentWhere.class = { name: className };
+        }
+        if (section) {
+            enrollmentWhere.class = { section: { name: section } };
+        }
+        if (pageNumber === -1) {
+            // ✅ Fetch ALL students with enrollments filtered by session
             studentsRaw = await prisma.student.findMany({
-                where: whereClause,
+                where: {
+                    ...whereClause,
+                    enrollments: { some: enrollmentWhere }, // ✅ Prisma-level filtering
+                },
                 skip: (pageNumber - 1) * pageSize,
                 take: pageSize,
                 orderBy: { createdAt: "desc" },
                 include: {
                     enrollments: {
+                        where: enrollmentWhere,
                         orderBy: { createdAt: "desc" },
                         take: 1,
-                        select: {
-                            class: { select: { name: true, section: true } },
-                            rollNo: true,
+                        include: {
+                            class: { include: { section: true } },
                         },
                     },
                 },
             });
         }
-        // Map student data
-        const students = studentsRaw.map((student) => {
+        else {
+            // ✅ Paginated fetch
+            studentsRaw = await prisma.student.findMany({
+                where: {
+                    ...whereClause,
+                    enrollments: { some: enrollmentWhere }, // ✅ Prisma-level filtering
+                },
+                skip: (pageNumber - 1) * pageSize,
+                take: pageSize,
+                orderBy: { createdAt: "desc" },
+                include: {
+                    enrollments: {
+                        where: enrollmentWhere,
+                        orderBy: { createdAt: "desc" },
+                        take: 1,
+                        include: {
+                            class: { include: { section: true } },
+                        },
+                    },
+                },
+            });
+        }
+        // ✅ Post-filter by class/section from latest enrollment
+        let students = studentsRaw
+            .map((student) => {
             const latest = student.enrollments[0];
             return {
                 id: student.id,
@@ -646,7 +638,7 @@ export const fetchStudents = async (req, res) => {
                 email: student.email,
                 mobile: student.fatherMobile,
                 admissionNo: student.admissionNo,
-                section: latest?.class.section,
+                section: latest?.class?.section?.name || null,
                 barcodeUrl: student.barcodeUrl,
                 rollNo: latest?.rollNo || null,
                 classLabel: latest?.class?.name || null,
@@ -655,24 +647,102 @@ export const fetchStudents = async (req, res) => {
                 gender: student.gender,
                 category: student.category,
             };
+        })
+            .filter((st) => {
+            if (className && st.classLabel !== className)
+                return false;
+            if (section && st.section !== section)
+                return false;
+            return true;
         });
-        // Get total count
-        let total = 0;
-        total = await prisma.student.count({ where: whereClause });
-        res.status(HTTP_STATUS.OK).json({
+        // ✅ Count
+        const total = pageNumber === -1 ? students.length : await prisma.student.count({ where: whereClause });
+        return res.status(HTTP_STATUS.OK).json({
             success: true,
-            data: { students,
+            data: {
+                students,
                 pagination: {
                     total,
                     page: pageNumber,
                     limit: pageNumber === -1 ? total : pageSize,
                     totalPages: pageNumber === -1 ? 1 : Math.ceil(total / pageSize),
-                }, }
+                },
+            },
         });
     }
     catch (err) {
         console.error("Error fetching students:", err);
         res.status(500).json({ error: "Failed to fetch students" });
+    }
+};
+export const getStudentDetail = async (req, res) => {
+    try {
+        const { id } = req.params;
+        if (!id) {
+            return res.status(HTTP_STATUS.BAD_REQUEST).json({
+                success: false,
+                message: "Student ID is required",
+            });
+        }
+        const student = await prisma.student.findUnique({
+            where: { id },
+            include: {
+                enrollments: {
+                    orderBy: { createdAt: "desc" },
+                    include: {
+                        class: {
+                            include: {
+                                section: { select: { name: true } },
+                                branch: { select: { id: true, name: true } },
+                            }
+                        },
+                        session: true,
+                    },
+                },
+            },
+        });
+        if (!student) {
+            return res.status(HTTP_STATUS.NOT_FOUND).json({
+                success: false,
+                message: "Student not found",
+            });
+        }
+        // latest enrollment
+        const latestEnrollment = student.enrollments[0];
+        console.log("student details ", latestEnrollment);
+        const result = {
+            id: student.id,
+            name: student.name,
+            admissionNo: student.admissionNo,
+            rollNo: latestEnrollment?.rollNo || null,
+            email: student.email,
+            mobile: student.fatherMobile,
+            fatherName: student.fatherName,
+            dob: student.dob,
+            gender: student.gender,
+            category: student.category,
+            barcodeUrl: student.barcodeUrl,
+            // Class & section
+            classLabel: latestEnrollment?.class?.name || null,
+            section: latestEnrollment?.class?.section?.name || null,
+            branch: latestEnrollment?.class?.branch || null,
+            session: latestEnrollment?.session?.name || null,
+            // Fees summary
+            totalFeesPaid: student.currentYearTotalPaid + student.lastYearTotalPaid,
+            totalPayable: student.currentYearTotal + student.lastYearTotal,
+            totalBalanceRemaining: student.currentYearTotalBalance + student.lastYearTotalBalance,
+        };
+        return res.status(HTTP_STATUS.OK).json({
+            success: true,
+            data: result,
+        });
+    }
+    catch (err) {
+        console.error("Error fetching student detail:", err);
+        return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
+            success: false,
+            message: "Failed to fetch student details",
+        });
     }
 };
 export const downloadSampleSheetForBulkUpload = (req, res) => {

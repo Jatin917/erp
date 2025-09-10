@@ -10,7 +10,6 @@ export const TokenCheck = async (req, res, next) => {
                 .json({ success: false, message: "No token provided" });
         }
         const token = authHeader.split(" ")[1];
-        console.log("token ", token);
         // verify token
         const decodedData = jwt.verify(token, JWT_SECRET);
         // check if user exists in DB

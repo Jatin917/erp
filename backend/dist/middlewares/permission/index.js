@@ -2,7 +2,6 @@ import { HTTP_STATUS } from "../../lib/http-codes.js";
 import { prisma } from "../../server.js";
 export const isPermitted = async (req, res, next) => {
     try {
-        console.log("req ", req.body, req.query);
         let userId = req.user.email; // Better: use req.user.id from auth middleware
         let task = null;
         if (req.body) {
@@ -11,7 +10,6 @@ export const isPermitted = async (req, res, next) => {
         else if (req.query) {
             task = req.query.task;
         }
-        console.log("isPermitted ", userId, task);
         if (!userId || !task) {
             return res.status(HTTP_STATUS.BAD_REQUEST).json({
                 success: false,
@@ -22,7 +20,6 @@ export const isPermitted = async (req, res, next) => {
             where: { email: userId },
             select: { permissions: true }
         });
-        console.log("user permissions ", user?.permissions);
         if (!user || !Array.isArray(user.permissions)) {
             return res.status(HTTP_STATUS.FORBIDDEN).json({
                 success: false,

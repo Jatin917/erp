@@ -30,7 +30,7 @@ app.use(express.json({ limit: '500mb' }));
 app.use(express.urlencoded({ limit: '500mb', extended: true }));
 app.use('/api/v1', router_v1);
 app.use("/uploads", express.static(path.join(__dirname, "..", "uploads")));
-export const LIMIT = 10;
+export const LIMIT = 20;
 app.get("/", (req, res) => {
     res.send("<h1>Backend is running<h1/>");
 });
