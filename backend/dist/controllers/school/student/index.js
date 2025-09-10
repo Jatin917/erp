@@ -562,19 +562,30 @@ export const bulkUploadStudents = async (req, res) => {
 };
 export const fetchStudents = async (req, res) => {
     try {
-        let { createdBy, task, page, studentId, class: className, section, session, ...filters } = req.query;
+        let { createdBy, task, page, studentId, class: className, section, session, name, admissionNo, rollNo, fatherName, mobile, ...filters } = req.query;
         if (studentId)
             filters.id = studentId;
-        console.log("filters ", createdBy, task, page, studentId, className, section, session, filters);
         // Pagination
         const pageNumber = parseInt(page, 10);
         const pageSize = parseInt(LIMIT, 10) || 10;
-        // Base where clause (direct filters on student)
+        // 🔹 Base student filters
         const whereClause = {
             ...Object.fromEntries(Object.entries(filters).map(([key, value]) => [key, String(value)])),
+            ...(name && {
+                name: { startsWith: name, mode: "insensitive" },
+            }),
+            ...(admissionNo && {
+                admissionNo: { startsWith: admissionNo, mode: "insensitive" },
+            }),
+            ...(fatherName && {
+                fatherName: { startsWith: fatherName, mode: "insensitive" },
+            }),
+            ...(mobile && {
+                fatherMobile: { startsWith: mobile, mode: "insensitive" },
+            }),
         };
-        let studentsRaw;
-        let enrollmentWhere = {};
+        // 🔹 Enrollment filters
+        const enrollmentWhere = {};
         if (session) {
             enrollmentWhere.session = { name: session };
         }
@@ -584,21 +595,25 @@ export const fetchStudents = async (req, res) => {
         if (section) {
             enrollmentWhere.class = { section: { name: section } };
         }
+        if (rollNo) {
+            enrollmentWhere.rollNo = { startsWith: rollNo, mode: "insensitive" };
+        }
+        // 🔹 Fetch students
+        let studentsRaw;
         if (pageNumber === -1) {
-            // ✅ Fetch ALL students with enrollments filtered by session
+            // Fetch all
             studentsRaw = await prisma.student.findMany({
                 where: {
                     ...whereClause,
-                    enrollments: { some: enrollmentWhere }, // ✅ Prisma-level filtering
+                    ...(Object.keys(enrollmentWhere).length > 0 && {
+                        enrollments: { some: enrollmentWhere },
+                    }),
                 },
-                skip: (pageNumber - 1) * pageSize,
-                take: pageSize,
                 orderBy: { createdAt: "desc" },
                 include: {
                     enrollments: {
-                        where: enrollmentWhere,
+                        where: Object.keys(enrollmentWhere).length ? enrollmentWhere : undefined,
                         orderBy: { createdAt: "desc" },
-                        take: 1,
                         include: {
                             class: { include: { section: true } },
                         },
@@ -607,18 +622,20 @@ export const fetchStudents = async (req, res) => {
             });
         }
         else {
-            // ✅ Paginated fetch
+            // Paginated fetch
             studentsRaw = await prisma.student.findMany({
                 where: {
                     ...whereClause,
-                    enrollments: { some: enrollmentWhere }, // ✅ Prisma-level filtering
+                    ...(Object.keys(enrollmentWhere).length > 0 && {
+                        enrollments: { some: enrollmentWhere },
+                    }),
                 },
                 skip: (pageNumber - 1) * pageSize,
                 take: pageSize,
                 orderBy: { createdAt: "desc" },
                 include: {
                     enrollments: {
-                        where: enrollmentWhere,
+                        where: Object.keys(enrollmentWhere).length ? enrollmentWhere : undefined,
                         orderBy: { createdAt: "desc" },
                         take: 1,
                         include: {
@@ -628,9 +645,8 @@ export const fetchStudents = async (req, res) => {
                 },
             });
         }
-        // ✅ Post-filter by class/section from latest enrollment
-        let students = studentsRaw
-            .map((student) => {
+        // 🔹 Transform result
+        const students = studentsRaw.map((student) => {
             const latest = student.enrollments[0];
             return {
                 id: student.id,
@@ -647,16 +663,18 @@ export const fetchStudents = async (req, res) => {
                 gender: student.gender,
                 category: student.category,
             };
-        })
-            .filter((st) => {
-            if (className && st.classLabel !== className)
-                return false;
-            if (section && st.section !== section)
-                return false;
-            return true;
         });
-        // ✅ Count
-        const total = pageNumber === -1 ? students.length : await prisma.student.count({ where: whereClause });
+        // 🔹 Count
+        const total = pageNumber === -1
+            ? students.length
+            : await prisma.student.count({
+                where: {
+                    ...whereClause,
+                    ...(Object.keys(enrollmentWhere).length > 0 && {
+                        enrollments: { some: enrollmentWhere },
+                    }),
+                },
+            });
         return res.status(HTTP_STATUS.OK).json({
             success: true,
             data: {
