@@ -1,5 +1,8 @@
-import { REDIS_URL } from "../server.js";
 import { createClient } from "redis";
+import dotenv from 'dotenv';
+dotenv.config();
+const REDIS_URL = process.env.REDIS_URL || "redis://redis:6379";
+console.log("redis url ", REDIS_URL);
 const client = createClient({
     url: REDIS_URL
 });
