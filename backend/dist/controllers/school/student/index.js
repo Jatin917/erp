@@ -765,6 +765,7 @@ export const getStudentDetail = async (req, res) => {
 };
 export const downloadSampleSheetForBulkUpload = (req, res) => {
     try {
+        console.log("yha request aa rhi hain");
         const filePath = path.join(__dirname, "../../../../uploads/sample-sheets/sample.xlsx");
         if (!fs.existsSync(filePath)) {
             return res.status(404).json({

@@ -1,9 +1,9 @@
 import { Router } from "express";
-import { changePassword, login, registerUser, userExist } from "@src/controllers/school/persons/index.js";
-import { emailVerificationSignController, emailVerificationVerifyController, sendOtpEmailSignController, sendOtpEmailVerifyController } from "@src/controllers/auth/otp.js";
-import { permitPermission } from "@src/controllers/user/index.js";
-import { isPermitted } from "@src/middlewares/permission/index.js";
-import { TokenCheck } from "@src/middlewares/auth/token.js";
+import { changePassword, login, registerUser, userExist } from "../../../controllers/school/persons/index.js";
+import { emailVerificationSignController, emailVerificationVerifyController, sendOtpEmailSignController, sendOtpEmailVerifyController } from "../../../controllers/auth/otp.js";
+import { permitPermission } from "../../../controllers/user/index.js";
+import { isPermitted } from "../../../middlewares/permission/index.js";
+import { TokenCheck } from "../../../middlewares/auth/token.js";
 export const userRouter = Router();
 userRouter.post("/register-user", TokenCheck, isPermitted, registerUser);
 userRouter.post("/login", login);

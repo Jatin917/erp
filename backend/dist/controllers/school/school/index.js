@@ -7,8 +7,8 @@ import path from "path";
 import bcrypt from 'bcrypt';
 import fs from "fs";
 import { roleDefaults, rolesAre } from "../../../lib/permission.js";
-import { OTP_TYPE } from "@src/lib/types.js";
-import { isEmailVerified, verifyOtp } from "@src/services/otp.js";
+import { OTP_TYPE } from "../../../lib/types.js";
+import { isEmailVerified, verifyOtp } from "../../../services/otp.js";
 // Updated createBranch to accept tx for transactions
 const createBranch = async (tx, address, principalId, name, schoolId, softwareCharge) => {
     try {

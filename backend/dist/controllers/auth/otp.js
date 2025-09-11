@@ -1,7 +1,7 @@
-import { HTTP_STATUS } from "@src/lib/http-codes.js";
-import { OTP_TYPE } from "@src/lib/types.js";
-import { JWT_SECRET, prisma } from "@src/server.js";
-import { emailVerification, sendOtpEmailFunction } from "@src/services/otp.js";
+import { HTTP_STATUS } from "../../lib/http-codes.js";
+import { OTP_TYPE } from "../../lib/types.js";
+import { JWT_SECRET, prisma } from "../../server.js";
+import { emailVerification, sendOtpEmailFunction } from "../../services/otp.js";
 import jwt from "jsonwebtoken";
 export const sendOtpEmailSignController = async (req, res) => {
     try {

@@ -7,10 +7,10 @@ export const studentRouter = Router();
 const upload = multer({ dest: "uploads/" });
 studentRouter.post("/create-student", isPermitted, createStudent);
 studentRouter.post("/bulk-upload", upload.single("file"), isPermitted, bulkUploadStudents);
-//@ts-ignore
-studentRouter.get("/", isPermitted, fetchStudents);
+studentRouter.get("/download-bulk-sample", isPermitted, downloadSampleSheetForBulkUpload);
 studentRouter.get("/:id", isPermitted, getStudentDetail);
 studentRouter.post("/fee-transaction", isPermitted, feeTransaction);
 studentRouter.post("/fee-doc", isPermitted, feeDoc);
-studentRouter.get("/download-bulk-sample", isPermitted, downloadSampleSheetForBulkUpload);
+//@ts-ignore
+studentRouter.get("/", isPermitted, fetchStudents);
 //# sourceMappingURL=studentRouter.js.map

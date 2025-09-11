@@ -9,8 +9,8 @@ export const isPermitted = async (req, res, next) => {
         }
         else if (req.query)
             task = req.query.task;
-        console.log("ispermitted ", task, userId);
         if (!userId || !task) {
+            console.log("yha aaya then");
             return res.status(HTTP_STATUS.BAD_REQUEST).json({
                 success: false,
                 message: "User ID and task are required"
