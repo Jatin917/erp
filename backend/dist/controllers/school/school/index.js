@@ -72,7 +72,7 @@ export const createSchool = async (req, res) => {
         const schoolName = req.body.schoolName || req.body.name;
         const principals = req.body.principals ? JSON.parse(req.body.principals) : null;
         const currentSession = req.body.currentSession;
-        const softwareCharges = req.body.softwareCharges;
+        const softwareCharge = req.body.softwareCharge;
         // Parse director & principal from JSON strings
         const director = req.body.directors ? JSON.parse(req.body.directors) : null;
         if (!director || !schoolName || !principals || !currentSession) {
@@ -91,7 +91,7 @@ export const createSchool = async (req, res) => {
             schoolId = school.id;
             for (const principal of principals) {
                 const principalId = await findOrCreateUser("PRINCIPAL", { name: principal.name, email: principal.email, contact: principal.contact }, tx);
-                const branch = await createBranch(tx, principal.branch.address, principalId, schoolName, school.id, softwareCharges);
+                const branch = await createBranch(tx, principal.branch.address, principalId, schoolName, school.id, softwareCharge);
                 if (!branch)
                     throw new Error("Error creating branch");
                 branchIds.push(branch.id);
