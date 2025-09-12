@@ -289,8 +289,6 @@ model Student {
   createdAt             DateTime @default(now())
 
   // Relationships
-  feeDocs               FeeDoc[]
-  feeTransactions       FeeTransaction[]
   enrollments           Enrollment[]
   fatherId              String?
   father                Parent?   @relation("fatherToStudent", fields: [fatherId], references: [id])
@@ -325,12 +323,13 @@ model Class {
 }
 
 model ClassLabel {
-  id          String @id @default(uuid())
-  name        String
-  branch      Branch   @relation(fields: [branchId], references: [id])
-  branchId    String
-  classes     Class[]
-  createdAt   DateTime @default(now())
+  id           String @id @default(uuid())
+  name         String
+  branch       Branch   @relation(fields: [branchId], references: [id])
+  branchId     String
+  classes      Class[]
+  feeTemplates FeeTemplate[]
+  createdAt    DateTime @default(now())
 }
 
 model Section {
@@ -355,39 +354,6 @@ model ClassTeacher {
   @@id([classId, teacherId])
 }
 
-model FeeDoc {
-  id              String   @id @default(uuid())
-  student         Student  @relation(fields: [studentId], references: [id])
-  studentId       String
-  session         AcademicSession @relation(fields: [sessionId], references: [id])
-  sessionId       String
-
-  admissionFee    Float
-  tuitionFee      Float
-  transportFee    Float?
-  hostelFee       Float?
-  concessions     Float   @default(0)
-  totalPayable    Float
-  paidInSession   Float   @default(0)
-  dueInSession    Float
-
-  createdAt       DateTime @default(now())
-}
-
-model FeeTransaction {
-  id            String   @id @default(uuid())
-  student       Student  @relation(fields: [studentId], references: [id])
-  studentId     String
-  amountPaid    Float
-  paidOn        DateTime @default(now())
-  remarks       String?
-  mode          PaymentMode
-  referenceId   String?
-  appliedToDocIds String[] @default([])
-  createdBy     User      @relation(fields: [createdById], references: [id])
-  createdById   String
-  createdAt     DateTime @default(now())
-}
 
 model AcademicSession {
   id         String    @id @default(uuid())
@@ -399,19 +365,166 @@ model AcademicSession {
   createdAt  DateTime  @default(now())
 
   enrollments Enrollment[]
-  feeDocs     FeeDoc[]
+  feeTemplates     FeeTemplate[]
+  academicsMonths AcademicMonth[]
 }
 
 model Enrollment {
-  id         String    @id @default(uuid())
-  student    Student   @relation(fields: [studentId], references: [id])
-  studentId  String
-  class      Class     @relation(fields: [classId], references: [id])
-  classId    String
-  session    AcademicSession @relation(fields: [sessionId], references: [id])
-  sessionId  String
-  rollNo     String?
-  isPromoted Boolean   @default(false)
-  createdAt  DateTime  @default(now())
+  id                      String    @id @default(uuid())
+  student                 Student   @relation(fields: [studentId], references: [id])
+  studentId               String
+  class                   Class     @relation(fields: [classId], references: [id])
+  classId                 String
+  session                 AcademicSession @relation(fields: [sessionId], references: [id])
+  sessionId               String
+  rollNo                  String?
+  feeDocs                 FeeDoc[] 
+  feeTransactions         FeeTransaction[]
+  isPromoted Boolean      @default(false)
+  createdAt  DateTime     @default(now())
 }
+
+
+enum FeePaymentType {
+  MONTHLY
+  INSTALLMENT
+  ONE_TIME
+}
+
+model FeeHead {
+  id        String   @id @default(uuid())
+  name      String
+  createdAt DateTime @default(now())
+  feeTemplates FeeTemplate[]
+  feeDocs      FeeDoc[]
+}
+
+model FeeTemplate {
+  id              String   @id @default(uuid())
+  session         AcademicSession @relation(fields: [sessionId], references: [id])
+  sessionId       String
+  branchId        String
+  classLabel      ClassLabel @relation(fields: [classLabelId], references: [id])
+  classLabelId    String
+    
+  feeHeadId       String
+  feeHead         FeeHead  @relation(fields: [feeHeadId], references: [id])
+    
+  amount          Float
+  discounts       Discount[]     // optional default discounts
+  lateFees        LateFee[]      // optional default late fees
+  feeDocs         FeeDoc[]       // generated per student
+    
+  createdAt       DateTime @default(now())
+}
+
+model FeeDoc {
+  id               String       @id @default(uuid())
+  eenrollment      Enrollment @relation(fields: [enrollmentId], references: [id])
+  enrollmentId     String
+
+  templateId       String?
+  template         FeeTemplate? @relation(fields: [templateId], references: [id])
+   
+  feeHeadId        String
+  feeHead          FeeHead  @relation(fields: [feeHeadId], references: [id])
+   
+  paymentType      FeePaymentType
+  amount           Float
+  status           String   @default("PENDING") // Pending | Partial | Paid
+   
+  payments         FeePayment[] // linked payment schedules
+  transactions     FeeTransactionItem[]
+  discounts        Discount[]
+  lateFees         LateFee[]
+   
+  createdAt        DateTime @default(now())
+}
+
+model FeePayment {
+  id          String   @id @default(uuid())
+  feeDocId    String
+  feeDoc      FeeDoc   @relation(fields: [feeDocId], references: [id])
+
+  academicMonthId String? @unique  // if monthly, link to academic month
+  academicMonth   AcademicMonth? @relation(fields: [academicMonthId], references: [id])
+
+  name        String?   // "July installment" / "Admission Fee"
+  amount      Float
+  dueDate     DateTime
+  isPaid      Boolean   @default(false)
+
+  createdAt   DateTime @default(now())
+}
+
+model FeeTransaction {
+  id             String   @id @default(uuid())
+
+  enrollmentId   String
+  enrollment     Enrollment  @relation(fields: [enrollmentId], references: [id])
+
+  amountPaid     Float
+  paidOn         DateTime @default(now())
+  remarks        String?
+
+  createdById    String
+  createdBy      User     @relation(fields: [createdById], references: [id])
+
+  // Relations
+  items          FeeTransactionItem[]
+  discounts      Discount[]
+  lateFees       LateFee[]
+
+  mode           PaymentMode
+  referenceId    String?        // txn id, cheque no, UPI ref
+  receiptNo      String         @unique
+}
+
+model FeeTransactionItem {
+  id            String   @id @default(uuid())
+  transactionId String
+  transaction   FeeTransaction @relation(fields: [transactionId], references: [id])
+
+  feeDocId      String
+  feeDoc        FeeDoc @relation(fields: [feeDocId], references: [id])
+
+  paidAmount    Float
+}
+
+model Discount {
+  id            String   @id @default(uuid())
+  feeDocId      String
+  feeDoc        FeeDoc @relation(fields: [feeDocId], references: [id])
+  feeTemplateId String
+  feeTemplate   FeeTemplate @relation(fields: [feeTemplateId], references: [id])
+  transactionId String?
+  transaction   FeeTransaction? @relation(fields: [transactionId], references: [id])
+
+  type          String   // e.g., "Sibling", "Merit"
+  amount        Float
+}
+
+model LateFee {
+  id            String   @id @default(uuid())
+  feeDocId      String
+  feeDoc        FeeDoc @relation(fields: [feeDocId], references: [id])
+  feeTemplateId String
+  feeTemplate   FeeTemplate @relation(fields: [feeTemplateId], references: [id])
+  transactionId String?
+  transaction   FeeTransaction? @relation(fields: [transactionId], references: [id])
+
+  amount        Float
+  reason        String?
+}
+
+model AcademicMonth {
+  id         String   @id @default(uuid())
+  name       String   // July, August, etc.
+  startDate  DateTime
+  endDate    DateTime
+  sessionId  String
+  feePayment  FeePayment?
+  session    AcademicSession @relation(fields: [sessionId], references: [id])
+}
+
 
