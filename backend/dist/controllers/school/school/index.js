@@ -1,14 +1,12 @@
 import { error } from "console";
-import { Role } from "../../../../generated/prisma/index.js";
+import { Role as rolesAre } from "../../../../generated/prisma/index.js";
 import { HTTP_STATUS } from "../../../lib/http-codes.js";
 import { defaultPassword, prisma } from "../../../server.js";
-import multer from "multer";
 import path from "path";
 import bcrypt from 'bcrypt';
 import fs from "fs";
-import { roleDefaults, rolesAre } from "../../../lib/permission.js";
 import { OTP_TYPE } from "../../../lib/types.js";
-import { isEmailVerified, verifyOtp } from "../../../services/otp.js";
+import { isEmailVerified } from "../../../services/otp.js";
 // Updated createBranch to accept tx for transactions
 const createBranch = async (tx, address, principalId, name, schoolId, softwareCharge) => {
     try {
@@ -68,17 +66,21 @@ const findOrCreateUser = async (role, userData, tx) => {
 export const createSchool = async (req, res) => {
     const file = req.file; // Multer puts uploaded file here
     try {
-        // Parse incoming body fields from multipart/form-data
         const schoolName = req.body.schoolName || req.body.name;
         const principals = req.body.principals ? JSON.parse(req.body.principals) : null;
         const currentSession = req.body.currentSession;
         const softwareCharge = req.body.softwareCharge;
-        // Parse director & principal from JSON strings
         const director = req.body.directors ? JSON.parse(req.body.directors) : null;
-        if (!director || !schoolName || !principals || !currentSession) {
-            return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: "Reuired Field Not Provided", success: false });
+        const academicMonths = req.body.academicMonths ? JSON.parse(req.body.academicMonths) : [];
+        const startMonthName = req.body.startMonthName;
+        const endMonthName = req.body.endMonthName;
+        if (!director || !schoolName || !principals || !currentSession || academicMonths.length === 0) {
+            return res.status(HTTP_STATUS.BAD_REQUEST).json({
+                message: "Required field not provided",
+                success: false,
+            });
         }
-        let schoolId;
+        let schoolId = "";
         let branchIds = [];
         await prisma.$transaction(async (tx) => {
             const directorId = await findOrCreateUser("DIRECTOR", director, tx);
@@ -88,6 +90,9 @@ export const createSchool = async (req, res) => {
                     createdById: directorId,
                 },
             });
+            if (!school) {
+                throw new Error("Error Creating School");
+            }
             schoolId = school.id;
             for (const principal of principals) {
                 const principalId = await findOrCreateUser("PRINCIPAL", { name: principal.name, email: principal.email, contact: principal.contact }, tx);
@@ -95,26 +100,43 @@ export const createSchool = async (req, res) => {
                 if (!branch)
                     throw new Error("Error creating branch");
                 branchIds.push(branch.id);
-                await tx.academicSession.create({
+                // Create session
+                const session = await tx.academicSession.create({
                     data: {
                         name: currentSession,
                         branchId: branch.id,
                         isCurrent: true,
                     },
                 });
+                // Create academic months
+                const createdMonths = await Promise.all(academicMonths.map((m) => tx.academicMonth.create({
+                    data: {
+                        name: m.name,
+                        startDate: new Date(m.startDate),
+                        endDate: new Date(m.endDate),
+                        sessionId: session.id,
+                    },
+                })));
+                // Set start & end month
+                const startMonth = createdMonths.find((m) => m.name === startMonthName);
+                const endMonth = createdMonths.find((m) => m.name === endMonthName);
+                if (!startMonth || !endMonth) {
+                    throw new Error("Start or End month not found in academicMonths");
+                }
+                await tx.academicSession.update({
+                    where: { id: session.id },
+                    data: {
+                        startMonthId: startMonth.id,
+                        endMonthId: endMonth.id,
+                    },
+                });
             }
-            console.log("file is ", file, school);
             if (!file) {
                 throw new Error("NO File Found. Please Try Again");
             }
         });
         // ---------- File Handling AFTER transaction ----------
-        // @ts-ignore
-        // Save logo path in DB
-        branchIds.forEach(async (branchId) => {
-            if (!schoolId || !branchId) {
-                throw new Error("School ID or Branch ID is missing after transaction.");
-            }
+        for (const branchId of branchIds) {
             const uploadDir = path.join("uploads", String(schoolId), String(branchId));
             fs.mkdirSync(uploadDir, { recursive: true });
             const ext = path.extname(file.originalname);
@@ -124,15 +146,15 @@ export const createSchool = async (req, res) => {
                 where: { id: branchId },
                 data: { logoUrl: destPath },
             });
-        });
+        }
         return res.status(HTTP_STATUS.CREATED).json({
             success: true,
-            message: "Created School with default branch",
+            message: "Created School with default branch and academic months",
         });
     }
     catch (error) {
         if (file && fs.existsSync(file.path)) {
-            fs.unlinkSync(file.path); // clean temp file if error
+            fs.unlinkSync(file.path);
         }
         return res.status(HTTP_STATUS.BAD_REQUEST).json({
             success: false,

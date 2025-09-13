@@ -260,175 +260,171 @@ const __dirname = dirname(__filename);
 //     }
 //   }
 // -------------------- FeeHead --------------------
-/*
-
-export const createFeeHead = async (req: any, res: any) => {
-  try {
-    const { name } = req.body;
-    if (!name) return res.status(HTTP_STATUS.BAD_REQUEST).json({ success: false, message: "Name required" });
-
-    // Prevent duplicate name per branch/school if needed later (currently global)
-    const exists = await prisma.feeHead.findFirst({ where: { name } });
-    if (exists) return res.status(HTTP_STATUS.CONFLICT).json({ success: false, message: "FeeHead with this name already exists" });
-
-    const feeHead = await prisma.feeHead.create({ data: { name } });
-    return res.status(HTTP_STATUS.CREATED).json({ success: true, message: "FeeHead created", data: { feeHead } });
-  } catch (err: any) {
-    return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ success: false, message: err.message });
-  }
-};
-
-export const listFeeHeads = async (_req: any, res: any) => {
-  try {
-    const feeHeads = await prisma.feeHead.findMany({ orderBy: { name: "asc" } });
-    return res.status(HTTP_STATUS.OK).json({ success: true, message: "FeeHeads fetched", data: { feeHeads } });
-  } catch (err: any) {
-    return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ success: false, message: err.message });
-  }
-};
-
-export const updateFeeHead = async (req: any, res: any) => {
-  try {
-    const { id } = req.params;
-    const { name } = req.body;
-    if (!id) return res.status(HTTP_STATUS.BAD_REQUEST).json({ success: false, message: "id param required" });
-    if (!name) return res.status(HTTP_STATUS.BAD_REQUEST).json({ success: false, message: "name required" });
-
-    const feeHead = await prisma.feeHead.update({
-      where: { id },
-      data: { name },
-    });
-    return res.status(HTTP_STATUS.OK).json({ success: true, message: "FeeHead updated", data: { feeHead } });
-  } catch (err: any) {
-    if (err.code === "P2025") {
-      return res.status(HTTP_STATUS.NOT_FOUND).json({ success: false, message: "FeeHead not found" });
+export const createFeeHead = async (req, res) => {
+    try {
+        const { name } = req.body;
+        if (!name)
+            return res.status(HTTP_STATUS.BAD_REQUEST).json({ success: false, message: "Name required" });
+        // Prevent duplicate name per branch/school if needed later (currently global)
+        const exists = await prisma.feeHead.findFirst({ where: { name } });
+        if (exists)
+            return res.status(HTTP_STATUS.CONFLICT).json({ success: false, message: "FeeHead with this name already exists" });
+        const feeHead = await prisma.feeHead.create({ data: { name } });
+        return res.status(HTTP_STATUS.CREATED).json({ success: true, message: "FeeHead created", data: { feeHead } });
     }
-    return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ success: false, message: err.message });
-  }
-};
-
-export const deleteFeeHead = async (req: any, res: any) => {
-  try {
-    const { id } = req.params;
-    if (!id) return res.status(HTTP_STATUS.BAD_REQUEST).json({ success: false, message: "id param required" });
-
-    // Optional: check for dependent templates/docs before deleting
-    const templatesCount = await prisma.feeTemplate.count({ where: { feeHeadId: id } });
-    if (templatesCount > 0) {
-      return res.status(HTTP_STATUS.BAD_REQUEST).json({ success: false, message: "Cannot delete FeeHead: templates exist using this head" });
+    catch (err) {
+        return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ success: false, message: err.message });
     }
-
-    await prisma.feeHead.delete({ where: { id } });
-    return res.status(HTTP_STATUS.OK).json({ success: true, message: "FeeHead deleted" });
-  } catch (err: any) {
-    if (err.code === "P2025") {
-      return res.status(HTTP_STATUS.NOT_FOUND).json({ success: false, message: "FeeHead not found" });
-    }
-    return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ success: false, message: err.message });
-  }
 };
-
+export const listFeeHeads = async (_req, res) => {
+    try {
+        const feeHeads = await prisma.feeHead.findMany({ select: { name: true, id: true }, orderBy: { name: "asc" } });
+        return res.status(HTTP_STATUS.OK).json({ success: true, message: "FeeHeads fetched", data: { feeHeads } });
+    }
+    catch (err) {
+        return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ success: false, message: err.message });
+    }
+};
+export const updateFeeHead = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { name } = req.body;
+        if (!id)
+            return res.status(HTTP_STATUS.BAD_REQUEST).json({ success: false, message: "id param required" });
+        if (!name)
+            return res.status(HTTP_STATUS.BAD_REQUEST).json({ success: false, message: "name required" });
+        const feeHead = await prisma.feeHead.update({
+            where: { id },
+            data: { name },
+        });
+        console.log("fee head ", feeHead, id, name);
+        return res.status(HTTP_STATUS.OK).json({ success: true, message: "FeeHead updated", data: { feeHead } });
+    }
+    catch (err) {
+        if (err.code === "P2025") {
+            return res.status(HTTP_STATUS.NOT_FOUND).json({ success: false, message: "FeeHead not found" });
+        }
+        return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ success: false, message: err.message });
+    }
+};
+export const deleteFeeHead = async (req, res) => {
+    try {
+        const { id } = req.params;
+        if (!id)
+            return res.status(HTTP_STATUS.BAD_REQUEST).json({ success: false, message: "id param required" });
+        // Optional: check for dependent templates/docs before deleting
+        const templatesCount = await prisma.feeTemplate.count({ where: { feeHeadId: id } });
+        if (templatesCount > 0) {
+            return res.status(HTTP_STATUS.BAD_REQUEST).json({ success: false, message: "Cannot delete FeeHead: templates exist using this head" });
+        }
+        await prisma.feeHead.delete({ where: { id } });
+        return res.status(HTTP_STATUS.OK).json({ success: true, message: "FeeHead deleted" });
+    }
+    catch (err) {
+        if (err.code === "P2025") {
+            return res.status(HTTP_STATUS.NOT_FOUND).json({ success: false, message: "FeeHead not found" });
+        }
+        return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ success: false, message: err.message });
+    }
+};
 // -------------------- FeeTemplate --------------------
-export const createFeeTemplate = async (req: any, res: any) => {
-  try {
-    const { sessionId, branchId, classLabelId, feeHeadId, totalAmount, defaultDiscounts, defaultLateFees } = req.body;
-
-    if (!sessionId || !branchId || !classLabelId || !feeHeadId || totalAmount == null) {
-      return res.status(HTTP_STATUS.BAD_REQUEST).json({ success: false, message: "Missing required fields" });
+export const createFeeTemplate = async (req, res) => {
+    try {
+        const { sessionId, branchId, classLabelId, feeHeadId, totalAmount, defaultDiscounts, defaultLateFees } = req.body;
+        if (!sessionId || !branchId || !classLabelId || !feeHeadId || totalAmount == null) {
+            return res.status(HTTP_STATUS.BAD_REQUEST).json({ success: false, message: "Missing required fields" });
+        }
+        if (typeof totalAmount !== "number" || totalAmount <= 0) {
+            return res.status(HTTP_STATUS.BAD_REQUEST).json({ success: false, message: "totalAmount must be a positive number" });
+        }
+        // Prevent duplicate template for same class/session/branch/head
+        const exists = await prisma.feeTemplate.findFirst({
+            where: { sessionId, branchId, classLabelId, feeHeadId }
+        });
+        if (exists) {
+            return res.status(HTTP_STATUS.CONFLICT).json({ success: false, message: "Template already exists for this class/session/feeHead" });
+        }
+        const template = await prisma.feeTemplate.create({
+            data: {
+                sessionId,
+                branchId,
+                classLabelId,
+                feeHeadId,
+                amount: totalAmount,
+                discounts: defaultDiscounts,
+                lateFees: defaultLateFees
+            }
+        });
+        return res.status(HTTP_STATUS.CREATED).json({ success: true, message: "FeeTemplate created", data: { template } });
     }
-    if (typeof totalAmount !== "number" || totalAmount <= 0) {
-      return res.status(HTTP_STATUS.BAD_REQUEST).json({ success: false, message: "totalAmount must be a positive number" });
+    catch (err) {
+        if (err.code === "P2003") {
+            return res.status(HTTP_STATUS.BAD_REQUEST).json({ success: false, message: "Invalid reference (session/branch/class/feeHead not found)" });
+        }
+        return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ success: false, message: err.message });
     }
-
-    // Prevent duplicate template for same class/session/branch/head
-    const exists = await prisma.feeTemplate.findFirst({
-      where: { sessionId, branchId, classLabelId, feeHeadId }
-    });
-    if (exists) {
-      return res.status(HTTP_STATUS.CONFLICT).json({ success: false, message: "Template already exists for this class/session/feeHead" });
-    }
-
-    const template = await prisma.feeTemplate.create({
-      data: {
-        sessionId,
-        branchId,
-        classLabelId,
-        feeHeadId,
-        amount:totalAmount,
-        discounts:defaultDiscounts,
-        lateFees:defaultLateFees
-      }
-    });
-
-    return res.status(HTTP_STATUS.CREATED).json({ success: true, message: "FeeTemplate created", data: { template } });
-  } catch (err: any) {
-    if (err.code === "P2003") {
-      return res.status(HTTP_STATUS.BAD_REQUEST).json({ success: false, message: "Invalid reference (session/branch/class/feeHead not found)" });
-    }
-    return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ success: false, message: err.message });
-  }
 };
-
-export const getFeeTemplates = async (req: any, res: any) => {
-  try {
-    const { branchId, sessionId, classLabelId } = req.query;
-    const where: any = {};
-    if (branchId) where.branchId = branchId;
-    if (sessionId) where.sessionId = sessionId;
-    if (classLabelId) where.classId = classLabelId;
-
-    const templates = await prisma.feeTemplate.findMany({ where });
-    return res.status(HTTP_STATUS.OK).json({ success: true, message: "FeeTemplates fetched", data: { templates } });
-  } catch (err: any) {
-    return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ success: false, message: err.message });
-  }
+export const getFeeTemplates = async (req, res) => {
+    try {
+        const { branchId, sessionId, classLabelId } = req.query;
+        const where = {};
+        if (branchId)
+            where.branchId = branchId;
+        if (sessionId)
+            where.sessionId = sessionId;
+        if (classLabelId)
+            where.classId = classLabelId;
+        const templates = await prisma.feeTemplate.findMany({ where });
+        return res.status(HTTP_STATUS.OK).json({ success: true, message: "FeeTemplates fetched", data: { templates } });
+    }
+    catch (err) {
+        return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ success: false, message: err.message });
+    }
 };
-
-export const updateFeeTemplate = async (req: any, res: any) => {
-  try {
-    const { id } = req.params;
-    const payload = req.body;
-    if (!id) return res.status(HTTP_STATUS.BAD_REQUEST).json({ success: false, message: "id required" });
-
-    // Basic validation: cannot set negative totalAmount if provided
-    if (payload.totalAmount != null && (typeof payload.totalAmount !== "number" || payload.totalAmount <= 0)) {
-      return res.status(HTTP_STATUS.BAD_REQUEST).json({ success: false, message: "totalAmount must be positive" });
+export const updateFeeTemplate = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const payload = req.body;
+        if (!id)
+            return res.status(HTTP_STATUS.BAD_REQUEST).json({ success: false, message: "id required" });
+        // Basic validation: cannot set negative totalAmount if provided
+        if (payload.totalAmount != null && (typeof payload.totalAmount !== "number" || payload.totalAmount <= 0)) {
+            return res.status(HTTP_STATUS.BAD_REQUEST).json({ success: false, message: "totalAmount must be positive" });
+        }
+        const template = await prisma.feeTemplate.update({ where: { id }, data: payload });
+        return res.status(HTTP_STATUS.OK).json({ success: true, message: "FeeTemplate updated", data: { template } });
     }
-
-    const template = await prisma.feeTemplate.update({ where: { id }, data: payload });
-    return res.status(HTTP_STATUS.OK).json({ success: true, message: "FeeTemplate updated", data: { template } });
-  } catch (err: any) {
-    if (err.code === "P2025") {
-      return res.status(HTTP_STATUS.NOT_FOUND).json({ success: false, message: "FeeTemplate not found" });
+    catch (err) {
+        if (err.code === "P2025") {
+            return res.status(HTTP_STATUS.NOT_FOUND).json({ success: false, message: "FeeTemplate not found" });
+        }
+        return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ success: false, message: err.message });
     }
-    return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ success: false, message: err.message });
-  }
 };
-
-export const deleteFeeTemplate = async (req: any, res: any) => {
-  try {
-    const { id } = req.params;
-    if (!id) return res.status(HTTP_STATUS.BAD_REQUEST).json({ success: false, message: "id required" });
-
-    const used = await prisma.feeDoc.count({ where: { templateId: id } });
-    if (used > 0) {
-      return res.status(HTTP_STATUS.BAD_REQUEST).json({ success: false, message: "Cannot delete template: feeDocs exist" });
+export const deleteFeeTemplate = async (req, res) => {
+    try {
+        const { id } = req.params;
+        if (!id)
+            return res.status(HTTP_STATUS.BAD_REQUEST).json({ success: false, message: "id required" });
+        const used = await prisma.feeDoc.count({ where: { templateId: id } });
+        if (used > 0) {
+            return res.status(HTTP_STATUS.BAD_REQUEST).json({ success: false, message: "Cannot delete template: feeDocs exist" });
+        }
+        await prisma.feeTemplate.delete({ where: { id } });
+        return res.status(HTTP_STATUS.OK).json({ success: true, message: "FeeTemplate deleted" });
     }
-
-    await prisma.feeTemplate.delete({ where: { id } });
-    return res.status(HTTP_STATUS.OK).json({ success: true, message: "FeeTemplate deleted" });
-  } catch (err: any) {
-    if (err.code === "P2025") {
-      return res.status(HTTP_STATUS.NOT_FOUND).json({ success: false, message: "FeeTemplate not found" });
+    catch (err) {
+        if (err.code === "P2025") {
+            return res.status(HTTP_STATUS.NOT_FOUND).json({ success: false, message: "FeeTemplate not found" });
+        }
+        return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ success: false, message: err.message });
     }
-    return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ success: false, message: err.message });
-  }
 };
-
+/*
 // -------------------- FeeDoc --------------------
 export const generateFeeDocs = async (req: any, res: any) => {
   try {
-    const { classId, classLabelId, sessionId } = req.body;
+    const { classId, classLabelId, sessionId, paymentType, installments } = req.body;
     if (!classId || !sessionId) return res.status(HTTP_STATUS.BAD_REQUEST).json({ success: false, message: "classId & sessionId required" });
 
     // use transaction - if any creation fails, rollback
@@ -441,24 +437,23 @@ export const generateFeeDocs = async (req: any, res: any) => {
       if (templates.length === 0) throw new Error("No fee templates found for this class & session");
 
       const created: any[] = [];
-      for (const student of students) {
+      for (const enrollment of enrollments) {
         for (const template of templates) {
           // avoid duplicates if same doc already exists
           const exists = await tx.feeDoc.findFirst({
-            where: { enrollmentId: student.id, templateId: template.id, feeHeadId: template.feeHeadId, sessionId }
+            where: { enrollmentId: enrollment.id, templateId: template.id, feeHeadId: template.feeHeadId }
           });
           if (exists) {
-            created.push({ skipped: true, studentId: student.id, templateId: template.id });
+            created.push({ skipped: true, enrollmentId: enrollment.id, templateId: template.id });
             continue;
           }
 
           const doc = await tx.feeDoc.create({
             data: {
-              studentId: student.id,
+              enrollmentId: enrollment.id,
               feeHeadId: template.feeHeadId,
               templateId: template.id,
-              sessionId,
-              amount: template.totalAmount ?? template.totalAmount, // adjust field names if needed
+              amount: template.amount ?? template.amount, // adjust field names if needed
               status: "PENDING",
             }
           });
@@ -672,6 +667,5 @@ export const getBranchTransactions = async (req: any, res: any) => {
     return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ success: false, message: err.message });
   }
 };
-
-*/ 
+*/
 //# sourceMappingURL=fees.js.map

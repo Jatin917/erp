@@ -1,62 +1,100 @@
+import { $Enums } from "../../generated/prisma/index.js";
 export const permissions = {
     school: [
-        "CREATE_SCHOOL",
-        "VIEW_SCHOOL",
-        "EDIT_SCHOOL",
-        "DELETE_SCHOOL"
+        $Enums.Permission.CREATE_SCHOOL,
+        $Enums.Permission.VIEW_SCHOOL,
+        $Enums.Permission.EDIT_SCHOOL,
+        $Enums.Permission.DELETE_SCHOOL,
     ],
     branch: [
-        "CREATE_BRANCH",
-        "VIEW_BRANCH",
-        "EDIT_BRANCH",
-        "DELETE_BRANCH"
+        $Enums.Permission.CREATE_BRANCH,
+        $Enums.Permission.VIEW_BRANCH,
+        $Enums.Permission.EDIT_BRANCH,
+        $Enums.Permission.DELETE_BRANCH,
     ],
     class: [
-        "CREATE_CLASS",
-        "VIEW_CLASS",
-        "EDIT_CLASS",
-        "DELETE_CLASS"
+        $Enums.Permission.CREATE_CLASS,
+        $Enums.Permission.VIEW_CLASS,
+        $Enums.Permission.EDIT_CLASS,
+        $Enums.Permission.DELETE_CLASS,
+        $Enums.Permission.CREATE_CLASSNAME,
+        $Enums.Permission.VIEW_CLASSNAME,
     ],
     student: [
-        "CREATE_STUDENT",
-        "VIEW_STUDENT",
-        "EDIT_STUDENT",
-        "DELETE_STUDENT",
-        "BULK_UPLOAD_STUDENTS",
-        "GET_BULK_UPLOAD_SHEET"
+        $Enums.Permission.CREATE_STUDENT,
+        $Enums.Permission.VIEW_STUDENT,
+        $Enums.Permission.EDIT_STUDENT,
+        $Enums.Permission.DELETE_STUDENT,
+        $Enums.Permission.BULK_UPLOAD_STUDENTS,
+        $Enums.Permission.GET_BULK_UPLOAD_SHEET,
     ],
     parent: [
-        "CREATE_PARENT",
-        "VIEW_PARENT",
-        "EDIT_PARENT",
-        "DELETE_PARENT"
+        $Enums.Permission.CREATE_PARENT,
+        $Enums.Permission.VIEW_PARENT,
+        $Enums.Permission.EDIT_PARENT,
+        $Enums.Permission.DELETE_PARENT,
     ],
-    fees: [
-        "CREATE_FEE_DOC",
-        "VIEW_FEE_DOC",
-        "EDIT_FEE_DOC",
-        "DELETE_FEE_DOC",
-        "RECORD_FEE_TRANSACTION",
-        "VIEW_FEE_SUMMARY"
+    discounts: [
+        $Enums.Permission.CREATE_DISCOUNT_POLICY,
+        $Enums.Permission.VIEW_DISCOUNT_POLICY,
+        $Enums.Permission.UPDATE_DISCOUNT_POLICY,
+        $Enums.Permission.DELETE_DISCOUNT_POLICY,
+        $Enums.Permission.APPLY_DISCOUNT,
+        $Enums.Permission.DELETE_APPLY_DISCOUNT,
+        $Enums.Permission.VIEW_APPLY_DISCOUNT,
+    ],
+    feeHead: [
+        $Enums.Permission.CREATE_FEE_HEAD,
+        $Enums.Permission.VIEW_FEE_HEAD,
+        $Enums.Permission.EDIT_FEE_HEAD,
+        $Enums.Permission.DELETE_FEE_HEAD,
+    ],
+    feeTemplate: [
+        $Enums.Permission.CREATE_FEE_TEMPLATE,
+        $Enums.Permission.VIEW_FEE_TEMPLATE,
+        $Enums.Permission.EDIT_FEE_TEMPLATE,
+        $Enums.Permission.DELETE_FEE_TEMPLATE,
+    ],
+    feeDoc: [
+        $Enums.Permission.GENERATE_FEE_DOCS,
+        $Enums.Permission.VIEW_FEE_DOCS,
+        $Enums.Permission.EDIT_FEE_DOC,
+        $Enums.Permission.DELETE_FEE_DOC,
+    ],
+    feePayment: [
+        $Enums.Permission.CREATE_FEE_PAYMENT,
+        $Enums.Permission.VIEW_FEE_PAYMENTS,
+        $Enums.Permission.EDIT_FEE_PAYMENT,
+        $Enums.Permission.DELETE_FEE_PAYMENT,
+    ],
+    feeTransaction: [
+        $Enums.Permission.CREATE_FEE_TRANSACTION,
+        $Enums.Permission.VIEW_FEE_TRANSACTIONS,
+        $Enums.Permission.VIEW_BRANCH_FEE_REPORT,
     ],
     session: [
-        "CREATE_SESSION",
-        "VIEW_SESSION",
-        "EDIT_SESSION",
-        "LOCK_SESSION",
-        "PROMOTE_STUDENTS"
+        $Enums.Permission.CREATE_SESSION,
+        $Enums.Permission.VIEW_SESSION,
+        $Enums.Permission.EDIT_SESSION,
+        $Enums.Permission.DELETE_SESSION,
+        $Enums.Permission.LOCK_SESSION,
+        $Enums.Permission.PROMOTE_STUDENTS,
     ],
     reports: [
-        "VIEW_REPORTS",
-        "EXPORT_REPORTS"
+        $Enums.Permission.VIEW_REPORTS,
+        $Enums.Permission.EXPORT_REPORTS,
     ],
     documents: [
-        "GENERATE_ID_CARD",
-        "GENERATE_TRANSFER_CERTIFICATE"
+        $Enums.Permission.GENERATE_ID_CARD,
+        $Enums.Permission.GENERATE_TRANSFER_CERTIFICATE,
+        $Enums.Permission.UPLOAD_DOCUMENT,
+        $Enums.Permission.VIEW_DOCUMENT,
+        $Enums.Permission.DELETE_DOCUMENT,
     ],
     notifications: [
-        "SEND_NOTIFICATION",
-        "VIEW_NOTIFICATIONS"
+        $Enums.Permission.SEND_NOTIFICATION,
+        $Enums.Permission.VIEW_NOTIFICATIONS,
+        $Enums.Permission.DELETE_NOTIFICATION,
     ],
 };
 export const roleDefaults = {
@@ -66,11 +104,16 @@ export const roleDefaults = {
         ...permissions.class,
         ...permissions.student,
         ...permissions.parent,
-        ...permissions.fees,
+        ...permissions.discounts,
+        ...permissions.feeHead,
+        ...permissions.feeTemplate,
+        ...permissions.feeDoc,
+        ...permissions.feePayment,
+        ...permissions.feeTransaction,
         ...permissions.session,
         ...permissions.reports,
         ...permissions.documents,
-        ...permissions.notifications
+        ...permissions.notifications,
     ],
     DIRECTOR: [
         ...permissions.school,
@@ -78,77 +121,81 @@ export const roleDefaults = {
         ...permissions.class,
         ...permissions.student,
         ...permissions.parent,
-        ...permissions.fees,
+        ...permissions.discounts,
+        ...permissions.feeHead,
+        ...permissions.feeTemplate,
+        ...permissions.feeDoc,
+        ...permissions.feePayment,
+        ...permissions.feeTransaction,
         ...permissions.session,
         ...permissions.reports,
         ...permissions.documents,
-        ...permissions.notifications
+        ...permissions.notifications,
     ],
     PRINCIPAL: [
         ...permissions.branch,
         ...permissions.class,
         ...permissions.student,
         ...permissions.parent,
-        ...permissions.fees,
+        ...permissions.discounts,
+        ...permissions.feeDoc,
+        ...permissions.feePayment,
+        ...permissions.feeTransaction,
         ...permissions.session,
         ...permissions.reports,
         ...permissions.documents,
-        ...permissions.notifications
+        ...permissions.notifications,
     ],
     TEACHER: [
         ...permissions.class,
         ...permissions.student,
         ...permissions.parent,
-        "VIEW_REPORTS",
-        "VIEW_NOTIFICATIONS"
+        $Enums.Permission.VIEW_REPORTS,
+        $Enums.Permission.VIEW_NOTIFICATIONS,
     ],
     LIBRARIAN: [
         ...permissions.student,
-        "VIEW_REPORTS",
-        "VIEW_NOTIFICATIONS"
+        $Enums.Permission.VIEW_DOCUMENT,
+        $Enums.Permission.UPLOAD_DOCUMENT,
+        $Enums.Permission.VIEW_REPORTS,
+        $Enums.Permission.VIEW_NOTIFICATIONS,
     ],
     RECEPTIONIST: [
         ...permissions.student,
         ...permissions.parent,
-        "VIEW_REPORTS",
-        "VIEW_NOTIFICATIONS"
+        $Enums.Permission.VIEW_REPORTS,
+        $Enums.Permission.VIEW_NOTIFICATIONS,
     ],
     ACCOUNTANT: [
-        ...permissions.fees,
-        "VIEW_REPORTS",
-        "VIEW_NOTIFICATIONS"
+        ...permissions.feeDoc,
+        ...permissions.feePayment,
+        ...permissions.feeTransaction,
+        $Enums.Permission.VIEW_REPORTS,
+        $Enums.Permission.VIEW_NOTIFICATIONS,
     ],
     SCHOOL_ADMIN: [
         ...permissions.branch,
         ...permissions.class,
         ...permissions.student,
         ...permissions.parent,
-        ...permissions.fees,
+        ...permissions.feeDoc,
+        ...permissions.feePayment,
+        ...permissions.feeTransaction,
         ...permissions.session,
-        "VIEW_REPORTS",
-        "VIEW_NOTIFICATIONS"
+        $Enums.Permission.VIEW_REPORTS,
+        $Enums.Permission.VIEW_NOTIFICATIONS,
     ],
     STUDENT: [
-        "VIEW_NOTIFICATIONS"
+        $Enums.Permission.VIEW_NOTIFICATIONS,
+        $Enums.Permission.VIEW_DOCUMENT,
     ],
     FATHER: [
-        "VIEW_NOTIFICATIONS"
+        $Enums.Permission.VIEW_NOTIFICATIONS,
+        $Enums.Permission.VIEW_DOCUMENT,
     ],
     MOTHER: [
-        "VIEW_NOTIFICATIONS"
+        $Enums.Permission.VIEW_NOTIFICATIONS,
+        $Enums.Permission.VIEW_DOCUMENT,
     ],
-};
-export const rolesAre = {
-    SUPERADMIN: "SUPERADMIN",
-    DIRECTOR: "DIRECTOR",
-    PRINCIPAL: "PRINCIPAL",
-    TEACHER: "TEACHER",
-    LIBRARIAN: "LIBRARIAN",
-    RECEPTIONIST: "RECEPTIONIST",
-    ACCOUNTANT: "ACCOUNTANT",
-    SCHOOL_ADMIN: "SCHOOL_ADMIN",
-    STUDENT: "STUDENT",
-    FATHER: "FATHER",
-    MOTHER: "MOTHER",
 };
 //# sourceMappingURL=permission.js.map

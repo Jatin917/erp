@@ -4,7 +4,7 @@ import bcrypt from 'bcrypt';
 import { roleDefaults } from '../../../lib/permission.js';
 import { OTP_TYPE, Permission } from '../../../lib/types.js';
 import jwt from 'jsonwebtoken';
-import { Role } from "../../../../generated/prisma/index.js";
+import { Permission as PrismaPermission } from "../../../../generated/prisma/index.js";
 import { TOKEN_TTL } from "../../../lib/contants.js";
 import { userInfo } from "os";
 import { isEmailVerified } from "../../../services/otp.js";
@@ -26,7 +26,7 @@ export const registerUser = async (req, res) => {
         }
         const hashedPassword = await bcrypt.hash(password, 10);
         const rolePermissions = roleDefaults[role] || [];
-        const rolePermissionsEnum = rolePermissions.map((perm) => Permission[perm]);
+        const rolePermissionsEnum = rolePermissions.map((perm) => PrismaPermission[perm]);
         const roles = [role];
         const user = await prisma.user.create({
             data: {
