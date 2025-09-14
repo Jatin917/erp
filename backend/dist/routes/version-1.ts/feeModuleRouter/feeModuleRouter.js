@@ -14,7 +14,7 @@ feeModuleRouter.get('/list-feetemplate', isPermitted, getFeeTemplates);
 feeModuleRouter.put('/update-feetemplate/:id', isPermitted, updateFeeTemplate);
 feeModuleRouter.delete('/delete-feetemplate/:id', isPermitted, deleteFeeTemplate);
 feeModuleRouter.post('/create-discountpolicy', isPermitted, createDiscountPolicy);
-feeModuleRouter.get('/list-discountpolicy/:id', isPermitted, listDiscountPolicies);
+feeModuleRouter.get('/list-discountpolicy/:branchId', isPermitted, listDiscountPolicies);
 feeModuleRouter.put('/update-discountpolicy/:id', isPermitted, updateDiscountPolicy);
 feeModuleRouter.delete('/delete-discountpolicy/:id', isPermitted, deleteDiscountPolicy);
 feeModuleRouter.delete('/delete-applied-discount/:id', isPermitted, deleteAppliedDiscount);

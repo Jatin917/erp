@@ -33,7 +33,7 @@ export const createDiscountPolicy = async (req, res) => {
 };
 export const listDiscountPolicies = async (req, res) => {
     try {
-        const branchId = req.params.id;
+        const branchId = req.params.branchId;
         if (!branchId) {
             return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: "Branch required", success: false });
         }
@@ -48,47 +48,88 @@ export const listDiscountPolicies = async (req, res) => {
 };
 export const applyDiscount = async (req, res) => {
     try {
-        const { feeDocId, transactionId, policyId } = req.body;
-        if (!feeDocId || !transactionId || !policyId) {
-            return res.status(HTTP_STATUS.BAD_REQUEST).json({ success: false, message: "feeDocId, transactionId, and policyId required" });
+        const { feeDocId, transactionId, feeTemplateId, policyId } = req.body;
+        if (!policyId || (!feeDocId && !transactionId && !feeTemplateId)) {
+            return res
+                .status(HTTP_STATUS.BAD_REQUEST)
+                .json({ success: false, message: "policyId and at least one of feeDocId, transactionId, or feeTemplateId required" });
         }
         const policy = await prisma.discountPolicy.findUnique({ where: { id: policyId } });
         if (!policy) {
-            return res.status(HTTP_STATUS.NOT_FOUND).json({ success: false, message: "DiscountPolicy not found" });
+            return res
+                .status(HTTP_STATUS.NOT_FOUND)
+                .json({ success: false, message: "DiscountPolicy not found" });
         }
+        // ---------- Validation ----------
         if (policy.expiryDate && new Date(policy.expiryDate) < new Date()) {
-            return res.status(HTTP_STATUS.BAD_REQUEST).json({ success: false, message: "DiscountPolicy expired" });
+            return res
+                .status(HTTP_STATUS.BAD_REQUEST)
+                .json({ success: false, message: "DiscountPolicy expired" });
         }
         if (policy.usageLimit !== null) {
             const usedCount = await prisma.discount.count({ where: { policyId } });
             if (usedCount >= policy.usageLimit) {
-                return res.status(HTTP_STATUS.BAD_REQUEST).json({ success: false, message: "DiscountPolicy usage limit reached" });
+                return res
+                    .status(HTTP_STATUS.BAD_REQUEST)
+                    .json({ success: false, message: "DiscountPolicy usage limit reached" });
             }
         }
-        // compute applied amount
+        // ---------- Applied Amount ----------
+        let baseAmount = 0;
+        if (feeDocId) {
+            const feeDoc = await prisma.feeDoc.findUnique({ where: { id: feeDocId } });
+            if (!feeDoc) {
+                return res
+                    .status(HTTP_STATUS.NOT_FOUND)
+                    .json({ success: false, message: "FeeDoc not found" });
+            }
+            baseAmount = feeDoc.amount ?? 0;
+        }
+        else if (feeTemplateId) {
+            const template = await prisma.feeTemplate.findUnique({ where: { id: feeTemplateId } });
+            if (!template) {
+                return res
+                    .status(HTTP_STATUS.NOT_FOUND)
+                    .json({ success: false, message: "FeeTemplate not found" });
+            }
+            baseAmount = template.amount ?? 0;
+        }
+        else if (transactionId) {
+            const txn = await prisma.feeTransaction.findUnique({ where: { id: transactionId } });
+            if (!txn) {
+                return res
+                    .status(HTTP_STATUS.NOT_FOUND)
+                    .json({ success: false, message: "Transaction not found" });
+            }
+            baseAmount = txn.amountPaid ?? 0;
+        }
         let appliedAmount = 0;
-        const feeDoc = await prisma.feeDoc.findUnique({ where: { id: feeDocId } });
-        if (!feeDoc) {
-            return res.status(HTTP_STATUS.NOT_FOUND).json({ success: false, message: "FeeDoc not found" });
-        }
         if (policy.discountType === "PERCENTAGE") {
-            appliedAmount = (policy.percentage / 100) * feeDoc.amount;
+            appliedAmount = (policy.percentage ?? 0) / 100 * baseAmount;
         }
-        else {
-            appliedAmount = policy.amount;
+        else if (policy.discountType === "FIXED") {
+            appliedAmount = policy.amount ?? 0;
         }
+        // ---------- Create Discount ----------
         const discount = await prisma.discount.create({
             data: {
                 feeDocId,
+                feeTemplateId,
                 transactionId,
                 policyId,
                 appliedAmount,
             },
         });
-        return res.json({ success: true, message: "Discount applied", data: { discount } });
+        return res.json({
+            success: true,
+            message: "Discount applied successfully",
+            data: { discount },
+        });
     }
     catch (err) {
-        return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ success: false, message: err.message });
+        return res
+            .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
+            .json({ success: false, message: err.message });
     }
 };
 // -------------------- Get Discounts by Transaction --------------------
