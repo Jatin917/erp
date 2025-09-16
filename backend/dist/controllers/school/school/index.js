@@ -283,7 +283,7 @@ export const getBranches = async (req, res) => {
         const roles = user.role;
         // SUPERADMIN: return all branches
         if (roles.includes(rolesAre.SUPERADMIN)) {
-            const branches = await prisma.branch.findMany();
+            const branches = await prisma.branch.findMany({ include: { academicSession: true } });
             schools = branches.map(branch => ({
                 name: `${branch.name} ${branch.address}`,
                 id: branch.id,

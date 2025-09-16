@@ -6,14 +6,16 @@ import bcrypt from "bcrypt";
 import { defaultPassword, LIMIT, prisma } from "../../../server.js"; // your prisma instance
 import { HTTP_STATUS } from "../../../lib/http-codes.js";
 import XLSX from "xlsx";
-import { ClassEnum } from "../../../../generated/prisma/index.js";
+import { ClassEnum, } from "../../../../generated/prisma/index.js";
+import { Prisma } from "@prisma/client/extension";
 import { fileURLToPath } from "url";
 import { connect } from "http2";
+import { sendError, sendSuccess } from "../../../lib/utils.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 function getStudentDir(sid, bid, admissionNo) {
     // All must be string for path.join
-    return path.join(__dirname, '..', "..", "..", "..", 'uploads', String(sid), String(bid), String(admissionNo));
+    return path.join(__dirname, "..", "..", "..", "..", "uploads", String(sid), String(bid), String(admissionNo));
 }
 // ----------------------
 // Generate Barcode
@@ -42,7 +44,7 @@ async function generateBarcode(student) {
     }
     console.log("image is ");
     // Return relative path for frontend usage
-    return path.join('..', "..", "..", "..", "uploads", student.branch.schoolId, student.branchId, student.admissionNo || student.id, `${student.id}.png`);
+    return path.join("..", "..", "..", "..", "uploads", student.branch.schoolId, student.branchId, student.admissionNo || student.id, `${student.id}.png`);
 }
 // ----------------------
 // Create / Find User Helper
@@ -75,27 +77,36 @@ async function findOrCreateUser(role, name, email, phone) {
         });
     }
 }
-async function createEnrollment(tx, // 👈 accept tx here
-className, branchId, studentId, section, sessionId, rollNo) {
-    // Ensure class exists (or create)
+async function createEnrollment(tx, classNameId, branchId, studentId, sectionId, rollNo) {
     let cls = await tx.class.findFirst({
-        where: { name: className, section, branchId },
+        where: {
+            classLabelId: classNameId,
+            sectionId: sectionId ?? undefined,
+            branchId,
+        },
     });
     if (!cls) {
         cls = await tx.class.create({
-            data: { name: className, section, branchId },
+            data: { classLabelId: classNameId, sectionId, branchId },
         });
     }
-    // Create enrollment (if not already created, optional uniqueness check)
-    const enrollment = await tx.enrollment.create({
+    const branch = await tx.branch.findUnique({
+        where: { id: branchId },
+        include: { academicSession: true },
+    });
+    if (!branch)
+        throw Error("Branch does not exist");
+    const currentSession = branch.academicSession.find((s) => s.isCurrent === true);
+    if (!currentSession)
+        throw Error("No current session for branch");
+    return tx.enrollment.create({
         data: {
-            studentId,
-            classId: cls.id,
-            sessionId,
+            student: { connect: { id: studentId } },
+            class: { connect: { id: cls.id } },
+            session: { connect: { id: currentSession.id } },
             rollNo,
         },
     });
-    return enrollment;
 }
 function normalizeSession(session) {
     // 1. Extract years (assume formats like "2024-2025", "2024-25", "24-25")
@@ -118,34 +129,50 @@ function mapClassInput(input) {
         return null;
     const trimmed = input.trim().toUpperCase();
     switch (trimmed) {
-        case "NURSERY": return ClassEnum.NURSERY;
-        case "LKG": return ClassEnum.LKG;
-        case "UKG": return ClassEnum.UKG;
+        case "NURSERY":
+            return ClassEnum.NURSERY;
+        case "LKG":
+            return ClassEnum.LKG;
+        case "UKG":
+            return ClassEnum.UKG;
         case "I":
-        case "FIRST": return ClassEnum.FIRST;
+        case "FIRST":
+            return ClassEnum.FIRST;
         case "II":
-        case "SECOND": return ClassEnum.SECOND;
+        case "SECOND":
+            return ClassEnum.SECOND;
         case "III":
-        case "THIRD": return ClassEnum.THIRD;
+        case "THIRD":
+            return ClassEnum.THIRD;
         case "IV":
-        case "FOURTH": return ClassEnum.FOURTH;
+        case "FOURTH":
+            return ClassEnum.FOURTH;
         case "V":
-        case "FIFTH": return ClassEnum.FIFTH;
+        case "FIFTH":
+            return ClassEnum.FIFTH;
         case "VI":
-        case "SIXTH": return ClassEnum.SIXTH;
+        case "SIXTH":
+            return ClassEnum.SIXTH;
         case "VII":
-        case "SEVENTH": return ClassEnum.SEVENTH;
+        case "SEVENTH":
+            return ClassEnum.SEVENTH;
         case "VIII":
-        case "EIGHTH": return ClassEnum.EIGHTH;
+        case "EIGHTH":
+            return ClassEnum.EIGHTH;
         case "IX":
-        case "NINTH": return ClassEnum.NINTH;
+        case "NINTH":
+            return ClassEnum.NINTH;
         case "X":
-        case "TENTH": return ClassEnum.TENTH;
+        case "TENTH":
+            return ClassEnum.TENTH;
         case "XI":
-        case "ELEVENTH": return ClassEnum.ELEVENTH;
+        case "ELEVENTH":
+            return ClassEnum.ELEVENTH;
         case "XII":
-        case "TWELFTH": return ClassEnum.TWELFTH;
-        default: return null; // invalid class input
+        case "TWELFTH":
+            return ClassEnum.TWELFTH;
+        default:
+            return null; // invalid class input
     }
 }
 // ----------------------
@@ -153,54 +180,68 @@ function mapClassInput(input) {
 // ----------------------
 export const createStudent = async (req, res) => {
     try {
-        let dataFromBody = req.body;
-        const { session, class: classAsParam, branchId, rollNo, dob, ...data } = dataFromBody;
-        const normalizedSession = normalizeSession(session);
+        const { className, branchId, rollNo, dob, ...data } = req.body;
+        if (!branchId || !className) {
+            return sendError(res, "branchId and className required", HTTP_STATUS.BAD_REQUEST);
+        }
+        const classLabel = await prisma.classLabel.findFirst({ where: { branchId, name: className } });
+        if (!classLabel) {
+            return sendError(res, "ClassName don't exist", HTTP_STATUS.CONFLICT);
+        }
+        const classNameId = classLabel.id;
+        if (!data.fatherName || !data.fatherMobile) {
+            return sendError(res, "Father details required", HTTP_STATUS.BAD_REQUEST);
+        }
+        if (!data.motherName || !data.motherMobile) {
+            return sendError(res, "Mother details required", HTTP_STATUS.BAD_REQUEST);
+        }
         const student = await prisma.$transaction(async (tx) => {
-            // ---------- 1. Check Academic Session ----------
-            const sessionIsThere = await tx.academicSession.findFirst({
-                where: { name: normalizedSession },
+            // ---------- Student User ----------
+            const studentUser = await findOrCreateUser("STUDENT", {
+                name: data.name,
+                email: data.studentEmail,
+                contact: data.studentMobile,
             });
-            if (!sessionIsThere) {
-                throw new Error("Academic Session does not exist");
-            }
-            // ---------- 2. Create Student User ----------
-            const studentUser = await findOrCreateUser("STUDENT", data.name, data.studentEmail, data.studentMobile ? String(data.studentMobile) : null);
-            // ---------- 3. Create Parent Users ----------
-            let fatherParent = null;
-            if (data.fatherName || data.fatherEmail || data.fatherMobile) {
-                const fatherUser = await findOrCreateUser("FATHER", data.fatherName, data.fatherEmail, data.fatherMobile ? String(data.fatherMobile) : null);
-                if (fatherUser) {
-                    fatherParent = await tx.parent.create({
-                        data: { type: "FATHER", userId: String(fatherUser.id) },
-                    });
-                }
-            }
-            let motherParent = null;
-            if (data.motherName || data.motherEmail || data.motherMobile) {
-                const motherUser = await findOrCreateUser("MOTHER", data.motherName, data.motherEmail, data.motherMobile ? String(data.motherMobile) : null);
-                if (motherUser) {
-                    motherParent = await tx.parent.create({
-                        data: { type: "MOTHER", userId: String(motherUser.id) },
-                    });
-                }
-            }
-            // ---------- 4. Create Student Record ----------
-            console.log("dob ", dob);
+            // ---------- Father ----------
+            const fatherUser = await findOrCreateUser("FATHER", {
+                name: data.fatherName,
+                email: data.fatherEmail,
+                contact: data.fatherMobile,
+            });
+            const fatherParent = fatherUser
+                ? await tx.parent.create({
+                    data: { type: "FATHER", userId: fatherUser.id },
+                })
+                : null;
+            // ---------- Mother ----------
+            const motherUser = await findOrCreateUser("MOTHER", {
+                name: data.motherName,
+                email: data.motherEmail,
+                contact: data.motherMobile,
+            });
+            const motherParent = motherUser
+                ? await tx.parent.create({
+                    data: { type: "MOTHER", userId: motherUser.id },
+                })
+                : null;
+            // ---------- Student ----------
             const student = await tx.student.create({
                 data: {
-                    // ---------- Keep connect relations ----------
-                    user: studentUser ? { connect: { id: String(studentUser.id) } } : undefined,
-                    father: fatherParent ? { connect: { id: String(fatherParent.id) } } : undefined,
-                    mother: motherParent ? { connect: { id: String(motherParent.id) } } : undefined,
+                    // ---------- Relations ----------
+                    user: studentUser
+                        ? { connect: { id: String(studentUser.id) } }
+                        : undefined,
+                    father: fatherParent
+                        ? { connect: { id: String(fatherParent.id) } }
+                        : undefined,
+                    mother: motherParent
+                        ? { connect: { id: String(motherParent.id) } }
+                        : undefined,
                     branch: { connect: { id: branchId } },
-                    rollNo,
-                    class: classAsParam,
-                    // ---------- Map fields from data ----------
+                    // ---------- Basic Info ----------
                     name: String(data.name),
                     studentId: data.studentId || null,
                     admissionNo: data.admissionNo || null,
-                    section: data.section || null,
                     gender: data.gender || null,
                     dob: dob ? new Date(dob) : null,
                     aadhaar: data.aadhaar || null,
@@ -217,11 +258,12 @@ export const createStudent = async (req, res) => {
                     allergies: data.allergies || null,
                     studentEmail: data.studentEmail || null,
                     studentMobile: data.studentMobile || null,
+                    // ---------- Citizenship & Visa ----------
                     citizenship: data.citizenship || null,
                     visaNo: data.visaNo || null,
                     visaType: data.visaType || null,
                     visaValidity: data.visaValidity ? new Date(data.visaValidity) : null,
-                    // Father / Mother details
+                    // ---------- Father Details ----------
                     fatherName: data.fatherName || null,
                     fatherOccupation: data.fatherOccupation || null,
                     fatherEmail: data.fatherEmail || null,
@@ -233,7 +275,10 @@ export const createStudent = async (req, res) => {
                     fatherCitizenship: data.fatherCitizenship || null,
                     fatherVisaNo: data.fatherVisaNo || null,
                     fatherVisaType: data.fatherVisaType || null,
-                    fatherVisaValidity: data.fatherVisaValidity ? new Date(data.fatherVisaValidity) : null,
+                    fatherVisaValidity: data.fatherVisaValidity
+                        ? new Date(data.fatherVisaValidity)
+                        : null,
+                    // ---------- Mother Details ----------
                     motherName: data.motherName || null,
                     motherOccupation: data.motherOccupation || null,
                     motherEmail: data.motherEmail || null,
@@ -245,18 +290,10 @@ export const createStudent = async (req, res) => {
                     motherCitizenship: data.motherCitizenship || null,
                     motherVisaNo: data.motherVisaNo || null,
                     motherVisaType: data.motherVisaType || null,
-                    motherVisaValidity: data.motherVisaValidity ? new Date(data.motherVisaValidity) : null,
-                    // Fees
-                    discount: data.discount ? parseFloat(data.discount) : 0,
-                    lateFine: data.lateFine ? parseFloat(data.lateFine) : 0,
-                    remark: data.remark || null,
-                    currentYearTotal: data.currentYearTotal ? parseFloat(data.currentYearTotal) : 0,
-                    currentYearTotalPaid: data.currentYearTotalPaid ? parseFloat(data.currentYearTotalPaid) : 0,
-                    currentYearTotalBalance: data.currentYearTotalBalance ? parseFloat(data.currentYearTotalBalance) : 0,
-                    lastYearTotal: data.lastYearTotal ? parseFloat(data.lastYearTotal) : 0,
-                    lastYearTotalPaid: data.lastYearTotalPaid ? parseFloat(data.lastYearTotalPaid) : 0,
-                    lastYearTotalBalance: data.lastYearTotalBalance ? parseFloat(data.lastYearTotalBalance) : 0,
-                    // Previous education & address
+                    motherVisaValidity: data.motherVisaValidity
+                        ? new Date(data.motherVisaValidity)
+                        : null,
+                    // ---------- Previous Education ----------
                     previousSchoolName: data.previousSchoolName || null,
                     previousClassPassed: data.previousClassPassed || null,
                     previousClassMarks: data.previousClassMarks || null,
@@ -264,130 +301,36 @@ export const createStudent = async (req, res) => {
                     previousBoard: data.previousBoard || null,
                     migrationCertificateUrl: data.migrationCertificateUrl || null,
                     tcNo: data.tcNo || null,
+                    // ---------- Address ----------
                     permanentAddress: data.permanentAddress || null,
                     temporaryAddress: data.temporaryAddress || null,
-                    // Extras
+                    // ---------- Extras ----------
                     result: data.result || null,
                     resultStatus: data.resultStatus || null,
-                    photoUrl: data.photoUrl || null,
-                    barcodeUrl: data.barcodeUrl || null,
                 },
-                include: { user: true, enrollments: true, branch: true },
-            });
-            // ---------- 5. Enrollment ----------
-            const classValue = mapClassInput(classAsParam);
-            if (!classValue)
-                throw new Error(`Invalid class: ${classAsParam}`);
-            await createEnrollment(tx, classValue, String(branchId), String(student.id), data.section ? String(data.section) : null, String(sessionIsThere.id), rollNo ? String(rollNo) : null);
-            // ---------- 6. Barcode ----------
-            const barcodeUrl = await generateBarcode(student);
-            await tx.student.update({
-                where: { id: String(student.id) },
-                data: { barcodeUrl },
-            });
-            // ---------- 7. Current Year Fee ----------
-            let tuitionFee = data.currentYearTuitionFee
-                ? parseFloat(String(data.currentYearTuitionFee))
-                : 0;
-            let admissionFee = data.currentYearAdmissionFee
-                ? parseFloat(String(data.currentYearAdmissionFee))
-                : 0;
-            if (!tuitionFee && !admissionFee) {
-                tuitionFee = data.currentYearTotal ? parseFloat(String(data.currentYearTotal)) : 0;
-            }
-            const currentFeeDoc = await tx.feeDoc.create({
-                data: {
-                    student: { connect: { id: String(student.id) } },
-                    session: { connect: { id: String(sessionIsThere.id) } },
-                    admissionFee,
-                    tuitionFee,
-                    totalPayable: admissionFee + tuitionFee,
-                    paidInSession: data.currentYearTotalPaid
-                        ? parseFloat(String(data.currentYearTotalPaid))
-                        : 0,
-                    dueInSession: admissionFee + tuitionFee - (data.currentYearTotalPaid
-                        ? parseFloat(String(data.currentYearTotalPaid))
-                        : 0),
+                include: {
+                    user: true,
+                    enrollments: true,
+                    branch: true,
                 },
             });
-            // ---------- 8. Last Year Fee (optional) ----------
-            if (data.lastYearAdmissionFee || data.lastYearTuitionFee || data.lastYearTotal) {
-                const lastSession = await tx.academicSession.findFirst({
-                    where: { branchId: String(branchId), isCurrent: false },
-                    orderBy: { createdAt: "desc" },
-                });
-                if (lastSession) {
-                    await tx.feeDoc.create({
-                        data: {
-                            student: { connect: { id: String(student.id) } },
-                            session: { connect: { id: String(lastSession.id) } },
-                            admissionFee: data.lastYearAdmissionFee
-                                ? parseFloat(String(data.lastYearAdmissionFee))
-                                : 0,
-                            tuitionFee: data.lastYearTuitionFee
-                                ? parseFloat(String(data.lastYearTuitionFee))
-                                : data.lastYearTotal
-                                    ? parseFloat(String(data.lastYearTotal))
-                                    : 0,
-                            totalPayable: (data.lastYearAdmissionFee
-                                ? parseFloat(String(data.lastYearAdmissionFee))
-                                : 0) +
-                                (data.lastYearTuitionFee
-                                    ? parseFloat(String(data.lastYearTuitionFee))
-                                    : data.lastYearTotal
-                                        ? parseFloat(String(data.lastYearTotal))
-                                        : 0),
-                            paidInSession: data.lastYearTotalPaid
-                                ? parseFloat(String(data.lastYearTotalPaid))
-                                : 0,
-                            dueInSession: data.lastYearTotalBalance
-                                ? parseFloat(String(data.lastYearTotalBalance))
-                                : 0,
-                        },
-                    });
-                }
-                else {
-                    await tx.feeDoc.update({
-                        where: { id: currentFeeDoc.id },
-                        data: {
-                            tuitionFee: {
-                                increment: data.lastYearTotal
-                                    ? parseFloat(String(data.lastYearTotal))
-                                    : 0,
-                            },
-                            totalPayable: {
-                                increment: data.lastYearTotal
-                                    ? parseFloat(String(data.lastYearTotal))
-                                    : 0,
-                            },
-                            paidInSession: {
-                                increment: data.lastYearTotalPaid
-                                    ? parseFloat(String(data.lastYearTotalPaid))
-                                    : 0,
-                            },
-                            dueInSession: {
-                                increment: data.lastYearTotalBalance
-                                    ? parseFloat(String(data.lastYearTotalBalance))
-                                    : 0,
-                            },
-                        },
-                    });
-                }
-            }
-            return student;
+            // ---------- Enrollment ----------
+            await createEnrollment(tx, classNameId, branchId, student.id, data.sectionId || null, rollNo || null);
+            return student; // ✅ return student object
         });
-        return res.status(201).json({
-            success: true,
-            message: "Student created successfully",
+        // ---------- Barcode after commit ----------
+        const barcodeUrl = await generateBarcode(student);
+        await prisma.student.update({
+            where: { id: student.id },
+            data: { barcodeUrl },
+        });
+        return sendSuccess(res, "Student created successfully", {
             studentId: student.id,
         });
     }
     catch (error) {
         console.error(error);
-        return res.status(500).json({
-            success: false,
-            message: error.message,
-        });
+        return sendError(res, error.message, HTTP_STATUS.INTERNAL_SERVER_ERROR);
     }
 };
 export const bulkUploadStudents = async (req, res) => {
@@ -403,149 +346,157 @@ export const bulkUploadStudents = async (req, res) => {
         const sheetName = workbook.SheetNames[0];
         const sheetData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
         let results = [];
-        for (const row of sheetData) {
-            try {
-                const session = row.session;
-                const classAsParam = row.class;
-                const normalizedSession = normalizeSession(session);
+        try {
+            for (const row of sheetData) {
+                const { className, branchId, rollNo, dob, ...data } = row;
+                if (!branchId || !className) {
+                    return sendError(res, "branchId and className required", HTTP_STATUS.BAD_REQUEST);
+                }
+                const classLabel = await prisma.classLabel.findFirst({ where: { branchId, name: className } });
+                if (!classLabel) {
+                    return sendError(res, "ClassName don't exist", HTTP_STATUS.CONFLICT);
+                }
+                const classNameId = classLabel.id;
+                if (!data.fatherName || !data.fatherMobile) {
+                    return sendError(res, "Father details required", HTTP_STATUS.BAD_REQUEST);
+                }
+                if (!data.motherName || !data.motherMobile) {
+                    return sendError(res, "Mother details required", HTTP_STATUS.BAD_REQUEST);
+                }
                 const student = await prisma.$transaction(async (tx) => {
-                    const sessionIsThere = await tx.academicSession.findFirst({
-                        where: { name: normalizedSession },
+                    // ---------- Student User ----------
+                    const studentUser = await findOrCreateUser("STUDENT", {
+                        name: data.name,
+                        email: data.studentEmail,
+                        contact: data.studentMobile,
                     });
-                    if (!sessionIsThere) {
-                        throw new Error("Academic Session does not exist");
-                    }
-                    // 1. Student User
-                    const studentUser = await findOrCreateUser("STUDENT", row.studentName, row.studentEmail, row.studentMobile ? String(row.studentMobile) : null);
-                    // skipping this part student email and mobile are not always available
-                    // if (!studentUser) throw new Error("Student user creation failed");
-                    // 2. Father (if any)
-                    let fatherParent = null;
-                    if (row.fatherName || row.fatherEmail || row.fatherMobile) {
-                        const fatherUser = await findOrCreateUser("FATHER", row.fatherName, row.fatherEmail, row.fatherMobile ? String(row.fatherMobile) : null);
-                        if (fatherUser) {
-                            fatherParent = await tx.parent.create({
-                                data: { type: "FATHER", userId: fatherUser.id },
-                            });
-                        }
-                    }
-                    // 3. Mother (if any)
-                    let motherParent = null;
-                    if (row.motherName || row.motherEmail || row.motherMobile) {
-                        const motherUser = await findOrCreateUser("MOTHER", row.motherName, row.motherEmail, row.motherMobile ? String(row.motherMobile) : null);
-                        if (motherUser) {
-                            motherParent = await tx.parent.create({
-                                data: { type: "MOTHER", userId: motherUser.id },
-                            });
-                        }
-                    }
-                    // 4. Student record
+                    // ---------- Father ----------
+                    const fatherUser = await findOrCreateUser("FATHER", {
+                        name: data.fatherName,
+                        email: data.fatherEmail,
+                        contact: data.fatherMobile,
+                    });
+                    const fatherParent = fatherUser
+                        ? await tx.parent.create({
+                            data: { type: "FATHER", userId: fatherUser.id },
+                        })
+                        : null;
+                    // ---------- Mother ----------
+                    const motherUser = await findOrCreateUser("MOTHER", {
+                        name: data.motherName,
+                        email: data.motherEmail,
+                        contact: data.motherMobile,
+                    });
+                    const motherParent = motherUser
+                        ? await tx.parent.create({
+                            data: { type: "MOTHER", userId: motherUser.id },
+                        })
+                        : null;
+                    // ---------- Student ----------
                     const student = await tx.student.create({
                         data: {
-                            name: row.studentName,
+                            // ---------- Relations ----------
                             user: studentUser
                                 ? { connect: { id: String(studentUser.id) } }
                                 : undefined,
-                            branch: {
-                                connect: { id: branchId } // keep as is
-                            },
-                            admissionNo: row.AdmissionNo ? String(row.AdmissionNo) : null,
-                            rollNo: row.rollNo ? String(row.rollNo) : null,
-                            studentId: row.studentId ? String(row.studentId) : null,
-                            studentEmail: row.studentEmail ? String(row.studentEmail) : null,
-                            studentMobile: row.studentMobile ? String(row.studentMobile) : null,
-                            fatherName: row.fatherName ? String(row.fatherName) : null,
-                            fatherEmail: row.fatherEmail ? String(row.fatherEmail) : null,
-                            fatherMobile: row.fatherMobile ? String(row.fatherMobile) : null,
-                            motherName: row.motherName ? String(row.motherName) : null,
-                            motherEmail: row.motherEmail ? String(row.motherEmail) : null,
-                            motherMobile: row.motherMobile ? String(row.motherMobile) : null,
-                            lastYearTotal: row.lastYearTotal ? parseFloat(row.lastYearTotal) : 0,
-                            lastYearTotalBalance: row.lastYearTotalBalance ? parseFloat(row.lastYearTotalBalance) : 0,
-                            lastYearTotalPaid: row.lastYearTotalPaid ? parseFloat(row.lastYearTotalPaid) : 0,
-                            currentYearTotal: row.currentYearTotal ? parseFloat(row.currentYearTotal) : 0,
-                            currentYearTotalPaid: row.currentYearTotalPaid ? parseFloat(row.currentYearTotalPaid) : 0,
-                            currentYearTotalBalance: row.currentYearTotalBalance ? parseFloat(row.currentYearTotalBalance) : 0,
                             father: fatherParent
                                 ? { connect: { id: String(fatherParent.id) } }
                                 : undefined,
                             mother: motherParent
                                 ? { connect: { id: String(motherParent.id) } }
                                 : undefined,
+                            branch: { connect: { id: branchId } },
+                            // ---------- Basic Info ----------
+                            name: String(data.name),
+                            studentId: data.studentId || null,
+                            admissionNo: data.admissionNo || null,
+                            gender: data.gender || null,
+                            dob: dob ? new Date(dob) : null,
+                            aadhaar: data.aadhaar || null,
+                            birthCertificateUrl: data.birthCertificateUrl || null,
+                            abcId: data.abcId || null,
+                            sssmId: data.sssmId || null,
+                            familySssmId: data.familySssmId || null,
+                            minority: data.minority || null,
+                            scStObc: data.scStObc || null,
+                            bpl: data.bpl || null,
+                            scStObcCertificateUrl: data.scStObcCertificateUrl || null,
+                            bplCertificateUrl: data.bplCertificateUrl || null,
+                            specialChild: data.specialChild ? Boolean(data.specialChild) : false,
+                            allergies: data.allergies || null,
+                            studentEmail: data.studentEmail || null,
+                            studentMobile: data.studentMobile || null,
+                            // ---------- Citizenship & Visa ----------
+                            citizenship: data.citizenship || null,
+                            visaNo: data.visaNo || null,
+                            visaType: data.visaType || null,
+                            visaValidity: data.visaValidity ? new Date(data.visaValidity) : null,
+                            // ---------- Father Details ----------
+                            fatherName: data.fatherName || null,
+                            fatherOccupation: data.fatherOccupation || null,
+                            fatherEmail: data.fatherEmail || null,
+                            fatherMobile: data.fatherMobile || null,
+                            fatherAadhaar: data.fatherAadhaar || null,
+                            fatherIdUrl: data.fatherIdUrl || null,
+                            fatherPan: data.fatherPan || null,
+                            fatherPassport: data.fatherPassport || null,
+                            fatherCitizenship: data.fatherCitizenship || null,
+                            fatherVisaNo: data.fatherVisaNo || null,
+                            fatherVisaType: data.fatherVisaType || null,
+                            fatherVisaValidity: data.fatherVisaValidity
+                                ? new Date(data.fatherVisaValidity)
+                                : null,
+                            // ---------- Mother Details ----------
+                            motherName: data.motherName || null,
+                            motherOccupation: data.motherOccupation || null,
+                            motherEmail: data.motherEmail || null,
+                            motherMobile: data.motherMobile || null,
+                            motherAadhaar: data.motherAadhaar || null,
+                            motherIdUrl: data.motherIdUrl || null,
+                            motherPan: data.motherPan || null,
+                            motherPassport: data.motherPassport || null,
+                            motherCitizenship: data.motherCitizenship || null,
+                            motherVisaNo: data.motherVisaNo || null,
+                            motherVisaType: data.motherVisaType || null,
+                            motherVisaValidity: data.motherVisaValidity
+                                ? new Date(data.motherVisaValidity)
+                                : null,
+                            // ---------- Previous Education ----------
+                            previousSchoolName: data.previousSchoolName || null,
+                            previousClassPassed: data.previousClassPassed || null,
+                            previousClassMarks: data.previousClassMarks || null,
+                            previousClassYear: data.previousClassYear || null,
+                            previousBoard: data.previousBoard || null,
+                            migrationCertificateUrl: data.migrationCertificateUrl || null,
+                            tcNo: data.tcNo || null,
+                            // ---------- Address ----------
+                            permanentAddress: data.permanentAddress || null,
+                            temporaryAddress: data.temporaryAddress || null,
+                            // ---------- Extras ----------
+                            result: data.result || null,
+                            resultStatus: data.resultStatus || null,
                         },
-                        include: { user: true, enrollments: true, branch: true },
-                    });
-                    // ---------- 5. Enrollment ----------
-                    const classValue = mapClassInput(classAsParam);
-                    if (!classValue)
-                        throw new Error(`Invalid class: ${classAsParam}`);
-                    await createEnrollment(tx, classValue, branchId, student.id, row.section, sessionIsThere.id, row.rollNo ? String(row.rollNo) : null);
-                    const sessionId = sessionIsThere.id;
-                    // 5. Barcode
-                    const barcodeUrl = await generateBarcode(student);
-                    await tx.student.update({
-                        where: { id: student.id },
-                        data: { barcodeUrl },
-                    });
-                    // 6. Current year fees
-                    // ---------- Current Year Fees ----------
-                    let tuitionFee = 0;
-                    let admissionFee = 0;
-                    if (!row.currentYearAdmissionFee && !row.currentYearTuitionFee) {
-                        tuitionFee = parseFloat(row.currentYearTotal || "0");
-                    }
-                    else {
-                        tuitionFee = parseFloat(row.currentYearTuitionFee || "0");
-                        admissionFee = parseFloat(row.currentYearAdmissionFee || "0");
-                    }
-                    const currentFeeDoc = await tx.feeDoc.create({
-                        data: {
-                            student: { connect: { id: student.id } }, // use relation
-                            session: { connect: { id: sessionId } },
-                            admissionFee,
-                            tuitionFee,
-                            totalPayable: admissionFee + tuitionFee,
-                            dueInSession: admissionFee + tuitionFee - parseFloat(row.currentYearTotalPaid || "0"),
+                        include: {
+                            user: true,
+                            enrollments: true,
+                            branch: true,
                         },
                     });
-                    // ---------- Last Year Fees (optional) ----------
-                    if (row.lastYearAdmissionFee || row.lastYearTuitionFee || row.lastYearTotal) {
-                        const lastSession = await tx.academicSession.findFirst({
-                            where: { branchId: row.branchId, isCurrent: false },
-                            orderBy: { createdAt: "desc" },
-                        });
-                        if (lastSession) {
-                            await tx.feeDoc.create({
-                                data: {
-                                    student: { connect: { id: student.id } },
-                                    session: { connect: { id: sessionId } },
-                                    // sessionId: lastSession.id,
-                                    admissionFee: parseFloat(row.lastYearAdmissionFee || "0"),
-                                    tuitionFee: parseFloat(row.lastYearTuitionFee || row.lastYearTotal || "0"),
-                                    totalPayable: parseFloat(row.lastYearAdmissionFee || "0") + parseFloat(row.lastYearTuitionFee || row.lastYearTotal || "0"),
-                                    dueInSession: parseFloat(row.lastYearTotalBalance || "0"),
-                                },
-                            });
-                        }
-                        else {
-                            await tx.feeDoc.update({
-                                where: { id: currentFeeDoc.id },
-                                data: {
-                                    tuitionFee: { increment: parseFloat(row.lastYearTotal || "0") },
-                                    totalPayable: { increment: parseFloat(row.lastYearTotal || "0") },
-                                    paidInSession: { increment: parseFloat(row.lastYearTotalPaid || "0") },
-                                    dueInSession: { increment: parseFloat(row.lastYearTotalBalance || "0") },
-                                },
-                            });
-                        }
-                    }
-                    return student;
+                    // ---------- Enrollment ----------
+                    await createEnrollment(tx, classNameId, branchId, student.id, data.sectionId || null, rollNo || null);
+                    return student; // ✅ return student object
+                });
+                // ---------- Barcode after commit ----------
+                const barcodeUrl = await generateBarcode(student);
+                await prisma.student.update({
+                    where: { id: student.id },
+                    data: { barcodeUrl },
                 });
                 results.push({ studentId: student.id, success: true });
             }
-            catch (err) {
-                results.push({ error: err.message, success: false });
-            }
+        }
+        catch (err) {
+            results.push({ error: err.message, success: false });
         }
         return res.status(201).json({
             success: true,
@@ -555,9 +506,7 @@ export const bulkUploadStudents = async (req, res) => {
     }
     catch (error) {
         console.error(error);
-        return res
-            .status(500)
-            .json({ success: false, message: error.message });
+        return res.status(500).json({ success: false, message: error.message });
     }
 };
 export const fetchStudents = async (req, res) => {
@@ -596,7 +545,10 @@ export const fetchStudents = async (req, res) => {
             enrollmentWhere.class = { section: { name: section } };
         }
         if (rollNo) {
-            enrollmentWhere.rollNo = { startsWith: rollNo, mode: "insensitive" };
+            enrollmentWhere.rollNo = {
+                startsWith: rollNo,
+                mode: "insensitive",
+            };
         }
         // 🔹 Fetch students
         let studentsRaw;
@@ -612,7 +564,9 @@ export const fetchStudents = async (req, res) => {
                 orderBy: { createdAt: "desc" },
                 include: {
                     enrollments: {
-                        where: Object.keys(enrollmentWhere).length ? enrollmentWhere : undefined,
+                        where: Object.keys(enrollmentWhere).length
+                            ? enrollmentWhere
+                            : undefined,
                         orderBy: { createdAt: "desc" },
                         include: {
                             class: { include: { section: true } },
@@ -635,7 +589,9 @@ export const fetchStudents = async (req, res) => {
                 orderBy: { createdAt: "desc" },
                 include: {
                     enrollments: {
-                        where: Object.keys(enrollmentWhere).length ? enrollmentWhere : undefined,
+                        where: Object.keys(enrollmentWhere).length
+                            ? enrollmentWhere
+                            : undefined,
                         orderBy: { createdAt: "desc" },
                         take: 1,
                         include: {
@@ -712,7 +668,7 @@ export const getStudentDetail = async (req, res) => {
                             include: {
                                 section: { select: { name: true } },
                                 branch: { select: { id: true, name: true } },
-                            }
+                            },
                         },
                         session: true,
                     },

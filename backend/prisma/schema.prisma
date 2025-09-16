@@ -240,13 +240,10 @@ model Student {
   studentId            String?
   branchId             String 
   branch               Branch   @relation(fields: [branchId], references: [id])
-  rollNo               String
 
   // ----- Personal Details -----
   name                 String
   admissionNo          String?
-  class                ClassEnum? // isko hatana hain as class -> className+section and we need enrollment things too so keeping its class as it is in student table in wrong
-  section              String?
   gender               String?
   dob                  DateTime?
   aadhaar              String?
@@ -308,21 +305,6 @@ model Student {
   motherVisaNo         String?
   motherVisaType       String?
   motherVisaValidity   DateTime?
-
-  // ----- Fees -----
-  discount             Float    @default(0)
-  lateFine             Float    @default(0)
-  remark               String?
-
-  // Current year fee tracking
-  currentYearTotal         Float    @default(0)
-  currentYearTotalPaid     Float    @default(0)
-  currentYearTotalBalance  Float    @default(0)
-
-  // Last year fee tracking
-  lastYearTotal            Float    @default(0)
-  lastYearTotalPaid        Float    @default(0)
-  lastYearTotalBalance     Float    @default(0)
 
   // ----- Extras -----
   result                Json?
@@ -442,7 +424,7 @@ model Enrollment {
   classId                 String
   session                 AcademicSession @relation(fields: [sessionId], references: [id])
   sessionId               String
-  rollNo                  String?
+  rollNo                  String
   feeDocs                 FeeDoc[] 
   feeTransactions         FeeTransaction[]
   isPromoted Boolean      @default(false)

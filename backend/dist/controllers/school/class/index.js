@@ -57,24 +57,26 @@ export const getAllClass = async (req, res) => {
 export const getAllSections = async (req, res) => {
     try {
         const branchId = req.query.branchId;
-        const classId = req.query.classId; // optional filter
+        const className = req.query.className;
+        const classId = req.query.classId;
         if (!branchId) {
             return res.status(400).json({
                 message: "Please provide branchId",
                 success: false,
             });
         }
-        // Build the filter
         const where = { branchId };
-        if (classId) {
-            where.classes = { some: { id: classId } }; // sections that have this class
+        // If filtering by classId or className
+        if (classId || className) {
+            where.classes = {
+                some: classId
+                    ? { id: classId }
+                    : { classLabel: { name: className } },
+            };
         }
         const sections = await prisma.section.findMany({
             where,
-            select: {
-                name: true,
-                id: true
-            },
+            select: { id: true, name: true },
             orderBy: { name: "asc" },
         });
         return res.status(200).json({

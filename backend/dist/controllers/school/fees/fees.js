@@ -545,7 +545,7 @@ export const generateFeeDocs = async (req: any, res: any) => {
     return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ success: false, message: err.message });
   }
 };
-
+/*
 export const getStudentFeeDocs = async (req: any, res: any) => {
   try {
     const { studentId } = req.params;
@@ -643,7 +643,6 @@ export const updateFeePayment = async (req: any, res: any) => {
     return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ success: false, message: err.message });
   }
 };
-
 */
 // -------------------- FeeTransaction --------------------
 /**
