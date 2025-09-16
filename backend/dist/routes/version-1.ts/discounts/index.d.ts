@@ -1,7 +1,7 @@
 export declare const createDiscountPolicy: (req: any, res: any) => Promise<any>;
 export declare const listDiscountPolicies: (req: any, res: any) => Promise<any>;
 export declare const applyDiscount: (req: any, res: any) => Promise<any>;
-export declare const getDiscountsByTransaction: (req: any, res: any) => Promise<any>;
+export declare const getDiscountsById: (req: any, res: any) => Promise<any>;
 export declare const updateDiscountPolicy: (req: any, res: any) => Promise<any>;
 export declare const deleteDiscountPolicy: (req: any, res: any) => Promise<any>;
 export declare const deleteAppliedDiscount: (req: any, res: any) => Promise<any>;

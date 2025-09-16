@@ -5,6 +5,7 @@ import { getExecutablePath } from '../../../lib/services.js';
 import path, { dirname } from "path";
 import ejs from 'ejs';
 import { fileURLToPath } from "url";
+import { sendError } from "../../../lib/utils.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 // export const feeDoc = async (req:any, res:any) =>{
@@ -276,7 +277,7 @@ export const createFeeHead = async (req, res) => {
         return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ success: false, message: err.message });
     }
 };
-export const listFeeHeads = async (_req, res) => {
+export const listFeeHeads = async (req, res) => {
     try {
         const feeHeads = await prisma.feeHead.findMany({ select: { name: true, id: true }, orderBy: { name: "asc" } });
         return res.status(HTTP_STATUS.OK).json({ success: true, message: "FeeHeads fetched", data: { feeHeads } });
@@ -330,12 +331,36 @@ export const deleteFeeHead = async (req, res) => {
 // -------------------- FeeTemplate --------------------
 export const createFeeTemplate = async (req, res) => {
     try {
-        const { sessionId, branchId, classLabelId, feeHeadId, totalAmount, defaultDiscounts, defaultLateFees } = req.body;
-        if (!sessionId || !branchId || !classLabelId || !feeHeadId || totalAmount == null) {
+        const { branchId, classLabel, feeHeadId, totalAmount, defaultDiscounts, defaultLateFees } = req.body;
+        if (!branchId || !feeHeadId || totalAmount == null) {
             return res.status(HTTP_STATUS.BAD_REQUEST).json({ success: false, message: "Missing required fields" });
         }
         if (typeof totalAmount !== "number" || totalAmount <= 0) {
             return res.status(HTTP_STATUS.BAD_REQUEST).json({ success: false, message: "totalAmount must be a positive number" });
+        }
+        let classLabelId = null;
+        // -------- Resolve classLabelId --------
+        if (classLabel && branchId) {
+            const classLabelExist = await prisma.classLabel.findFirst({
+                where: { branchId, name: classLabel },
+            });
+            if (classLabelExist) {
+                classLabelId = classLabelExist.id;
+            }
+        }
+        if (!classLabelId) {
+            return sendError(res, "ClassLabel dont exist", HTTP_STATUS.CONFLICT);
+        }
+        const branch = await prisma.branch.findFirst({
+            where: { id: branchId },
+            include: { academicSession: true },
+        });
+        if (!branch) {
+            return sendError(res, "Branch doesn't exist", HTTP_STATUS.CONFLICT);
+        }
+        const sessionId = branch.academicSession.find((s) => s.isCurrent)?.id;
+        if (!sessionId) {
+            return sendError(res, "Missing SessionId", HTTP_STATUS.CONFLICT);
         }
         // Prevent duplicate template for same class/session/branch/head
         const exists = await prisma.feeTemplate.findFirst({
@@ -366,19 +391,67 @@ export const createFeeTemplate = async (req, res) => {
 };
 export const getFeeTemplates = async (req, res) => {
     try {
-        const { branchId, sessionId, classLabelId } = req.query;
+        const { branchId, sessionId, classLabel } = req.query;
         const where = {};
+        let classLabelId = null;
+        // -------- Resolve classLabelId --------
+        if (classLabel && branchId) {
+            const classLabelExist = await prisma.classLabel.findFirst({
+                where: { branchId, name: classLabel },
+            });
+            if (classLabelExist) {
+                classLabelId = classLabelExist.id;
+            }
+        }
         if (branchId)
             where.branchId = branchId;
         if (sessionId)
             where.sessionId = sessionId;
         if (classLabelId)
-            where.classId = classLabelId;
-        const templates = await prisma.feeTemplate.findMany({ where });
-        return res.status(HTTP_STATUS.OK).json({ success: true, message: "FeeTemplates fetched", data: { templates } });
+            where.classLabelId = classLabelId;
+        // -------- Fetch templates with discounts + policy --------
+        const templates = await prisma.feeTemplate.findMany({
+            where,
+            include: {
+                classLabel: true,
+                feeHead: true,
+                discounts: {
+                    include: { policy: true },
+                },
+            },
+        });
+        // -------- Map response --------
+        const feeTemplates = templates.map((t) => {
+            const totalDiscount = t.discounts.reduce((sum, d) => sum + (d.appliedAmount ?? 0), 0);
+            return {
+                id: t.id,
+                feeHeadName: t.feeHead.name,
+                sessionId: t.sessionId,
+                branchId: t.branchId,
+                classLabelId: t.classLabelId,
+                classLabel: t.classLabel?.name || null,
+                totalAmount: t.amount,
+                finalAmount: t.amount - totalDiscount,
+                discounts: t.discounts.map((d) => ({
+                    id: d.id,
+                    appliedAmount: d.appliedAmount,
+                    policyId: d.policyId,
+                    policyName: d.policy?.name ?? null
+                })),
+            };
+        });
+        return res
+            .status(HTTP_STATUS.OK)
+            .json({
+            success: true,
+            message: "FeeTemplates fetched",
+            data: { feeTemplates },
+        });
     }
     catch (err) {
-        return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ success: false, message: err.message });
+        return res
+            .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
+            .json({ success: false, message: err.message });
     }
 };
 export const updateFeeTemplate = async (req, res) => {
@@ -388,8 +461,8 @@ export const updateFeeTemplate = async (req, res) => {
         if (!id)
             return res.status(HTTP_STATUS.BAD_REQUEST).json({ success: false, message: "id required" });
         // Basic validation: cannot set negative totalAmount if provided
-        if (payload.totalAmount != null && (typeof payload.totalAmount !== "number" || payload.totalAmount <= 0)) {
-            return res.status(HTTP_STATUS.BAD_REQUEST).json({ success: false, message: "totalAmount must be positive" });
+        if (payload.amount != null && (typeof payload.amount !== "number" || payload.amount <= 0)) {
+            return res.status(HTTP_STATUS.BAD_REQUEST).json({ success: false, message: "amount must be positive" });
         }
         const template = await prisma.feeTemplate.update({ where: { id }, data: payload });
         return res.status(HTTP_STATUS.OK).json({ success: true, message: "FeeTemplate updated", data: { template } });
