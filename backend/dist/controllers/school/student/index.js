@@ -340,7 +340,10 @@ export const bulkUploadStudents = async (req, res) => {
                 .status(400)
                 .json({ success: false, message: "No file uploaded" });
         }
-        const { branchId } = req.body;
+        const { branchId, className } = req.body;
+        if (!branchId || !className) {
+            return sendError(res, "branchId and className required", HTTP_STATUS.BAD_REQUEST);
+        }
         const filePath = req.file.path; // multer stores file temporarily
         const workbook = XLSX.readFile(filePath);
         const sheetName = workbook.SheetNames[0];
@@ -348,10 +351,7 @@ export const bulkUploadStudents = async (req, res) => {
         let results = [];
         try {
             for (const row of sheetData) {
-                const { className, branchId, rollNo, dob, ...data } = row;
-                if (!branchId || !className) {
-                    return sendError(res, "branchId and className required", HTTP_STATUS.BAD_REQUEST);
-                }
+                const { rollNo, dob, ...data } = row;
                 const classLabel = await prisma.classLabel.findFirst({ where: { branchId, name: className } });
                 if (!classLabel) {
                     return sendError(res, "ClassName don't exist", HTTP_STATUS.CONFLICT);
@@ -501,7 +501,6 @@ export const bulkUploadStudents = async (req, res) => {
         return res.status(201).json({
             success: true,
             message: "Bulk upload completed",
-            results,
         });
     }
     catch (error) {
@@ -722,7 +721,7 @@ export const getStudentDetail = async (req, res) => {
 export const downloadSampleSheetForBulkUpload = (req, res) => {
     try {
         console.log("yha request aa rhi hain");
-        const filePath = path.join(__dirname, "../../../../uploads/sample-sheets/sample.xlsx");
+        const filePath = path.join(__dirname, "../../../../uploads/sample-sheets/student_data_sample.xlsx");
         if (!fs.existsSync(filePath)) {
             return res.status(404).json({
                 success: false,
