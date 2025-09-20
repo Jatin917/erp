@@ -15,6 +15,11 @@ export declare const updateFeeTemplate: (req: any, res: any) => Promise<any>;
 export declare const deleteFeeTemplate: (req: any, res: any) => Promise<any>;
 export declare const generateFeeDocs: (req: any, res: any) => Promise<any>;
 export declare const generateFeeDocForStudent: (req: any, res: any) => Promise<import("express").Response<any, Record<string, any>>>;
+export declare const getStudentFeeDocs: (req: any, res: any) => Promise<any>;
+export declare const updateFeeDoc: (req: any, res: any) => Promise<any>;
+export declare const addFeePayment: (req: any, res: any) => Promise<any>;
+export declare const getFeePayments: (req: any, res: any) => Promise<any>;
+export declare const updateFeePayment: (req: any, res: any) => Promise<any>;
 /**
  * createTransaction:
  * - Validates input
@@ -22,4 +27,5 @@ export declare const generateFeeDocForStudent: (req: any, res: any) => Promise<i
  * - Allocates payment amount sequentially to due payments (partial if needed)
  * - Creates a feeTransaction and feeTransactionItems atomically
  */
+export declare const createTransaction: (req: any, res: any) => Promise<any>;
 //# sourceMappingURL=fees.d.ts.map

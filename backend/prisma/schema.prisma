@@ -503,6 +503,7 @@ model FeePayment {
   amount             Float
   dueDate            DateTime
   isPaid             Boolean   @default(false)
+  paidAmount         Float     @default(0)
        
   createdAt          DateTime @default(now())
 }   

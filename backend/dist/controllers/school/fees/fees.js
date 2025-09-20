@@ -709,105 +709,113 @@ export const generateFeeDocForStudent = async (req, res) => {
         return sendError(res, err.message, HTTP_STATUS.INTERNAL_SERVER_ERROR);
     }
 };
-/*
-export const getStudentFeeDocs = async (req: any, res: any) => {
-  try {
-    const { studentId } = req.params;
-    if (!studentId) return res.status(HTTP_STATUS.BAD_REQUEST).json({ success: false, message: "studentId required" });
-
-    const docs = await prisma.feeDoc.findMany({
-      where: { studentId },
-      include: { payments: true } // adjust include names to your schema: feePayments vs payments
-    });
-
-    return res.status(HTTP_STATUS.OK).json({ success: true, message: "Student FeeDocs fetched", data: { docs } });
-  } catch (err: any) {
-    return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ success: false, message: err.message });
-  }
-};
-
-export const updateFeeDoc = async (req: any, res: any) => {
-  try {
-    const { id } = req.params;
-    const payload = req.body;
-    if (!id) return res.status(HTTP_STATUS.BAD_REQUEST).json({ success: false, message: "id required" });
-
-    // Validate sensible fields, e.g., amount must be positive if provided
-    if (payload.amount != null && (typeof payload.amount !== "number" || payload.amount < 0)) {
-      return res.status(HTTP_STATUS.BAD_REQUEST).json({ success: false, message: "amount must be a positive number" });
+export const getStudentFeeDocs = async (req, res) => {
+    try {
+        const { studentId } = req.params;
+        if (!studentId)
+            return res.status(HTTP_STATUS.BAD_REQUEST).json({ success: false, message: "studentId required" });
+        const student = await prisma.student.findFirst({ where: { id: studentId } });
+        if (!student) {
+            return sendError(res, "Student don't exist", HTTP_STATUS.CONFLICT);
+        }
+        const branchId = student.branchId;
+        const currentSession = await prisma.academicSession.findFirst({ where: { branchId, isCurrent: true } });
+        if (!currentSession) {
+            return sendError(res, "Session don't exist", HTTP_STATUS.CONFLICT);
+        }
+        const enrollment = await prisma.enrollment.findFirst({ where: { studentId, sessionId: currentSession.id } });
+        if (!enrollment) {
+            return sendError(res, "Enrollment don't exist", HTTP_STATUS.CONFLICT);
+        }
+        const docs = await prisma.feeDoc.findMany({
+            where: { enrollmentId: enrollment.id },
+            include: { payments: true } // adjust include names to your schema: feePayments vs payments
+        });
+        return res.status(HTTP_STATUS.OK).json({ success: true, message: "Student FeeDocs fetched", data: { docs } });
     }
-
-    const doc = await prisma.feeDoc.update({ where: { id }, data: payload });
-    return res.status(HTTP_STATUS.OK).json({ success: true, message: "FeeDoc updated", data: { doc } });
-  } catch (err: any) {
-    if (err.code === "P2025") return res.status(HTTP_STATUS.NOT_FOUND).json({ success: false, message: "FeeDoc not found" });
-    return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ success: false, message: err.message });
-  }
+    catch (err) {
+        return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ success: false, message: err.message });
+    }
 };
-
+export const updateFeeDoc = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const payload = req.body;
+        if (!id)
+            return res.status(HTTP_STATUS.BAD_REQUEST).json({ success: false, message: "id required" });
+        // Validate sensible fields, e.g., amount must be positive if provided
+        if (payload.amount != null && (typeof payload.amount !== "number" || payload.amount)) {
+            return res.status(HTTP_STATUS.BAD_REQUEST).json({ success: false, message: "amount can't be updated" });
+        }
+        const doc = await prisma.feeDoc.update({ where: { id }, data: payload });
+        return res.status(HTTP_STATUS.OK).json({ success: true, message: "FeeDoc updated", data: { doc } });
+    }
+    catch (err) {
+        if (err.code === "P2025")
+            return res.status(HTTP_STATUS.NOT_FOUND).json({ success: false, message: "FeeDoc not found" });
+        return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ success: false, message: err.message });
+    }
+};
 // -------------------- FeePayment --------------------
-export const addFeePayment = async (req: any, res: any) => {
-  try {
-    const { feeDocId } = req.params;
-    const { amount, dueDate, name, academicMonthId } = req.body;
-
-    if (!feeDocId || amount == null || !dueDate || !name) {
-      return res.status(HTTP_STATUS.BAD_REQUEST).json({ success: false, message: "Missing fields (feeDocId, amount, dueDate, name)" });
+export const addFeePayment = async (req, res) => {
+    try {
+        const { feeDocId } = req.params;
+        const { amount, dueDate, name, academicMonthId } = req.body;
+        if (!feeDocId || amount == null || !dueDate || !name) {
+            return res.status(HTTP_STATUS.BAD_REQUEST).json({ success: false, message: "Missing fields (feeDocId, amount, dueDate, name)" });
+        }
+        if (typeof amount !== "number" || amount <= 0) {
+            return res.status(HTTP_STATUS.BAD_REQUEST).json({ success: false, message: "amount must be positive number" });
+        }
+        // ensure feeDoc exists
+        const feeDoc = await prisma.feeDoc.findUnique({ where: { id: feeDocId } });
+        if (!feeDoc)
+            return res.status(HTTP_STATUS.NOT_FOUND).json({ success: false, message: "FeeDoc not found" });
+        const payment = await prisma.feePayment.create({
+            data: {
+                feeDocId,
+                amount,
+                name,
+                dueDate: new Date(dueDate),
+                academicMonthId: academicMonthId || null
+            }
+        });
+        return res.status(HTTP_STATUS.CREATED).json({ success: true, message: "FeePayment created", data: { payment } });
     }
-    if (typeof amount !== "number" || amount <= 0) {
-      return res.status(HTTP_STATUS.BAD_REQUEST).json({ success: false, message: "amount must be positive number" });
+    catch (err) {
+        return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ success: false, message: err.message });
     }
-
-    // ensure feeDoc exists
-    const feeDoc = await prisma.feeDoc.findUnique({ where: { id: feeDocId } });
-    if (!feeDoc) return res.status(HTTP_STATUS.NOT_FOUND).json({ success: false, message: "FeeDoc not found" });
-
-    const payment = await prisma.feePayment.create({
-      data: {
-        feeDocId,
-        amount,
-        name,
-        dueDate: new Date(dueDate),
-        academicMonthId: academicMonthId || null
-      }
-    });
-
-    return res.status(HTTP_STATUS.CREATED).json({ success: true, message: "FeePayment created", data: { payment } });
-  } catch (err: any) {
-    return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ success: false, message: err.message });
-  }
 };
-
-export const getFeePayments = async (req: any, res: any) => {
-  try {
-    const { feeDocId } = req.params;
-    if (!feeDocId) return res.status(HTTP_STATUS.BAD_REQUEST).json({ success: false, message: "feeDocId required" });
-
-    const payments = await prisma.feePayment.findMany({ where: { feeDocId }, orderBy: { dueDate: "asc" } });
-    return res.status(HTTP_STATUS.OK).json({ success: true, message: "FeePayments fetched", data: { payments } });
-  } catch (err: any) {
-    return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ success: false, message: err.message });
-  }
-};
-
-export const updateFeePayment = async (req: any, res: any) => {
-  try {
-    const { id } = req.params;
-    const payload = req.body;
-    if (!id) return res.status(HTTP_STATUS.BAD_REQUEST).json({ success: false, message: "id required" });
-
-    if (payload.amount != null && (typeof payload.amount !== "number" || payload.amount < 0)) {
-      return res.status(HTTP_STATUS.BAD_REQUEST).json({ success: false, message: "amount must be a positive number" });
+export const getFeePayments = async (req, res) => {
+    try {
+        const { feeDocId } = req.params;
+        if (!feeDocId)
+            return res.status(HTTP_STATUS.BAD_REQUEST).json({ success: false, message: "feeDocId required" });
+        const payments = await prisma.feePayment.findMany({ where: { feeDocId }, orderBy: { dueDate: "asc" } });
+        return res.status(HTTP_STATUS.OK).json({ success: true, message: "FeePayments fetched", data: { payments } });
     }
-
-    const payment = await prisma.feePayment.update({ where: { id }, data: payload });
-    return res.status(HTTP_STATUS.OK).json({ success: true, message: "FeePayment updated", data: { payment } });
-  } catch (err: any) {
-    if (err.code === "P2025") return res.status(HTTP_STATUS.NOT_FOUND).json({ success: false, message: "FeePayment not found" });
-    return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ success: false, message: err.message });
-  }
+    catch (err) {
+        return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ success: false, message: err.message });
+    }
 };
-*/
+export const updateFeePayment = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const payload = req.body;
+        if (!id)
+            return res.status(HTTP_STATUS.BAD_REQUEST).json({ success: false, message: "id required" });
+        if (payload.amount != null && (typeof payload.amount !== "number" || payload.amount < 0)) {
+            return res.status(HTTP_STATUS.BAD_REQUEST).json({ success: false, message: "amount must be a positive number" });
+        }
+        const payment = await prisma.feePayment.update({ where: { id }, data: payload });
+        return res.status(HTTP_STATUS.OK).json({ success: true, message: "FeePayment updated", data: { payment } });
+    }
+    catch (err) {
+        if (err.code === "P2025")
+            return res.status(HTTP_STATUS.NOT_FOUND).json({ success: false, message: "FeePayment not found" });
+        return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ success: false, message: err.message });
+    }
+};
 // -------------------- FeeTransaction --------------------
 /**
  * createTransaction:
@@ -816,61 +824,116 @@ export const updateFeePayment = async (req: any, res: any) => {
  * - Allocates payment amount sequentially to due payments (partial if needed)
  * - Creates a feeTransaction and feeTransactionItems atomically
  */
-/*
-export const createTransaction = async (req: any, res: any) => {
-  try {
-    const { studentId, amount, mode, referenceId, remarks, createdById } = req.body;
-
-    if (!studentId || !amount || !mode || !createdById) {
-      return res.status(HTTP_STATUS.BAD_REQUEST).json({ success: false, message: "Missing fields" });
-    }
-
-    let remaining = amount;
-    const duePayments = await prisma.feePayment.findMany({
-      where: { feeDoc: { studentId }, isPaid: false },
-      orderBy: { deadline: "asc" }
-    });
-
-    const allocations: any[] = [];
-
-    for (const payment of duePayments) {
-      if (remaining <= 0) break;
-
-      const toPay = Math.min(remaining, payment.amount - (payment.paidAmount || 0));
-      remaining -= toPay;
-
-      await prisma.feePayment.update({
-        where: { id: payment.id },
-        data: {
-          paidAmount: { increment: toPay },
-          isPaid: (payment.paidAmount + toPay) >= payment.amount
+export const createTransaction = async (req, res) => {
+    try {
+        const { studentId, amount, mode, referenceId, remarks, branchId } = req.body;
+        const createdById = req.user.id;
+        if (!studentId || !amount || !mode || !createdById) {
+            return res
+                .status(HTTP_STATUS.BAD_REQUEST)
+                .json({ success: false, message: "Missing fields" });
         }
-      });
-
-      allocations.push({ feePaymentId: payment.id, amount: toPay });
+        const currentSession = await prisma.academicSession.findFirst({
+            where: { branchId, isCurrent: true },
+        });
+        if (!currentSession) {
+            return sendError(res, "Session doesn't exist", HTTP_STATUS.CONFLICT);
+        }
+        const enrollment = await prisma.enrollment.findFirst({
+            where: { studentId, sessionId: currentSession.id },
+        });
+        if (!enrollment) {
+            return sendError(res, "Enrollment doesn't exist", HTTP_STATUS.CONFLICT);
+        }
+        const enrollmentId = enrollment.id;
+        // Run everything atomically
+        const result = await prisma.$transaction(async (tx) => {
+            let remaining = amount;
+            // fetch unpaid payments
+            const duePayments = await tx.feePayment.findMany({
+                where: { feeDoc: { enrollmentId }, isPaid: false },
+                orderBy: { dueDate: "asc" },
+            });
+            if (duePayments.length === 0) {
+                return sendError(res, "User Payments are cleared", HTTP_STATUS.BAD_REQUEST);
+            }
+            const allocations = [];
+            for (const payment of duePayments) {
+                if (remaining <= 0)
+                    break;
+                const alreadyPaid = payment.paidAmount || 0;
+                const toPay = Math.min(remaining, payment.amount - alreadyPaid);
+                remaining -= toPay;
+                await tx.feePayment.update({
+                    where: { id: payment.id },
+                    data: {
+                        paidAmount: { increment: toPay },
+                        isPaid: alreadyPaid + toPay >= payment.amount,
+                    },
+                });
+                allocations.push({ feePaymentId: payment.id, amount: toPay, feeDocId: payment.feeDocId });
+            }
+            const receiptNo = `RCPT-${Date.now()}`;
+            const txn = await tx.feeTransaction.create({
+                data: {
+                    enrollmentId,
+                    amountPaid: amount,
+                    mode,
+                    referenceId,
+                    remarks,
+                    receiptNo,
+                    createdById,
+                },
+            });
+            // Create or update feeTransactionItems
+            for (const alloc of allocations) {
+                const feeDoc = await tx.feeDoc.findUnique({
+                    where: { id: alloc.feeDocId },
+                });
+                if (!feeDoc)
+                    continue;
+                let feeTxnItm = await tx.feeTransactionItem.findFirst({
+                    where: { feeDocId: alloc.feeDocId, transactionId: txn.id },
+                });
+                if (feeTxnItm) {
+                    feeTxnItm = await tx.feeTransactionItem.update({
+                        where: { id: feeTxnItm.id },
+                        data: { paidAmount: { increment: alloc.amount } },
+                    });
+                }
+                else {
+                    feeTxnItm = await tx.feeTransactionItem.create({
+                        data: {
+                            transactionId: txn.id,
+                            feeDocId: alloc.feeDocId,
+                            paidAmount: alloc.amount,
+                        },
+                    });
+                }
+                // 🔑 Sum of all payments across all transactions for this feeDoc
+                const totalPaid = await tx.feeTransactionItem.aggregate({
+                    where: { feeDocId: alloc.feeDocId },
+                    _sum: { paidAmount: true },
+                });
+                const paidSoFar = totalPaid._sum.paidAmount || 0;
+                await tx.feeDoc.update({
+                    where: { id: alloc.feeDocId },
+                    data: {
+                        status: paidSoFar < (feeDoc.amount || 0) ? "Partial" : "Paid",
+                    },
+                });
+            }
+            return { txn, remaining };
+        });
+        return res.json({ success: true, message: "Transaction created", data: { txn: result } });
     }
-
-    const receiptNo = `RCPT-${Date.now()}`; // can improve later with sequence
-
-    const txn = await prisma.feeTransaction.create({
-      data: {
-        studentId,
-        amount,
-        mode,
-        referenceId,
-        remarks,
-        allocations,
-        receiptNo,
-        createdById
-      }
-    });
-
-    return res.json({ success: true, message: "Transaction created", data: { txn } });
-  } catch (err: any) {
-    return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ success: false, message: err.message });
-  }
+    catch (err) {
+        return res
+            .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
+            .json({ success: false, message: err.message });
+    }
 };
-
+/*
 export const getStudentTransactions = async (req: any, res: any) => {
   try {
     const { studentId } = req.params;
@@ -903,5 +966,6 @@ export const getBranchTransactions = async (req: any, res: any) => {
     return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ success: false, message: err.message });
   }
 };
-*/
+
+*/ 
 //# sourceMappingURL=fees.js.map
