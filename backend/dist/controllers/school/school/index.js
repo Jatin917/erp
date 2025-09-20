@@ -83,24 +83,19 @@ export const createSchool = async (req, res) => {
         let schoolId = "";
         let branchIds = [];
         await prisma.$transaction(async (tx) => {
-            // 1. Create Director
             const directorId = await findOrCreateUser("DIRECTOR", director, tx);
-            // 2. Create School
             const school = await tx.school.create({
-                data: { name: schoolName, createdById: directorId },
+                data: {
+                    name: schoolName,
+                    createdById: directorId,
+                },
             });
-            if (!school)
+            if (!school) {
                 throw new Error("Error Creating School");
+            }
             schoolId = school.id;
-            // 3. Process all principals in one go
             for (const principal of principals) {
-                // Create principal user
-                const principalId = await findOrCreateUser("PRINCIPAL", {
-                    name: principal.name,
-                    email: principal.email,
-                    contact: principal.contact,
-                }, tx);
-                // Create branch
+                const principalId = await findOrCreateUser("PRINCIPAL", { name: principal.name, email: principal.email, contact: principal.contact }, tx);
                 const branch = await createBranch(tx, principal.branch.address, principalId, schoolName, school.id, softwareCharge);
                 if (!branch)
                     throw new Error("Error creating branch");
@@ -111,27 +106,25 @@ export const createSchool = async (req, res) => {
                         name: currentSession,
                         branchId: branch.id,
                         isCurrent: true,
+                        startMonthId: '0',
+                        endMonthId: '0'
                     },
                 });
-                // Batch insert months (createMany instead of Promise.all)
-                await tx.academicMonth.createMany({
-                    data: academicMonths.map((m) => ({
+                // Create academic months
+                const createdMonths = await Promise.all(academicMonths.map((m) => tx.academicMonth.create({
+                    data: {
                         name: m.name,
                         startDate: new Date(m.startDate),
                         endDate: new Date(m.endDate),
                         sessionId: session.id,
-                    })),
-                });
-                // Fetch back created months (single query)
-                const createdMonths = await tx.academicMonth.findMany({
-                    where: { sessionId: session.id },
-                });
+                    },
+                })));
+                // Set start & end month
                 const startMonth = createdMonths.find((m) => m.name === startMonthName);
                 const endMonth = createdMonths.find((m) => m.name === endMonthName);
                 if (!startMonth || !endMonth) {
                     throw new Error("Start or End month not found in academicMonths");
                 }
-                // Update session once with start & end month IDs
                 await tx.academicSession.update({
                     where: { id: session.id },
                     data: {
@@ -140,7 +133,10 @@ export const createSchool = async (req, res) => {
                     },
                 });
             }
-        }, { timeout: 20000 }); // bump timeout if needed
+            if (!file) {
+                throw new Error("NO File Found. Please Try Again");
+            }
+        });
         // ---------- File Handling AFTER transaction ----------
         for (const branchId of branchIds) {
             const uploadDir = path.join("uploads", String(schoolId), String(branchId));

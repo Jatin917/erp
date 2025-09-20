@@ -391,10 +391,10 @@ model AcademicSession {
   createdAt   DateTime       @default(now())
 
   months      AcademicMonth[] @relation("academicMonths")
-  startMonth  AcademicMonth? @relation("SessionStartMonth", fields: [startMonthId], references: [id])
-  startMonthId String?       @unique
-  endMonth    AcademicMonth? @relation("SessionEndMonth", fields: [endMonthId], references: [id])
-  endMonthId   String?       @unique
+  startMonth  AcademicMonth @relation("SessionStartMonth", fields: [startMonthId], references: [id])
+  startMonthId String      @unique
+  endMonth    AcademicMonth @relation("SessionEndMonth", fields: [endMonthId], references: [id])
+  endMonthId   String       @unique
 
   enrollments    Enrollment[]
   feeTemplates   FeeTemplate[]
@@ -461,7 +461,10 @@ model FeeTemplate {
   discounts       Discount[]     // optional default discounts
   lateFees        LateFee[]      // optional default late fees
   feeDocs         FeeDoc[]       // generated per student
-    
+
+  paymentType     FeePaymentType @default(ONE_TIME)     //isko isliye rkh rhe hain as jab bahut sare student ko default payment kaise krenge wo krna hain tb  
+  installements   Float?         // jab user payment type installments choose krega tab kitni installments banegi uske liye
+  dueDate         DateTime @default(now())  // due date bhi honi chahiye na har payment ke liye
   createdAt       DateTime @default(now())
 }
 

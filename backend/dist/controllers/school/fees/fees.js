@@ -1,13 +1,93 @@
 import puppeteer from "puppeteer";
+import { FeePaymentType } from "../../../../generated/prisma/index.js";
 import { HTTP_STATUS } from "../../../lib/http-codes.js";
 import { PHOTO_URL, prisma } from "../../../server.js";
 import { getExecutablePath } from '../../../lib/services.js';
+import { Prisma } from "@prisma/client/extension";
 import path, { dirname } from "path";
 import ejs from 'ejs';
 import { fileURLToPath } from "url";
-import { sendError } from "../../../lib/utils.js";
+import { sendError, sendSuccess } from "../../../lib/utils.js";
+import { MONTHS, numsSuffix } from "../../../lib/contants.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+const createPayment = async (tx, doc, template, paymentType, dueDates) => {
+    if (paymentType === FeePaymentType.ONE_TIME) {
+        // Expecting only one dueDate
+        if (dueDates.length !== 1)
+            throw new Error("One-time payment requires exactly 1 dueDate");
+        const payment = await tx.feePayment.create({
+            data: {
+                feeDocId: doc.id,
+                amount: template.amount,
+                dueDate: dueDates[0] ? new Date(dueDates[0]) : new Date(),
+                name: template.feeHead.name
+            },
+        });
+    }
+    if (paymentType === FeePaymentType.MONTHLY) {
+        // Expect dueDates.length === number of months
+        const perMonth = template.amount / dueDates.length;
+        for (let i = 0; i < dueDates.length; i++) {
+            const d = dueDates[i] ?? new Date();
+            const month = d.getMonth();
+            const payment = await tx.feePayment.create({
+                data: {
+                    feeDocId: doc.id,
+                    amount: perMonth,
+                    dueDate: new Date(d),
+                    name: `${MONTHS[month]} Payment `
+                },
+            });
+        }
+    }
+    if (paymentType === FeePaymentType.INSTALLMENT) {
+        const perInstallment = template.amount / dueDates.length;
+        for (let i = 0; i < dueDates.length; i++) {
+            const d = dueDates[i] ?? new Date();
+            const payment = await tx.feePayment.create({
+                data: {
+                    feeDocId: doc.id,
+                    amount: perInstallment,
+                    dueDate: new Date(d),
+                    name: i + `${numsSuffix[i]} Installement`
+                },
+            });
+        }
+    }
+    return true;
+};
+export function generateDueDates(paymentType, options) {
+    const dates = [];
+    if (paymentType === FeePaymentType.ONE_TIME) {
+        if (!options.dueDate)
+            throw new Error("dueDate is required for ONE_TIME");
+        dates.push(new Date(options.dueDate));
+    }
+    if (paymentType === FeePaymentType.MONTHLY) {
+        if (!options.dueDate)
+            throw new Error("Start dueDate required for MONTHLY");
+        const months = options.months || 12;
+        const start = new Date(options.dueDate);
+        for (let i = 0; i < months; i++) {
+            const d = new Date(start);
+            d.setMonth(start.getMonth() + i);
+            dates.push(d);
+        }
+    }
+    if (paymentType === FeePaymentType.INSTALLMENT) {
+        if (!options.templateDueDate || !options.installments) {
+            throw new Error("templateDueDate and installments required for INSTALLMENTS");
+        }
+        const start = new Date(options.templateDueDate);
+        for (let i = 0; i < options.installments; i++) {
+            const d = new Date(start);
+            d.setMonth(start.getMonth() + i);
+            dates.push(d);
+        }
+    }
+    return dates;
+}
 // export const feeDoc = async (req:any, res:any) =>{
 //     try {
 //         const {studentId, session, admissionFee, tuitionFee, hostelFee, transportFee, concessions} = req.body;
@@ -331,12 +411,15 @@ export const deleteFeeHead = async (req, res) => {
 // -------------------- FeeTemplate --------------------
 export const createFeeTemplate = async (req, res) => {
     try {
-        const { branchId, classLabel, feeHeadId, totalAmount, defaultDiscounts, defaultLateFees } = req.body;
-        if (!branchId || !feeHeadId || totalAmount == null) {
+        const { branchId, classLabel, feeHeadId, totalAmount, defaultDiscounts, defaultLateFees, paymentType, installements, dueDate } = req.body;
+        if (!branchId || !feeHeadId || totalAmount == null || !dueDate || !paymentType) {
             return res.status(HTTP_STATUS.BAD_REQUEST).json({ success: false, message: "Missing required fields" });
         }
         if (typeof totalAmount !== "number" || totalAmount <= 0) {
             return res.status(HTTP_STATUS.BAD_REQUEST).json({ success: false, message: "totalAmount must be a positive number" });
+        }
+        if (paymentType === FeePaymentType.INSTALLMENT && !installements) {
+            return sendError(res, "installments should be provided", HTTP_STATUS.BAD_REQUEST);
         }
         let classLabelId = null;
         // -------- Resolve classLabelId --------
@@ -353,14 +436,26 @@ export const createFeeTemplate = async (req, res) => {
         }
         const branch = await prisma.branch.findFirst({
             where: { id: branchId },
-            include: { academicSession: true },
+            include: { academicSession: { select: { id: true, startMonth: true, isCurrent: true } } },
         });
         if (!branch) {
             return sendError(res, "Branch doesn't exist", HTTP_STATUS.CONFLICT);
         }
-        const sessionId = branch.academicSession.find((s) => s.isCurrent)?.id;
+        const currentSession = branch.academicSession.find((s) => s.isCurrent);
+        if (!currentSession) {
+            return sendError(res, "Session don't exist ", HTTP_STATUS.CONFLICT);
+        }
+        const sessionId = currentSession.id;
         if (!sessionId) {
             return sendError(res, "Missing SessionId", HTTP_STATUS.CONFLICT);
+        }
+        const sessionStart = new Date(currentSession.startMonth?.startDate);
+        const selectedDueDate = new Date(dueDate);
+        console.log("time ", sessionStart, selectedDueDate);
+        // Add 1 hour (3600000 ms) to session start
+        const minDueDate = new Date(sessionStart.getTime() + 3600 * 1000);
+        if (selectedDueDate <= minDueDate) {
+            return sendError(res, "Due date should be at least 1 hour after the session's start month", HTTP_STATUS.CONFLICT);
         }
         // Prevent duplicate template for same class/session/branch/head
         const exists = await prisma.feeTemplate.findFirst({
@@ -377,7 +472,10 @@ export const createFeeTemplate = async (req, res) => {
                 feeHeadId,
                 amount: totalAmount,
                 discounts: defaultDiscounts,
-                lateFees: defaultLateFees
+                lateFees: defaultLateFees,
+                paymentType,
+                installements,
+                dueDate
             }
         });
         return res.status(HTTP_STATUS.CREATED).json({ success: true, message: "FeeTemplate created", data: { template } });
@@ -493,57 +591,123 @@ export const deleteFeeTemplate = async (req, res) => {
         return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ success: false, message: err.message });
     }
 };
-/*
 // -------------------- FeeDoc --------------------
-export const generateFeeDocs = async (req: any, res: any) => {
-  try {
-    const { classId, classLabelId, sessionId, paymentType, installments } = req.body;
-    if (!classId || !sessionId) return res.status(HTTP_STATUS.BAD_REQUEST).json({ success: false, message: "classId & sessionId required" });
-
-    // use transaction - if any creation fails, rollback
-    const result = await prisma.$transaction(async (tx) => {
-      // find students and templates
-      const enrollments = await tx.enrollment.findMany({ where: { classId, sessionId } });
-      const templates = await tx.feeTemplate.findMany({ where: { classLabelId, sessionId } });
-
-      if (enrollments.length === 0) throw new Error("No students found for this class & session");
-      if (templates.length === 0) throw new Error("No fee templates found for this class & session");
-
-      const created: any[] = [];
-      for (const enrollment of enrollments) {
-        for (const template of templates) {
-          // avoid duplicates if same doc already exists
-          const exists = await tx.feeDoc.findFirst({
-            where: { enrollmentId: enrollment.id, templateId: template.id, feeHeadId: template.feeHeadId }
-          });
-          if (exists) {
-            created.push({ skipped: true, enrollmentId: enrollment.id, templateId: template.id });
-            continue;
-          }
-
-          const doc = await tx.feeDoc.create({
-            data: {
-              enrollmentId: enrollment.id,
-              feeHeadId: template.feeHeadId,
-              templateId: template.id,
-              amount: template.amount ?? template.amount, // adjust field names if needed
-              status: "PENDING",
-            }
-          });
-          created.push(doc);
-
-          // Optionally generate default feePayments based on paymentType or template defaults
-          // (left to explicit endpoint addFeePayments or automatic logic here)
+export const generateFeeDocs = async (req, res) => {
+    try {
+        const { sectionId, classLabelId, branchId } = req.body;
+        if (!classLabelId || !branchId)
+            return sendError(res, "classId & branchId required", HTTP_STATUS.BAD_REQUEST);
+        const classExist = await prisma.class.findFirst({
+            where: { classLabelId, sectionId, branchId },
+        });
+        if (!classExist) {
+            return sendError(res, "Class doesn't exist", HTTP_STATUS.CONFLICT);
         }
-      }
-
-      return created;
-    });
-
-    return res.status(HTTP_STATUS.CREATED).json({ success: true, message: "FeeDocs generated", data: { feeDocs: result } });
-  } catch (err: any) {
-    return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ success: false, message: err.message });
-  }
+        const classId = classExist.id;
+        const sessionExist = await prisma.academicSession.findFirst({ where: { branchId, isCurrent: true }, include: { months: true } });
+        if (!sessionExist) {
+            return sendError(res, "Session don't exist", HTTP_STATUS.CONFLICT);
+        }
+        const sessionId = sessionExist.id;
+        const monthsInSession = sessionExist.months.length;
+        // use transaction - if any creation fails, rollback
+        const result = await prisma.$transaction(async (tx) => {
+            // find students and templates
+            const enrollments = await tx.enrollment.findMany({ where: { classId, sessionId } });
+            const templates = await tx.feeTemplate.findMany({ where: { classLabelId, sessionId }, include: { feeHead: true } });
+            if (enrollments.length === 0)
+                throw new Error("No students found for this class & session");
+            if (templates.length === 0)
+                throw new Error("No fee templates found for this class & session");
+            const created = [];
+            for (const enrollment of enrollments) {
+                for (const template of templates) {
+                    // avoid duplicates if same doc already exists
+                    const exists = await tx.feeDoc.findFirst({
+                        where: { enrollmentId: enrollment.id, templateId: template.id, feeHeadId: template.feeHeadId }
+                    });
+                    if (exists) {
+                        created.push({ skipped: true, enrollmentId: enrollment.id, templateId: template.id });
+                        continue;
+                    }
+                    const doc = await tx.feeDoc.create({
+                        data: {
+                            enrollmentId: enrollment.id,
+                            feeHeadId: template.feeHeadId,
+                            templateId: template.id,
+                            amount: template.amount ?? template.amount, // adjust field names if needed
+                            status: "PENDING",
+                            paymentType: template.paymentType
+                        }
+                    });
+                    created.push(doc);
+                    const dueDates = generateDueDates(template.paymentType, { dueDate: template.dueDate, months: monthsInSession, installments: (template.installements ?? 0) });
+                    await createPayment(tx, doc, template, template.paymentType, dueDates);
+                    // Optionally generate default feePayments based on paymentType or template defaults
+                    // (left to explicit endpoint addFeePayments or automatic logic here)
+                }
+            }
+            return created;
+        });
+        return res.status(HTTP_STATUS.CREATED).json({ success: true, message: "FeeDocs generated", data: { feeDocs: result } });
+    }
+    catch (err) {
+        return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ success: false, message: err.message });
+    }
+};
+// for one student
+export const generateFeeDocForStudent = async (req, res) => {
+    try {
+        const { classLabelId, sectionId, branchId, sessionId, paymentType, installments, // number of installments (optional)
+        dueDates, // ✅ user passes array of dueDates
+        studentId, templateId, } = req.body;
+        if (!classLabelId || !sessionId || !branchId) {
+            return sendError(res, "classId, sessionId & branchId required", HTTP_STATUS.BAD_REQUEST);
+        }
+        if (!Array.isArray(dueDates) || dueDates.length === 0) {
+            return sendError(res, "dueDates array is required", HTTP_STATUS.BAD_REQUEST);
+        }
+        const classExist = await prisma.class.findFirst({
+            where: { classLabelId, sectionId, branchId },
+        });
+        if (!classExist) {
+            return sendError(res, "Class doesn't exist", HTTP_STATUS.CONFLICT);
+        }
+        const classId = classExist.id;
+        const result = await prisma.$transaction(async (tx) => {
+            const enrollment = await tx.enrollment.findFirst({
+                where: { classId, sessionId, studentId },
+            });
+            const template = await tx.feeTemplate.findFirst({ where: { id: templateId }, include: { feeHead: true } });
+            if (!enrollment)
+                throw new Error("No student found for this class & session");
+            if (!template)
+                throw new Error("No fee template found");
+            const exist = await tx.feeDoc.findFirst({
+                where: { enrollmentId: enrollment.id, templateId },
+            });
+            if (exist)
+                throw new Error("Template already exists for this student");
+            // ---------- Create FeeDoc ----------
+            const doc = await tx.feeDoc.create({
+                data: {
+                    enrollmentId: enrollment.id,
+                    feeHeadId: template.feeHeadId,
+                    templateId: template.id,
+                    amount: template.amount,
+                    status: "PENDING",
+                    paymentType,
+                },
+            });
+            // ---------- Generate Payments ----------
+            await createPayment(tx, doc, template, paymentType, dueDates);
+            return { doc };
+        });
+        return sendSuccess(res, "FeeDoc generated", result, HTTP_STATUS.CREATED);
+    }
+    catch (err) {
+        return sendError(res, err.message, HTTP_STATUS.INTERNAL_SERVER_ERROR);
+    }
 };
 /*
 export const getStudentFeeDocs = async (req: any, res: any) => {
