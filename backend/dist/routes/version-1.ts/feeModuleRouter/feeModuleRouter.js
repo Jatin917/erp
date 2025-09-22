@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { isPermitted } from "../../../middlewares/permission/index.js";
 import multer from "multer";
-import { createFeeHead, createFeeTemplate, createTransaction, deleteFeeHead, deleteFeeTemplate, generateFeeDocs, getFeeTemplates, getStudentFeeDocs, listFeeHeads, payForFeePayment, removeDiscountFromFeeDoc, revertPaymentForFeePayment, updateFeeHead, updateFeeTemplate } from "../../../controllers/school/fees/fees.js";
+import { createFeeHead, createFeeTemplate, createTransaction, deleteFeeHead, deleteFeeTemplate, generateFeeDocs, getFeeTemplates, getStudentFeeDocs, listFeeHeads, payForFeePayment, payForMultipleFeePayments, removeDiscountFromFeeDoc, revertPaymentForFeePayment, updateFeeHead, updateFeeTemplate } from "../../../controllers/school/fees/fees.js";
 import { applyDiscount, createDiscountPolicy, deleteAppliedDiscount, deleteDiscountPolicy, getDiscountsById, listDiscountPolicies, updateDiscountPolicy } from "../discounts/index.js";
 export const feeModuleRouter = Router();
 const upload = multer({ dest: "uploads/" });
@@ -29,6 +29,7 @@ feeModuleRouter.get('/list-feedocs/:studentId', isPermitted, getStudentFeeDocs);
 feeModuleRouter.post('/create-transaction', isPermitted, createTransaction);
 feeModuleRouter.delete("/remove-discount-from-fee-doc", isPermitted, removeDiscountFromFeeDoc);
 feeModuleRouter.post("/payByPaymentId", isPermitted, payForFeePayment);
+feeModuleRouter.post("/collectMultiplePayments", isPermitted, payForMultipleFeePayments);
 feeModuleRouter.put("/revert-payment", isPermitted, revertPaymentForFeePayment);
 // feeModuleRouter.get('/list-student-transaction', isPermitted, getStudentTransactions);
 // feeModuleRouter.get('/list-branch-transaction', isPermitted, getBranchTransactions);

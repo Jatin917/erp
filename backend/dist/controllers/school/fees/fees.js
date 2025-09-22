@@ -1092,92 +1092,128 @@ export const createTransaction = async (req, res) => {
     }
 };
 // dono ko review krna hain
-export const payForFeePayment = async (req, res) => {
-    try {
-        const { paymentId: feePaymentId, amount, mode, referenceId, remarks } = req.body;
-        const createdById = req.user.id;
-        if (!feePaymentId || !amount || !mode || !createdById) {
-            return sendError(res, "feePaymentId, amount, mode, createdById are required", HTTP_STATUS.BAD_REQUEST);
+export async function processFeePayment(tx, feePaymentId, amount, mode, referenceId, remarks, createdById) {
+    const feePayment = await tx.feePayment.findUnique({
+        where: { id: feePaymentId },
+        include: {
+            feeDoc: { include: { eenrollment: true } },
+            lateFees: true,
+        },
+    });
+    if (!feePayment) {
+        throw new Error("FeePayment not found");
+    }
+    if (feePayment.isPaid) {
+        throw new Error("This payment is already fully paid");
+    }
+    const lateFeesOfCurrentFeeDoc = await tx.lateFee.findMany({
+        where: { feeDocId: feePayment.feeDocId },
+    });
+    const alreadyAppliedLateFees = feePayment.lateFees;
+    const appliedIds = new Set(alreadyAppliedLateFees.map((f) => f.id));
+    const newLateFees = lateFeesOfCurrentFeeDoc.filter((fee) => !appliedIds.has(fee.id));
+    let totalLateFeeAmt = 0;
+    const alreadyPaid = feePayment.paidAmount || 0;
+    let remaining = feePayment.amount - alreadyPaid;
+    // check due date
+    const currentDate = new Date();
+    const dueDate = new Date(feePayment.dueDate);
+    if (dueDate < currentDate) {
+        for (const lateFee of newLateFees) {
+            totalLateFeeAmt += lateFee.amount;
         }
-        const feePayment = await prisma.feePayment.findUnique({
-            where: { id: feePaymentId },
-            include: {
-                feeDoc: { include: { eenrollment: true } }, lateFees: true,
+        remaining += totalLateFeeAmt;
+        await tx.feePayment.update({
+            where: { id: feePayment.id },
+            data: {
+                fineAmount: totalLateFeeAmt,
+                lateFees: { set: newLateFees.map((fee) => ({ id: fee.id })) },
             },
         });
-        if (!feePayment) {
-            return sendError(res, "FeePayment not found", HTTP_STATUS.NOT_FOUND);
+    }
+    if (amount > remaining) {
+        throw new Error(`You can pay max ${remaining} for this payment`);
+    }
+    const receiptNo = `RCPT-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+    // 1. Create transaction
+    const txn = await tx.feeTransaction.create({
+        data: {
+            enrollmentId: feePayment.feeDoc.enrollmentId,
+            amountPaid: amount,
+            returnedAmt: 0,
+            mode,
+            referenceId,
+            remarks,
+            receiptNo,
+            createdById,
+        },
+    });
+    // 2. Update feePayment
+    const updatedPayment = await tx.feePayment.update({
+        where: { id: feePaymentId },
+        data: {
+            paidAmount: { increment: amount },
+            fineAmount: totalLateFeeAmt,
+            isPaid: alreadyPaid + amount >= feePayment.amount + totalLateFeeAmt,
+        },
+    });
+    // 3. Create FeeTransactionItem
+    const txnItem = await tx.feeTransactionItem.create({
+        data: {
+            transactionId: txn.id,
+            feeDocId: feePayment.feeDocId,
+            paidAmount: amount,
+        },
+    });
+    // 4. Update FeeDoc status
+    const doc = await tx.feeDoc.update({
+        where: { id: feePayment.feeDocId },
+        data: {
+            status: alreadyPaid + amount >= feePayment.amount
+                ? "PAID"
+                : "PARTIAL",
+        },
+    });
+    return { txn, txnItem, updatedPayment, doc };
+}
+export const payForFeePayment = async (req, res) => {
+    try {
+        const { paymentId, amount, mode, referenceId, remarks } = req.body;
+        const createdById = req.user.id;
+        if (!paymentId || !amount || !mode || !createdById) {
+            return sendError(res, "paymentId, amount, mode, createdById are required", HTTP_STATUS.BAD_REQUEST);
         }
-        if (feePayment.isPaid) {
-            return sendError(res, "This payment is already fully paid", HTTP_STATUS.CONFLICT);
-        }
-        const lateFeesOfCurrentFeeDoc = await prisma.lateFee.findMany({ where: { feeDocId: feePayment.feeDocId } });
-        const alreadyAppliedLateFees = feePayment.lateFees;
-        const appliedIds = new Set(alreadyAppliedLateFees.map(f => f.id));
-        const newLateFees = lateFeesOfCurrentFeeDoc.filter(fee => !appliedIds.has(fee.id));
-        let totalLateFeeAmt = 0;
-        // Remaining amount
-        const alreadyPaid = feePayment.paidAmount || 0;
-        let remaining = feePayment.amount - alreadyPaid;
-        // Wrap in transaction to stay atomic
         const result = await prisma.$transaction(async (tx) => {
-            // due date ke baad late fee add ho jayega jitna dena hain usme
-            const currentDate = new Date();
-            const dueDate = new Date(feePayment.dueDate);
-            if (dueDate < currentDate) {
-                for (const lateFee of newLateFees) {
-                    totalLateFeeAmt += lateFee.amount;
-                }
-                remaining += totalLateFeeAmt;
-                await tx.feePayment.update({ where: { id: feePayment.id }, data: { fineAmount: totalLateFeeAmt, lateFees: { set: newLateFees.map(fee => ({ id: fee.id })) } } });
-            }
-            if (amount > remaining) {
-                return sendError(res, `You can pay max ${remaining} for this payment`, HTTP_STATUS.BAD_REQUEST);
-            }
-            const receiptNo = `RCPT-${Date.now()}`;
-            // 1. Create transaction
-            const txn = await tx.feeTransaction.create({
-                data: {
-                    enrollmentId: feePayment.feeDoc.enrollmentId,
-                    amountPaid: amount,
-                    returnedAmt: 0,
-                    mode,
-                    referenceId,
-                    remarks,
-                    receiptNo,
-                    createdById,
-                },
-            });
-            // 2. Update feePayment (increment paidAmount)
-            const updatedPayment = await tx.feePayment.update({
-                where: { id: feePaymentId },
-                data: {
-                    paidAmount: { increment: amount },
-                    fineAmount: totalLateFeeAmt,
-                    isPaid: (alreadyPaid + amount) >= feePayment.amount + totalLateFeeAmt,
-                },
-            });
-            // 3. Create FeeTransactionItem
-            const txnItem = await tx.feeTransactionItem.create({
-                data: {
-                    transactionId: txn.id,
-                    feeDocId: feePayment.feeDocId,
-                    paidAmount: amount,
-                },
-            });
-            // 4. Update FeeDoc status if needed
-            const doc = await tx.feeDoc.update({
-                where: { id: feePayment.feeDocId },
-                data: {
-                    status: (alreadyPaid + amount) >= feePayment.amount ? "PAID" : "PARTIAL",
-                },
-            });
-            return { txn, txnItem, updatedPayment, doc };
+            return processFeePayment(tx, paymentId, amount, mode, referenceId, remarks, createdById);
         });
         return sendSuccess(res, "Payment recorded successfully", result);
     }
     catch (err) {
-        console.error(err);
+        return sendError(res, err.message, HTTP_STATUS.INTERNAL_SERVER_ERROR);
+    }
+};
+export const payForMultipleFeePayments = async (req, res) => {
+    try {
+        const { payments } = req.body;
+        // payments = [{ paymentId, amount, mode, referenceId, remarks }, ...]
+        const createdById = req.user.id;
+        if (!payments || !Array.isArray(payments) || payments.length === 0) {
+            return sendError(res, "Payments array required", HTTP_STATUS.BAD_REQUEST);
+        }
+        const results = await prisma.$transaction(async (tx) => {
+            const responses = [];
+            for (const p of payments) {
+                if (!p.paymentId || !p.amount || !p.mode) {
+                    throw new Error("Each payment requires paymentId, amount, mode");
+                }
+                const result = await processFeePayment(tx, p.paymentId, p.amount, p.mode, p.referenceId || null, p.remarks || null, createdById);
+                responses.push(result);
+            }
+            return responses;
+        });
+        return sendSuccess(res, "Multiple payments recorded successfully", results);
+    }
+    catch (err) {
         return sendError(res, err.message, HTTP_STATUS.INTERNAL_SERVER_ERROR);
     }
 };
