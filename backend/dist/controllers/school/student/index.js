@@ -510,19 +510,16 @@ export const bulkUploadStudents = async (req, res) => {
 };
 export const fetchStudents = async (req, res) => {
     try {
-        let { createdBy, task, page, studentId, class: className, section, session, name, admissionNo, rollNo, fatherName, mobile, ...filters } = req.query;
+        let { studentId, class: className, section, session, name, admissionNo, rollNo, fatherName, mobile, page, task, ...filters } = req.query;
         if (studentId)
             filters.id = studentId;
-        console.log("class is ", className);
-        // Pagination
-        const pageNumber = parseInt(page, 10);
+        // 🔹 Pagination
+        const pageNumber = page ? parseInt(page, 10) : 1;
         const pageSize = parseInt(LIMIT, 10) || 10;
         // 🔹 Base student filters
         const whereClause = {
             ...Object.fromEntries(Object.entries(filters).map(([key, value]) => [key, String(value)])),
-            ...(name && {
-                name: { startsWith: name, mode: "insensitive" },
-            }),
+            ...(name && { name: { startsWith: name, mode: "insensitive" } }),
             ...(admissionNo && {
                 admissionNo: { startsWith: admissionNo, mode: "insensitive" },
             }),
@@ -536,7 +533,7 @@ export const fetchStudents = async (req, res) => {
         // 🔹 Enrollment filters
         const enrollmentWhere = {};
         if (session) {
-            enrollmentWhere.session = { name: session };
+            enrollmentWhere.session = { name: session }; // ✅ ensure relation exists
         }
         if (className || section) {
             enrollmentWhere.class = {};
@@ -553,7 +550,6 @@ export const fetchStudents = async (req, res) => {
                 mode: "insensitive",
             };
         }
-        console.log("enrollment", enrollmentWhere);
         // 🔹 Fetch students
         let studentsRaw;
         if (pageNumber === -1) {
@@ -573,7 +569,7 @@ export const fetchStudents = async (req, res) => {
                             : undefined,
                         orderBy: { createdAt: "desc" },
                         include: {
-                            class: { include: { section: true } },
+                            class: { include: { section: true, classLabel: true } },
                         },
                     },
                 },
@@ -611,19 +607,17 @@ export const fetchStudents = async (req, res) => {
             return {
                 id: student.id,
                 name: student.name,
-                email: student.email,
+                email: student.studentEmail, // ✅ use correct field
                 mobile: student.fatherMobile,
                 admissionNo: student.admissionNo,
-                section: latest?.class?.section?.name || null,
-                barcodeUrl: student.barcodeUrl,
                 rollNo: latest?.rollNo || null,
-                classLabel: latest?.class?.classLabel.name || null,
+                classLabel: latest?.class?.classLabel?.name || null,
+                section: latest?.class?.section?.name || null,
+                sectionId: latest?.class?.sectionId,
                 fatherName: student.fatherName,
                 dob: student.dob,
                 gender: student.gender,
-                category: student.category,
-                section: latest?.class.section.name || null,
-                sectionId: latest?.class.sectionId
+                barcodeUrl: student.barcodeUrl,
             };
         });
         // 🔹 Count

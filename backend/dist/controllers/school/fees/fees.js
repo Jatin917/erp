@@ -736,14 +736,128 @@ export const removeDiscountFromFeeDoc = async (req, res) => {
         return sendError(res, error.message, HTTP_STATUS.INTERNAL_SERVER_ERROR);
     }
 };
+// -------------------- FeeDoc for Specific Students --------------------
+export const generateFeeDocsForStudents = async (req, res) => {
+    try {
+        const { templateId, classLabelId: classLabel, branchId, studentIds } = req.body;
+        if (!templateId || !branchId || !Array.isArray(studentIds) || studentIds.length === 0) {
+            return sendError(res, "templateId, classLabelId, branchId and studentIds[] are required", HTTP_STATUS.BAD_REQUEST);
+        }
+        const classLabelExist = await prisma.classLabel.findFirst({ where: { name: classLabel } });
+        if (!classLabelExist) {
+            return sendError(res, "class name don't exist ", HTTP_STATUS.CONFLICT);
+        }
+        const classLabelId = classLabelExist.id;
+        // Ensure session exists
+        const sessionExist = await prisma.academicSession.findFirst({
+            where: { branchId, isCurrent: true },
+            include: { months: true },
+        });
+        if (!sessionExist) {
+            return sendError(res, "Session doesn't exist", HTTP_STATUS.CONFLICT);
+        }
+        const sessionId = sessionExist.id;
+        const monthsInSession = sessionExist.months.length;
+        const result = await prisma.$transaction(async (tx) => {
+            // Get template with relations
+            const template = await tx.feeTemplate.findFirst({
+                where: { id: templateId, classLabelId, sessionId },
+                include: { feeHead: true, discounts: true, lateFees: true },
+            });
+            if (!template)
+                throw new Error("Template not found for given class & session");
+            const created = [];
+            for (const studentId of studentIds) {
+                const enrollment = await tx.enrollment.findFirst({
+                    where: { studentId, sessionId },
+                });
+                if (!enrollment) {
+                    created.push({ skipped: true, reason: "No enrollment", studentId });
+                    continue;
+                }
+                // avoid duplicates
+                const exists = await tx.feeDoc.findFirst({
+                    where: { enrollmentId: enrollment.id, templateId: template.id, feeHeadId: template.feeHeadId },
+                });
+                if (exists) {
+                    created.push({ skipped: true, reason: "Already exists", studentId });
+                    continue;
+                }
+                // Apply discounts
+                let totalDiscountAmt = 0;
+                for (const discount of template.discounts) {
+                    totalDiscountAmt += discount.appliedAmount;
+                }
+                // Create FeeDoc
+                const doc = await tx.feeDoc.create({
+                    data: {
+                        enrollmentId: enrollment.id,
+                        feeHeadId: template.feeHeadId,
+                        templateId: template.id,
+                        amount: template.amount ?? 0,
+                        afterAmount: (template.amount ?? 0) - totalDiscountAmt,
+                        status: "PENDING",
+                        paymentType: template.paymentType,
+                    },
+                });
+                // Copy discounts
+                for (const discount of template.discounts) {
+                    await tx.discount.create({
+                        data: {
+                            appliedAmount: discount.appliedAmount,
+                            feeDocId: doc.id,
+                            feeTemplateId: discount.feeTemplateId,
+                            policyId: discount.policyId ?? null,
+                        },
+                    });
+                }
+                // Copy late fees
+                for (const lateFee of template.lateFees) {
+                    await tx.lateFee.create({
+                        data: {
+                            amount: lateFee.amount,
+                            feeDocId: doc.id,
+                            feeTemplateId: lateFee.feeTemplateId,
+                        },
+                    });
+                }
+                // Generate due dates for payments
+                const dueDates = generateDueDates(template.paymentType, {
+                    dueDate: template.dueDate,
+                    months: monthsInSession,
+                    installments: template.installements ?? 0,
+                });
+                // Create fee payments
+                await createPayment(tx, doc, doc.afterAmount, template.feeHead.name, template.paymentType, dueDates);
+                created.push({ success: true, studentId, doc });
+            }
+            return created;
+        });
+        return res.status(HTTP_STATUS.CREATED).json({
+            success: true,
+            message: "FeeDocs generated for students",
+            data: { feeDocs: result },
+        });
+    }
+    catch (err) {
+        return res
+            .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
+            .json({ success: false, message: err.message });
+    }
+};
 // for one student
 export const generateFeeDocForStudent = async (req, res) => {
     try {
-        const { classLabelId, sectionId, branchId, sessionId, paymentType, dueDates, // ✅ user passes array of dueDates
+        const { classLabelId, sectionId, branchId, paymentType, dueDates, // ✅ user passes array of dueDates
         studentId, templateId, } = req.body;
-        if (!classLabelId || !sessionId || !branchId) {
+        if (!classLabelId || !branchId) {
             return sendError(res, "classId, sessionId & branchId required", HTTP_STATUS.BAD_REQUEST);
         }
+        const sessionExist = await prisma.academicSession.findFirst({ where: { branchId, isCurrent: true }, include: { months: true } });
+        if (!sessionExist) {
+            return sendError(res, "Session don't exist", HTTP_STATUS.CONFLICT);
+        }
+        const sessionId = sessionExist.id;
         if (!Array.isArray(dueDates) || dueDates.length === 0) {
             return sendError(res, "dueDates array is required", HTTP_STATUS.BAD_REQUEST);
         }
