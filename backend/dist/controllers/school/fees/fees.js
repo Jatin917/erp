@@ -11,7 +11,50 @@ import { sendError, sendSuccess } from "../../../lib/utils.js";
 import { MONTHS, numsSuffix } from "../../../lib/contants.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-const createPayment = async (tx, doc, template, paymentType, dueDates) => {
+const updatePayments = async (tx, feeDocId, amount, paymentType, payments) => {
+    if (paymentType === FeePaymentType.ONE_TIME) {
+        // Expecting only one dueDate
+        if (payments.length !== 1)
+            throw new Error("One-time payment requires exactly 1 dueDate");
+        const payment = await tx.feePayment.update({
+            where: {
+                id: payments[0].id
+            },
+            data: {
+                amount: amount,
+            },
+        });
+    }
+    if (paymentType === FeePaymentType.MONTHLY) {
+        // Expect dueDates.length === number of months
+        const perMonth = amount / payments.length;
+        for (let i = 0; i < payments.length; i++) {
+            const paymentId = payments[i].id;
+            const payment = await tx.feePayment.update({
+                where: { id: paymentId },
+                data: {
+                    amount: perMonth,
+                },
+            });
+        }
+    }
+    if (paymentType === FeePaymentType.INSTALLMENT) {
+        const perInstallment = amount / payments.length;
+        for (let i = 0; i < payments.length; i++) {
+            const paymentId = payments[i].id;
+            const payment = await tx.feePayment.update({
+                where: {
+                    id: paymentId
+                },
+                data: {
+                    amount: perInstallment,
+                },
+            });
+        }
+    }
+    return true;
+};
+const createPayment = async (tx, doc, amount, feeHeadName, paymentType, dueDates) => {
     if (paymentType === FeePaymentType.ONE_TIME) {
         // Expecting only one dueDate
         if (dueDates.length !== 1)
@@ -19,15 +62,15 @@ const createPayment = async (tx, doc, template, paymentType, dueDates) => {
         const payment = await tx.feePayment.create({
             data: {
                 feeDocId: doc.id,
-                amount: template.amount,
+                amount: amount,
                 dueDate: dueDates[0] ? new Date(dueDates[0]) : new Date(),
-                name: template.feeHead.name
+                name: feeHeadName
             },
         });
     }
     if (paymentType === FeePaymentType.MONTHLY) {
         // Expect dueDates.length === number of months
-        const perMonth = template.amount / dueDates.length;
+        const perMonth = amount / dueDates.length;
         for (let i = 0; i < dueDates.length; i++) {
             const d = dueDates[i] ?? new Date();
             const month = d.getMonth();
@@ -42,7 +85,7 @@ const createPayment = async (tx, doc, template, paymentType, dueDates) => {
         }
     }
     if (paymentType === FeePaymentType.INSTALLMENT) {
-        const perInstallment = template.amount / dueDates.length;
+        const perInstallment = amount / dueDates.length;
         for (let i = 0; i < dueDates.length; i++) {
             const d = dueDates[i] ?? new Date();
             const payment = await tx.feePayment.create({
@@ -411,7 +454,7 @@ export const deleteFeeHead = async (req, res) => {
 // -------------------- FeeTemplate --------------------
 export const createFeeTemplate = async (req, res) => {
     try {
-        const { branchId, classLabel, feeHeadId, totalAmount, defaultDiscounts, defaultLateFees, paymentType, installements, dueDate } = req.body;
+        const { branchId, classLabel, feeHeadId, totalAmount, defaultDiscounts, defaultLateFees, paymentType, numberOfInstallments: installements, dueDate } = req.body;
         if (!branchId || !feeHeadId || totalAmount == null || !dueDate || !paymentType) {
             return res.status(HTTP_STATUS.BAD_REQUEST).json({ success: false, message: "Missing required fields" });
         }
@@ -475,7 +518,7 @@ export const createFeeTemplate = async (req, res) => {
                 lateFees: defaultLateFees,
                 paymentType,
                 installements,
-                dueDate
+                dueDate: new Date(dueDate)
             }
         });
         return res.status(HTTP_STATUS.CREATED).json({ success: true, message: "FeeTemplate created", data: { template } });
@@ -614,7 +657,7 @@ export const generateFeeDocs = async (req, res) => {
         const result = await prisma.$transaction(async (tx) => {
             // find students and templates
             const enrollments = await tx.enrollment.findMany({ where: { classId, sessionId } });
-            const templates = await tx.feeTemplate.findMany({ where: { classLabelId, sessionId }, include: { feeHead: true } });
+            const templates = await tx.feeTemplate.findMany({ where: { classLabelId, sessionId }, include: { feeHead: true, discounts: true, lateFees: true } });
             if (enrollments.length === 0)
                 throw new Error("No students found for this class & session");
             if (templates.length === 0)
@@ -630,19 +673,33 @@ export const generateFeeDocs = async (req, res) => {
                         created.push({ skipped: true, enrollmentId: enrollment.id, templateId: template.id });
                         continue;
                     }
+                    const discounts = template.discounts;
+                    const lateFees = template.lateFees;
+                    let totalDiscountAmt = 0;
+                    for (const discount of discounts) {
+                        totalDiscountAmt += discount.appliedAmount;
+                    }
                     const doc = await tx.feeDoc.create({
                         data: {
                             enrollmentId: enrollment.id,
                             feeHeadId: template.feeHeadId,
                             templateId: template.id,
                             amount: template.amount ?? template.amount, // adjust field names if needed
+                            afterAmount: template.amount - totalDiscountAmt,
                             status: "PENDING",
                             paymentType: template.paymentType
                         }
                     });
+                    for (const discount of discounts) {
+                        await tx.discount.create({ data: { appliedAmount: discount.appliedAmount, feeDocId: doc.id, feeTemplateId: discount.feeTemplateId } });
+                    }
+                    for (const lateFee of lateFees) {
+                        await tx.lateFee.create({ data: { amount: lateFee.amount, feeDocId: doc.id, feeTemplateId: lateFee.feeTemplateId } });
+                    }
                     created.push(doc);
                     const dueDates = generateDueDates(template.paymentType, { dueDate: template.dueDate, months: monthsInSession, installments: (template.installements ?? 0) });
-                    await createPayment(tx, doc, template, template.paymentType, dueDates);
+                    // payment template main jo amount hain usko deduct krdo discount amount se utne ka payments create krdo
+                    await createPayment(tx, doc, doc.afterAmount, template.feeHead.name, template.paymentType, dueDates);
                     // Optionally generate default feePayments based on paymentType or template defaults
                     // (left to explicit endpoint addFeePayments or automatic logic here)
                 }
@@ -655,11 +712,34 @@ export const generateFeeDocs = async (req, res) => {
         return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ success: false, message: err.message });
     }
 };
+export const removeDiscountFromFeeDoc = async (req, res) => {
+    const { feeDocId, discountId } = req.body;
+    if (!feeDocId || !discountId) {
+        return sendError(res, "Required Fields", HTTP_STATUS.BAD_REQUEST);
+    }
+    const feeDoc = await prisma.feeDoc.findUnique({ where: { id: feeDocId }, include: { payments: true } });
+    const discount = await prisma.discount.findUnique({ where: { id: discountId } });
+    if (!feeDoc || !discount) {
+        return sendError(res, "wrong discount or feeDoc id", HTTP_STATUS.CONFLICT);
+    }
+    try {
+        await prisma.$transaction(async (tx) => {
+            const discountAmt = discount.appliedAmount;
+            await tx.discount.delete({ where: { id: discountId } });
+            await tx.feeDoc.update({ where: { id: feeDocId }, data: { afterAmount: feeDoc.afterAmount + discountAmt } });
+            await updatePayments(tx, feeDocId, feeDoc.afterAmount, feeDoc.paymentType, feeDoc.payments);
+        });
+        const feeDocUpdated = await prisma.feeDoc.findUnique({ where: { id: feeDocId }, include: { payments: true } });
+        return sendSuccess(res, "removed discount successfully", feeDocUpdated, HTTP_STATUS.CREATED);
+    }
+    catch (error) {
+        return sendError(res, error.message, HTTP_STATUS.INTERNAL_SERVER_ERROR);
+    }
+};
 // for one student
 export const generateFeeDocForStudent = async (req, res) => {
     try {
-        const { classLabelId, sectionId, branchId, sessionId, paymentType, installments, // number of installments (optional)
-        dueDates, // ✅ user passes array of dueDates
+        const { classLabelId, sectionId, branchId, sessionId, paymentType, dueDates, // ✅ user passes array of dueDates
         studentId, templateId, } = req.body;
         if (!classLabelId || !sessionId || !branchId) {
             return sendError(res, "classId, sessionId & branchId required", HTTP_STATUS.BAD_REQUEST);
@@ -678,7 +758,7 @@ export const generateFeeDocForStudent = async (req, res) => {
             const enrollment = await tx.enrollment.findFirst({
                 where: { classId, sessionId, studentId },
             });
-            const template = await tx.feeTemplate.findFirst({ where: { id: templateId }, include: { feeHead: true } });
+            const template = await tx.feeTemplate.findFirst({ where: { id: templateId }, include: { feeHead: true, discounts: true } });
             if (!enrollment)
                 throw new Error("No student found for this class & session");
             if (!template)
@@ -688,6 +768,11 @@ export const generateFeeDocForStudent = async (req, res) => {
             });
             if (exist)
                 throw new Error("Template already exists for this student");
+            const discounts = template.discounts;
+            let totalDiscountAmt = 0;
+            for (const discount of discounts) {
+                totalDiscountAmt += discount.appliedAmount;
+            }
             // ---------- Create FeeDoc ----------
             const doc = await tx.feeDoc.create({
                 data: {
@@ -695,12 +780,13 @@ export const generateFeeDocForStudent = async (req, res) => {
                     feeHeadId: template.feeHeadId,
                     templateId: template.id,
                     amount: template.amount,
+                    afterAmount: template.amount - totalDiscountAmt,
                     status: "PENDING",
                     paymentType,
                 },
             });
             // ---------- Generate Payments ----------
-            await createPayment(tx, doc, template, paymentType, dueDates);
+            await createPayment(tx, doc, doc.afterAmount, template.feeHead.name, paymentType, dueDates);
             return { doc };
         });
         return sendSuccess(res, "FeeDoc generated", result, HTTP_STATUS.CREATED);
@@ -712,29 +798,84 @@ export const generateFeeDocForStudent = async (req, res) => {
 export const getStudentFeeDocs = async (req, res) => {
     try {
         const { studentId } = req.params;
-        if (!studentId)
-            return res.status(HTTP_STATUS.BAD_REQUEST).json({ success: false, message: "studentId required" });
+        if (!studentId) {
+            return res
+                .status(HTTP_STATUS.BAD_REQUEST)
+                .json({ success: false, message: "studentId required" });
+        }
         const student = await prisma.student.findFirst({ where: { id: studentId } });
         if (!student) {
-            return sendError(res, "Student don't exist", HTTP_STATUS.CONFLICT);
+            return sendError(res, "Student doesn't exist", HTTP_STATUS.CONFLICT);
         }
         const branchId = student.branchId;
-        const currentSession = await prisma.academicSession.findFirst({ where: { branchId, isCurrent: true } });
-        if (!currentSession) {
-            return sendError(res, "Session don't exist", HTTP_STATUS.CONFLICT);
-        }
-        const enrollment = await prisma.enrollment.findFirst({ where: { studentId, sessionId: currentSession.id } });
-        if (!enrollment) {
-            return sendError(res, "Enrollment don't exist", HTTP_STATUS.CONFLICT);
-        }
-        const docs = await prisma.feeDoc.findMany({
-            where: { enrollmentId: enrollment.id },
-            include: { payments: true } // adjust include names to your schema: feePayments vs payments
+        const currentSession = await prisma.academicSession.findFirst({
+            where: { branchId, isCurrent: true },
         });
-        return res.status(HTTP_STATUS.OK).json({ success: true, message: "Student FeeDocs fetched", data: { docs } });
+        if (!currentSession) {
+            return sendError(res, "Session doesn't exist", HTTP_STATUS.CONFLICT);
+        }
+        const enrollment = await prisma.enrollment.findFirst({
+            where: { studentId, sessionId: currentSession.id },
+        });
+        if (!enrollment) {
+            return sendError(res, "Enrollment doesn't exist", HTTP_STATUS.CONFLICT);
+        }
+        const feeDocs = await prisma.feeDoc.findMany({
+            where: { enrollmentId: enrollment.id },
+            include: {
+                discounts: true,
+                lateFees: true, // rules defined at FeeDoc level
+                payments: {
+                    include: { lateFees: true }, // applied late fees at payment level
+                },
+                transactions: { include: { transaction: true } },
+                feeHead: true,
+            },
+        });
+        const formattedDocs = feeDocs.map((doc) => {
+            const discountTotalAmount = doc.discounts.reduce((sum, d) => sum + d.appliedAmount, 0);
+            const afterAmount = doc.amount - discountTotalAmount;
+            console.log("p ", doc.payments);
+            const payments = doc.payments.map((p) => ({
+                id: p.id,
+                name: p.name,
+                dueDate: p.dueDate,
+                amount: p.amount,
+                isPaid: p.isPaid,
+                paidAmount: p.paidAmount,
+                fineAmount: p.fineAmount, // only set when paid late
+                discountAmt: discountTotalAmount / doc.payments.length,
+                lateFees: p.lateFees.map((lf) => ({
+                    id: lf.id,
+                    amount: lf.amount,
+                    reason: lf.reason,
+                })),
+                mode: doc.transactions[0]?.transaction.mode,
+                paidOn: doc.transactions[0]?.transaction.paidOn
+            }));
+            return {
+                id: doc.id,
+                paymentType: doc.paymentType,
+                feeHead: doc.feeHead,
+                amount: doc.amount,
+                discountTotalAmount,
+                afterAmount,
+                status: doc.status,
+                discounts: doc.discounts,
+                lateFeeRules: doc.lateFees, // rules, not applied fines
+                payments,
+            };
+        });
+        return res.status(HTTP_STATUS.OK).json({
+            success: true,
+            message: "Student FeeDocs fetched",
+            data: { feeDocs: formattedDocs },
+        });
     }
     catch (err) {
-        return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ success: false, message: err.message });
+        return res
+            .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
+            .json({ success: false, message: err.message });
     }
 };
 export const updateFeeDoc = async (req, res) => {
@@ -852,32 +993,49 @@ export const createTransaction = async (req, res) => {
             // fetch unpaid payments
             const duePayments = await tx.feePayment.findMany({
                 where: { feeDoc: { enrollmentId }, isPaid: false },
-                orderBy: { dueDate: "asc" },
+                orderBy: { dueDate: "asc" }, include: { lateFees: true }
             });
             if (duePayments.length === 0) {
                 return sendError(res, "User Payments are cleared", HTTP_STATUS.BAD_REQUEST);
             }
             const allocations = [];
+            const currentDate = new Date();
             for (const payment of duePayments) {
                 if (remaining <= 0)
                     break;
+                const lateFeesOfCurrentFeeDoc = await tx.lateFee.findMany({ where: { feeDocId: payment.feeDocId } });
+                const alreadyAppliedLateFees = payment.lateFees;
+                const appliedIds = new Set(alreadyAppliedLateFees.map(f => f.id));
+                const newLateFees = lateFeesOfCurrentFeeDoc.filter(fee => !appliedIds.has(fee.id));
+                let totalLateFeeAmt = 0;
+                for (const lateFee of newLateFees) {
+                    totalLateFeeAmt += lateFee.amount;
+                }
                 const alreadyPaid = payment.paidAmount || 0;
-                const toPay = Math.min(remaining, payment.amount - alreadyPaid);
+                let toPay = Math.min(remaining, payment.amount - alreadyPaid);
+                const dueDate = new Date(payment.dueDate);
+                // due date ke baad late fee add ho jayega jitna dena hain usme
+                if (dueDate < currentDate) {
+                    toPay += totalLateFeeAmt;
+                    await tx.feePayment.update({ where: { id: payment.id }, data: { fineAmount: totalLateFeeAmt, lateFees: { set: newLateFees.map(fee => ({ id: fee.id })) } } });
+                }
                 remaining -= toPay;
                 await tx.feePayment.update({
                     where: { id: payment.id },
                     data: {
                         paidAmount: { increment: toPay },
-                        isPaid: alreadyPaid + toPay >= payment.amount,
+                        isPaid: alreadyPaid + toPay >= payment.amount + totalLateFeeAmt,
                     },
                 });
-                allocations.push({ feePaymentId: payment.id, amount: toPay, feeDocId: payment.feeDocId });
+                // feeDoc main late fee nhi hain actual jo payment hain unko agr late deposite kiya to late fee lag rhi hain so no need to take fine amount outside fee payment
+                allocations.push({ feePaymentId: payment.id, amount: toPay - totalLateFeeAmt, feeDocId: payment.feeDocId });
             }
             const receiptNo = `RCPT-${Date.now()}`;
             const txn = await tx.feeTransaction.create({
                 data: {
                     enrollmentId,
                     amountPaid: amount,
+                    returnedAmt: remaining,
                     mode,
                     referenceId,
                     remarks,
@@ -919,11 +1077,11 @@ export const createTransaction = async (req, res) => {
                 await tx.feeDoc.update({
                     where: { id: alloc.feeDocId },
                     data: {
-                        status: paidSoFar < (feeDoc.amount || 0) ? "Partial" : "Paid",
+                        status: paidSoFar < (feeDoc.afterAmount || 0) ? "PARTIAL" : "PAID",
                     },
                 });
             }
-            return { txn, remaining };
+            return txn;
         });
         return res.json({ success: true, message: "Transaction created", data: { txn: result } });
     }
@@ -931,6 +1089,150 @@ export const createTransaction = async (req, res) => {
         return res
             .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
             .json({ success: false, message: err.message });
+    }
+};
+// dono ko review krna hain
+export const payForFeePayment = async (req, res) => {
+    try {
+        const { paymentId: feePaymentId, amount, mode, referenceId, remarks } = req.body;
+        const createdById = req.user.id;
+        if (!feePaymentId || !amount || !mode || !createdById) {
+            return sendError(res, "feePaymentId, amount, mode, createdById are required", HTTP_STATUS.BAD_REQUEST);
+        }
+        const feePayment = await prisma.feePayment.findUnique({
+            where: { id: feePaymentId },
+            include: {
+                feeDoc: { include: { eenrollment: true } }, lateFees: true,
+            },
+        });
+        if (!feePayment) {
+            return sendError(res, "FeePayment not found", HTTP_STATUS.NOT_FOUND);
+        }
+        if (feePayment.isPaid) {
+            return sendError(res, "This payment is already fully paid", HTTP_STATUS.CONFLICT);
+        }
+        const lateFeesOfCurrentFeeDoc = await prisma.lateFee.findMany({ where: { feeDocId: feePayment.feeDocId } });
+        const alreadyAppliedLateFees = feePayment.lateFees;
+        const appliedIds = new Set(alreadyAppliedLateFees.map(f => f.id));
+        const newLateFees = lateFeesOfCurrentFeeDoc.filter(fee => !appliedIds.has(fee.id));
+        let totalLateFeeAmt = 0;
+        // Remaining amount
+        const alreadyPaid = feePayment.paidAmount || 0;
+        let remaining = feePayment.amount - alreadyPaid;
+        // Wrap in transaction to stay atomic
+        const result = await prisma.$transaction(async (tx) => {
+            // due date ke baad late fee add ho jayega jitna dena hain usme
+            const currentDate = new Date();
+            const dueDate = new Date(feePayment.dueDate);
+            if (dueDate < currentDate) {
+                for (const lateFee of newLateFees) {
+                    totalLateFeeAmt += lateFee.amount;
+                }
+                remaining += totalLateFeeAmt;
+                await tx.feePayment.update({ where: { id: feePayment.id }, data: { fineAmount: totalLateFeeAmt, lateFees: { set: newLateFees.map(fee => ({ id: fee.id })) } } });
+            }
+            if (amount > remaining) {
+                return sendError(res, `You can pay max ${remaining} for this payment`, HTTP_STATUS.BAD_REQUEST);
+            }
+            const receiptNo = `RCPT-${Date.now()}`;
+            // 1. Create transaction
+            const txn = await tx.feeTransaction.create({
+                data: {
+                    enrollmentId: feePayment.feeDoc.enrollmentId,
+                    amountPaid: amount,
+                    returnedAmt: 0,
+                    mode,
+                    referenceId,
+                    remarks,
+                    receiptNo,
+                    createdById,
+                },
+            });
+            // 2. Update feePayment (increment paidAmount)
+            const updatedPayment = await tx.feePayment.update({
+                where: { id: feePaymentId },
+                data: {
+                    paidAmount: { increment: amount },
+                    fineAmount: totalLateFeeAmt,
+                    isPaid: (alreadyPaid + amount) >= feePayment.amount + totalLateFeeAmt,
+                },
+            });
+            // 3. Create FeeTransactionItem
+            const txnItem = await tx.feeTransactionItem.create({
+                data: {
+                    transactionId: txn.id,
+                    feeDocId: feePayment.feeDocId,
+                    paidAmount: amount,
+                },
+            });
+            // 4. Update FeeDoc status if needed
+            const doc = await tx.feeDoc.update({
+                where: { id: feePayment.feeDocId },
+                data: {
+                    status: (alreadyPaid + amount) >= feePayment.amount ? "PAID" : "PARTIAL",
+                },
+            });
+            return { txn, txnItem, updatedPayment, doc };
+        });
+        return sendSuccess(res, "Payment recorded successfully", result);
+    }
+    catch (err) {
+        console.error(err);
+        return sendError(res, err.message, HTTP_STATUS.INTERNAL_SERVER_ERROR);
+    }
+};
+export const revertPaymentForFeePayment = async (req, res) => {
+    try {
+        const { transactionId, feePaymentId } = req.body;
+        if (!transactionId || !feePaymentId) {
+            return sendError(res, "transactionId and feePaymentId are required", HTTP_STATUS.BAD_REQUEST);
+        }
+        const txnItem = await prisma.feeTransactionItem.findFirst({
+            where: { transactionId, feeDoc: { payments: { some: { id: feePaymentId } } } },
+            include: {
+                feeDoc: { include: { payments: true } },
+            },
+        });
+        if (!txnItem) {
+            return sendError(res, "No matching FeeTransactionItem found", HTTP_STATUS.NOT_FOUND);
+        }
+        const feePayment = await prisma.feePayment.findUnique({ where: { id: feePaymentId } });
+        if (!feePayment) {
+            return sendError(res, "FeePayment not found", HTTP_STATUS.NOT_FOUND);
+        }
+        // Wrap in transaction for atomicity
+        const result = await prisma.$transaction(async (tx) => {
+            // 1. Rollback paidAmount from FeePayment
+            const updatedPayment = await tx.feePayment.update({
+                where: { id: feePaymentId },
+                data: {
+                    paidAmount: { decrement: txnItem.paidAmount },
+                    isPaid: false,
+                },
+            });
+            // 2. Update FeeDoc status (check if any payment is still paid)
+            const doc = await tx.feeDoc.update({
+                where: { id: txnItem.feeDocId },
+                data: {
+                    status: updatedPayment.paidAmount > 0 ? "PARTIAL" : "PENDING",
+                },
+            });
+            // 3. Delete transactionItem
+            await tx.feeTransactionItem.delete({ where: { id: txnItem.id } });
+            // 4. If no items left for this transaction → delete transaction too
+            const remainingItems = await tx.feeTransactionItem.count({
+                where: { transactionId },
+            });
+            if (remainingItems === 0) {
+                await tx.feeTransaction.delete({ where: { id: transactionId } });
+            }
+            return { updatedPayment, doc };
+        });
+        return sendSuccess(res, "Payment reverted successfully", result);
+    }
+    catch (err) {
+        console.error(err);
+        return sendError(res, err.message, HTTP_STATUS.INTERNAL_SERVER_ERROR);
     }
 };
 /*

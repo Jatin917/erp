@@ -481,6 +481,7 @@ model FeeDoc {
    
   paymentType      FeePaymentType
   amount           Float
+  afterAmount      Float    @default(0)    //amount after deducting discounts and late fees
   status           String   @default("PENDING") // Pending | Partial | Paid
    
   payments         FeePayment[] // linked payment schedules
@@ -503,8 +504,9 @@ model FeePayment {
   amount             Float
   dueDate            DateTime
   isPaid             Boolean   @default(false)
+  fineAmount         Float     @default(0)
+  lateFees           LateFee[]
   paidAmount         Float     @default(0)
-       
   createdAt          DateTime @default(now())
 }   
 
@@ -515,6 +517,7 @@ model FeeTransaction {
   enrollment     Enrollment  @relation(fields: [enrollmentId], references: [id])
 
   amountPaid     Float
+  returnedAmt    Float    @default(0)
   paidOn         DateTime @default(now())
   remarks        String?
 
@@ -581,7 +584,8 @@ model LateFee {
   feeTemplate   FeeTemplate? @relation(fields: [feeTemplateId], references: [id])
   transactionId String?
   transaction   FeeTransaction? @relation(fields: [transactionId], references: [id])
-
+  paymentId     String?
+  payment       FeePayment?   @relation(fields: [paymentId], references: [id])
   amount        Float
   reason        String?
 }

@@ -513,6 +513,7 @@ export const fetchStudents = async (req, res) => {
         let { createdBy, task, page, studentId, class: className, section, session, name, admissionNo, rollNo, fatherName, mobile, ...filters } = req.query;
         if (studentId)
             filters.id = studentId;
+        console.log("class is ", className);
         // Pagination
         const pageNumber = parseInt(page, 10);
         const pageSize = parseInt(LIMIT, 10) || 10;
@@ -537,11 +538,14 @@ export const fetchStudents = async (req, res) => {
         if (session) {
             enrollmentWhere.session = { name: session };
         }
-        if (className) {
-            enrollmentWhere.class = { name: className };
-        }
-        if (section) {
-            enrollmentWhere.class = { section: { name: section } };
+        if (className || section) {
+            enrollmentWhere.class = {};
+            if (className) {
+                enrollmentWhere.class.classLabel = { name: className };
+            }
+            if (section) {
+                enrollmentWhere.class.section = { id: section };
+            }
         }
         if (rollNo) {
             enrollmentWhere.rollNo = {
@@ -549,6 +553,7 @@ export const fetchStudents = async (req, res) => {
                 mode: "insensitive",
             };
         }
+        console.log("enrollment", enrollmentWhere);
         // 🔹 Fetch students
         let studentsRaw;
         if (pageNumber === -1) {
@@ -594,7 +599,7 @@ export const fetchStudents = async (req, res) => {
                         orderBy: { createdAt: "desc" },
                         take: 1,
                         include: {
-                            class: { include: { section: true } },
+                            class: { include: { section: true, classLabel: true } },
                         },
                     },
                 },
@@ -612,11 +617,13 @@ export const fetchStudents = async (req, res) => {
                 section: latest?.class?.section?.name || null,
                 barcodeUrl: student.barcodeUrl,
                 rollNo: latest?.rollNo || null,
-                classLabel: latest?.class?.name || null,
+                classLabel: latest?.class?.classLabel.name || null,
                 fatherName: student.fatherName,
                 dob: student.dob,
                 gender: student.gender,
                 category: student.category,
+                section: latest?.class.section.name || null,
+                sectionId: latest?.class.sectionId
             };
         });
         // 🔹 Count

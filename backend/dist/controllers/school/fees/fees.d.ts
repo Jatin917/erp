@@ -14,6 +14,7 @@ export declare const getFeeTemplates: (req: any, res: any) => Promise<any>;
 export declare const updateFeeTemplate: (req: any, res: any) => Promise<any>;
 export declare const deleteFeeTemplate: (req: any, res: any) => Promise<any>;
 export declare const generateFeeDocs: (req: any, res: any) => Promise<any>;
+export declare const removeDiscountFromFeeDoc: (req: any, res: any) => Promise<import("express").Response<any, Record<string, any>>>;
 export declare const generateFeeDocForStudent: (req: any, res: any) => Promise<import("express").Response<any, Record<string, any>>>;
 export declare const getStudentFeeDocs: (req: any, res: any) => Promise<any>;
 export declare const updateFeeDoc: (req: any, res: any) => Promise<any>;
@@ -28,4 +29,6 @@ export declare const updateFeePayment: (req: any, res: any) => Promise<any>;
  * - Creates a feeTransaction and feeTransactionItems atomically
  */
 export declare const createTransaction: (req: any, res: any) => Promise<any>;
+export declare const payForFeePayment: (req: any, res: any) => Promise<import("express").Response<any, Record<string, any>>>;
+export declare const revertPaymentForFeePayment: (req: any, res: any) => Promise<import("express").Response<any, Record<string, any>>>;
 //# sourceMappingURL=fees.d.ts.map
