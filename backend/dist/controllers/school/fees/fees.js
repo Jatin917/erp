@@ -1083,7 +1083,7 @@ export const updateFeePayment = async (req, res) => {
  */
 export const createTransaction = async (req, res) => {
     try {
-        const { studentId, amount, mode, referenceId, remarks, branchId } = req.body;
+        const { studentId, amount, mode, referenceId, remarks, branchId, lateFee, lateFeeReason, discountAmount } = req.body;
         const createdById = req.user.id;
         if (!studentId || !amount || !mode || !createdById) {
             return res
@@ -1105,7 +1105,15 @@ export const createTransaction = async (req, res) => {
         const enrollmentId = enrollment.id;
         // Run everything atomically
         const result = await prisma.$transaction(async (tx) => {
-            let remaining = amount;
+            let currentAppliedLateFee = null;
+            let currentAppliedDiscount = null;
+            if (lateFee) {
+                currentAppliedLateFee = await tx.lateFee.create({ data: { amount: parseFloat(lateFee), reason: lateFeeReason } });
+            }
+            if (discountAmount) {
+                currentAppliedDiscount = await tx.discount.create({ data: { appliedAmount: parseFloat(discountAmount) } });
+            }
+            let remaining = amount + (parseFloat(discountAmount) || 0) - (parseFloat(lateFee) || 0);
             // fetch unpaid payments
             const duePayments = await tx.feePayment.findMany({
                 where: { feeDoc: { enrollmentId }, isPaid: false },
@@ -1161,6 +1169,12 @@ export const createTransaction = async (req, res) => {
                     createdById,
                 },
             });
+            if (currentAppliedLateFee) {
+                await tx.lateFee.update({ where: { id: currentAppliedLateFee.id }, data: { transactionId: txn.id } });
+            }
+            if (currentAppliedDiscount) {
+                await tx.discount.update({ where: { id: currentAppliedDiscount.id }, data: { transactionId: txn.id } });
+            }
             // Create or update feeTransactionItems
             for (const alloc of allocations) {
                 const feeDoc = await tx.feeDoc.findUnique({
