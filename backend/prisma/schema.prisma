@@ -481,7 +481,7 @@ model FeeDoc {
    
   paymentType      FeePaymentType
   amount           Float
-  afterAmount      Float    @default(0)    //amount after deducting discounts and late fees
+  afterAmount      Float    @default(0)    //amount after deducting discounts
   status           String   @default("PENDING") // Pending | Partial | Paid
    
   payments         FeePayment[] // linked payment schedules

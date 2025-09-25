@@ -948,16 +948,18 @@ export const getStudentFeeDocs = async (req, res) => {
         });
         const formattedDocs = feeDocs.map((doc) => {
             const discountTotalAmount = doc.discounts.reduce((sum, d) => sum + d.appliedAmount, 0);
+            const totalLateFeeAmt = doc.lateFees.reduce((sum, lt) => sum + lt.amount, 0);
+            const currentDate = new Date();
             const afterAmount = doc.amount - discountTotalAmount;
             console.log("p ", doc.payments);
             const payments = doc.payments.map((p) => ({
                 id: p.id,
                 name: p.name,
                 dueDate: p.dueDate,
-                amount: p.amount,
+                amount: p.amount + (currentDate > new Date(p.dueDate) ? totalLateFeeAmt : p.fineAmount),
                 isPaid: p.isPaid,
                 paidAmount: p.paidAmount,
-                fineAmount: p.fineAmount, // only set when paid late
+                fineAmount: currentDate > new Date(p.dueDate) ? totalLateFeeAmt : p.fineAmount, // only set when paid late
                 discountAmt: discountTotalAmount / doc.payments.length,
                 lateFees: p.lateFees.map((lf) => ({
                     id: lf.id,
@@ -1132,6 +1134,8 @@ export const createTransaction = async (req, res) => {
                 if (dueDate < currentDate) {
                     toPay += totalLateFeeAmt;
                     await tx.feePayment.update({ where: { id: payment.id }, data: { fineAmount: totalLateFeeAmt, lateFees: { set: newLateFees.map(fee => ({ id: fee.id })) } } });
+                    // late fee apply ho rhi hain to usko update kr rhe hain feedoc main as after amount 
+                    await tx.feeDoc.update({ where: { id: payment.feeDocId }, data: { afterAmount: { increment: totalLateFeeAmt } } });
                 }
                 remaining -= toPay;
                 await tx.feePayment.update({
@@ -1205,7 +1209,6 @@ export const createTransaction = async (req, res) => {
             .json({ success: false, message: err.message });
     }
 };
-// dono ko review krna hain
 export async function processFeePayment(tx, feePaymentId, amount, mode, referenceId, remarks, createdById) {
     const feePayment = await tx.feePayment.findUnique({
         where: { id: feePaymentId },
@@ -1244,6 +1247,7 @@ export async function processFeePayment(tx, feePaymentId, amount, mode, referenc
                 lateFees: { set: newLateFees.map((fee) => ({ id: fee.id })) },
             },
         });
+        await tx.feeDoc.update({ where: { id: feePayment.feeDocId }, data: { afterAmount: { increment: totalLateFeeAmt } } });
     }
     if (amount > remaining) {
         throw new Error(`You can pay max ${remaining} for this payment`);
@@ -1292,7 +1296,7 @@ export async function processFeePayment(tx, feePaymentId, amount, mode, referenc
 }
 export const payForFeePayment = async (req, res) => {
     try {
-        const { paymentId, amount, mode, referenceId, remarks } = req.body;
+        const { paymentId, amount, mode, referenceId, remarks, lateFeeAmount } = req.body;
         const createdById = req.user.id;
         if (!paymentId || !amount || !mode || !createdById) {
             return sendError(res, "paymentId, amount, mode, createdById are required", HTTP_STATUS.BAD_REQUEST);
@@ -1331,6 +1335,7 @@ export const payForMultipleFeePayments = async (req, res) => {
         return sendError(res, err.message, HTTP_STATUS.INTERNAL_SERVER_ERROR);
     }
 };
+// review krna hain
 export const revertPaymentForFeePayment = async (req, res) => {
     try {
         const { transactionId, feePaymentId } = req.body;
