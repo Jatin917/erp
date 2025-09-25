@@ -2,7 +2,7 @@ import { Router } from "express";
 import { isPermitted } from "../../../middlewares/permission/index.js";
 import multer from "multer";
 import { createFeeHead, createFeeTemplate, createTransaction, deleteFeeHead, deleteFeeTemplate, generateFeeDocs, generateFeeDocsForStudents, getFeeTemplates, getStudentFeeDocs, listFeeHeads, payForFeePayment, payForMultipleFeePayments, removeDiscountFromFeeDoc, revertPaymentForFeePayment, updateFeeHead, updateFeeTemplate } from "../../../controllers/school/fees/fees.js";
-import { applyDiscount, createDiscountPolicy, deleteAppliedDiscount, deleteDiscountPolicy, getDiscountsById, listDiscountPolicies, updateDiscountPolicy } from "../discounts/index.js";
+import { applyDiscount, createDiscountPolicy, createLateFee, deleteAppliedDiscount, deleteDiscountPolicy, deleteLateFee, getDiscountsById, listDiscountPolicies, updateDiscountPolicy, updateLateFee } from "../discounts/index.js";
 export const feeModuleRouter = Router();
 const upload = multer({ dest: "uploads/" });
 feeModuleRouter.post('/create-feehead', isPermitted, createFeeHead);
@@ -20,6 +20,10 @@ feeModuleRouter.delete('/delete-discountpolicy/:id', isPermitted, deleteDiscount
 feeModuleRouter.delete('/delete-applied-discount/:id', isPermitted, deleteAppliedDiscount);
 feeModuleRouter.post('/apply-discount', isPermitted, applyDiscount);
 feeModuleRouter.get('/list-discount-by-id', isPermitted, getDiscountsById);
+// Late Fee
+feeModuleRouter.post("/create-latefee", isPermitted, createLateFee);
+feeModuleRouter.put("/update-latefee/:id", isPermitted, updateLateFee);
+feeModuleRouter.delete("/delete-latefee/:id", isPermitted, deleteLateFee);
 feeModuleRouter.post('/create-feedocs', isPermitted, generateFeeDocs);
 feeModuleRouter.post('/create-students-feedoc', isPermitted, generateFeeDocsForStudents);
 feeModuleRouter.get('/list-feedocs/:studentId', isPermitted, getStudentFeeDocs);

@@ -1296,7 +1296,7 @@ export async function processFeePayment(tx, feePaymentId, amount, mode, referenc
 }
 export const payForFeePayment = async (req, res) => {
     try {
-        const { paymentId, amount, mode, referenceId, remarks, lateFeeAmount } = req.body;
+        const { paymentId, amount, mode, referenceId, remarks } = req.body;
         const createdById = req.user.id;
         if (!paymentId || !amount || !mode || !createdById) {
             return sendError(res, "paymentId, amount, mode, createdById are required", HTTP_STATUS.BAD_REQUEST);

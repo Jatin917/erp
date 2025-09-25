@@ -270,15 +270,15 @@ export const deleteAppliedDiscount = async (req, res) => {
 };
 export const createLateFee = async (req, res) => {
     try {
-        const { feeTransactionId, amount, reason } = req.body;
-        if (!feeTransactionId || !amount) {
+        const { templateId, feeDocId, amount, reason } = req.body;
+        if (!(feeDocId || templateId) || !amount) {
             return res.status(HTTP_STATUS.BAD_REQUEST).json({
                 success: false,
-                message: "feeTransactionId and amount are required",
+                message: "feeDocId or templateId and amount are required",
             });
         }
         const lateFee = await prisma.lateFee.create({
-            data: { transactionId: feeTransactionId, amount, reason: reason || null },
+            data: { feeDocId: feeDocId, feeTemplateId: templateId, amount, reason: reason || null },
         });
         return res.status(HTTP_STATUS.CREATED).json({
             success: true,
@@ -290,19 +290,18 @@ export const createLateFee = async (req, res) => {
         return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ success: false, message: err.message });
     }
 };
-// -------------------- Get LateFees by Transaction --------------------
-export const getLateFeesByTransaction = async (req, res) => {
+// -------------------- Get LateFees by ID --------------------
+export const getLateFeeById = async (req, res) => {
     try {
-        const { feeTransactionId } = req.params;
-        const lateFees = await prisma.lateFee.findMany({ where: { transactionId: feeTransactionId } });
-        return res.status(HTTP_STATUS.OK).json({
-            success: true,
-            message: "Late fees fetched successfully",
-            data: { lateFees },
-        });
+        const { feeDocId, templateId, feeTransactionId } = req.query;
+        if (!feeDocId && !templateId && !feeTransactionId) {
+            return sendError(res, "Id is required", HTTP_STATUS.BAD_REQUEST);
+        }
+        const lateFees = await prisma.lateFee.findMany({ where: { feeDocId: feeDocId ?? null, feeTemplateId: templateId ?? null, transactionId: feeTransactionId ?? null } });
+        return sendSuccess(res, "Late Fee Feteched Successfully", lateFees);
     }
     catch (err) {
-        return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ success: false, message: err.message });
+        return sendError(res, err.message, HTTP_STATUS.INTERNAL_SERVER_ERROR);
     }
 };
 // -------------------- Update LateFee --------------------
