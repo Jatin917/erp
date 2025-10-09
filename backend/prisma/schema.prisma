@@ -40,6 +40,11 @@ enum SessionStatus {
   COMPLETED
   LOCKED
 }
+enum PaymentStatus {
+  PENDING
+  PARTIAL
+  PAID
+}
 enum LeaveType {
   CASUAL
   SICK
@@ -482,7 +487,7 @@ model FeeDoc {
   paymentType      FeePaymentType
   amount           Float
   afterAmount      Float    @default(0)    //amount after deducting discounts
-  status           String   @default("PENDING") // Pending | Partial | Paid
+  status           PaymentStatus   @default(PENDING) // Pending | Partial | Paid
    
   payments         FeePayment[] // linked payment schedules
   transactions     FeeTransactionItem[]
