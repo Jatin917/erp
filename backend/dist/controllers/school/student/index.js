@@ -31,7 +31,7 @@ async function generateBarcode(student) {
     // Ensure the folder exists
     fs.mkdirSync(qrDir, { recursive: true });
     // Define full path for the barcode image
-    const qrPath = path.join(qrDir, `${student.id}.png`);
+    const qrPath = path.join(qrDir, `${student.id}-barcode.png`);
     console.log("qrPath ", qrPath, qrText, student);
     // Generate and save the QR code image
     try {
@@ -44,7 +44,7 @@ async function generateBarcode(student) {
     }
     console.log("image is ");
     // Return relative path for frontend usage
-    return path.join("..", "..", "..", "..", "uploads", student.branch.schoolId, student.branchId, student.admissionNo || student.id, `${student.id}.png`);
+    return path.join("..", "..", "..", "..", "uploads", student.branch.schoolId, student.branchId, student.admissionNo, `${student.id}-barcode.png`);
 }
 // ----------------------
 // Create / Find User Helper
@@ -181,6 +181,7 @@ function mapClassInput(input) {
 export const createStudent = async (req, res) => {
     try {
         const { className, branchId, rollNo, dob, ...data } = req.body;
+        const photo = req.file;
         if (!branchId || !className) {
             return sendError(res, "branchId and className required", HTTP_STATUS.BAD_REQUEST);
         }
@@ -318,11 +319,26 @@ export const createStudent = async (req, res) => {
             await createEnrollment(tx, classNameId, branchId, student.id, data.sectionId || null, rollNo || null);
             return student; // ✅ return student object
         });
+        let photoUrl = null;
+        if (photo) {
+            try {
+                const uploadDir = getStudentDir(student.branch.schoolId, student.branchId, student.admissionNo);
+                await fs.promises.mkdir(uploadDir, { recursive: true });
+                const destPath = path.join(uploadDir, `${student.id}-profile.png`);
+                await fs.renameSync(photo.path, destPath);
+                photoUrl = path.join("..", "..", "..", "..", "uploads", student.branch.schoolId, student.branchId, student.admissionNo, `${student.id}-profile.png`);
+                console.log(`Photo saved at: ${destPath}`);
+            }
+            catch (err) {
+                console.error("Error saving student photo:", err);
+                return sendError(res, "Photo upload failed", HTTP_STATUS.INTERNAL_SERVER_ERROR);
+            }
+        }
         // ---------- Barcode after commit ----------
         const barcodeUrl = await generateBarcode(student);
         await prisma.student.update({
             where: { id: student.id },
-            data: { barcodeUrl },
+            data: { barcodeUrl, photoUrl },
         });
         return sendSuccess(res, "Student created successfully", {
             studentId: student.id,
@@ -704,6 +720,7 @@ export const getStudentDetail = async (req, res) => {
             // Fees summary
             totalFeesPaid: student.currentYearTotalPaid + student.lastYearTotalPaid,
             totalPayable: student.currentYearTotal + student.lastYearTotal,
+            photoUrl: student.photoUrl,
             totalBalanceRemaining: student.currentYearTotalBalance + student.lastYearTotalBalance,
         };
         return res.status(HTTP_STATUS.OK).json({

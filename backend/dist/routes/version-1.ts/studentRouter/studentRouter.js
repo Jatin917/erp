@@ -4,7 +4,7 @@ import { bulkUploadStudents, createStudent, downloadSampleSheetForBulkUpload, fe
 import multer from "multer";
 export const studentRouter = Router();
 const upload = multer({ dest: "uploads/" });
-studentRouter.post("/create-student", isPermitted, createStudent);
+studentRouter.post("/create-student", upload.single("file"), isPermitted, createStudent);
 studentRouter.post("/bulk-upload", upload.single("file"), isPermitted, bulkUploadStudents);
 studentRouter.get("/download-bulk-sample", isPermitted, downloadSampleSheetForBulkUpload);
 studentRouter.get("/:id", isPermitted, getStudentDetail);

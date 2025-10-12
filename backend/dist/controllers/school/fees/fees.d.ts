@@ -22,6 +22,7 @@ export declare const updateFeeDoc: (req: any, res: any) => Promise<any>;
 export declare const addFeePayment: (req: any, res: any) => Promise<any>;
 export declare const getFeePayments: (req: any, res: any) => Promise<any>;
 export declare const updateFeePayment: (req: any, res: any) => Promise<any>;
+export declare const getUnpaidFeePaymentAmount: (req: any, res: any) => Promise<import("express").Response<any, Record<string, any>>>;
 /**
  * createTransaction:
  * - Validates input

@@ -1,5 +1,5 @@
 import puppeteer from "puppeteer";
-import { FeePaymentType } from "../../../../generated/prisma/index.js";
+import { FeePaymentType, PaymentStatus } from "../../../../generated/prisma/index.js";
 import { HTTP_STATUS } from "../../../lib/http-codes.js";
 import { PHOTO_URL, prisma } from "../../../server.js";
 import { getExecutablePath } from '../../../lib/services.js';
@@ -1071,6 +1071,50 @@ export const updateFeePayment = async (req, res) => {
         if (err.code === "P2025")
             return res.status(HTTP_STATUS.NOT_FOUND).json({ success: false, message: "FeePayment not found" });
         return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ success: false, message: err.message });
+    }
+};
+export const getUnpaidFeePaymentAmount = async (req, res) => {
+    try {
+        const { studentId, branchId } = req.query;
+        console.log("student details ", studentId);
+        const createdById = req.user.id;
+        if (!studentId || !createdById) {
+            return sendError(res, "Missing Fields", HTTP_STATUS.BAD_REQUEST);
+        }
+        const currentSession = await prisma.academicSession.findFirst({
+            where: { branchId, isCurrent: true },
+        });
+        if (!currentSession) {
+            return sendError(res, "Session doesn't exist", HTTP_STATUS.CONFLICT);
+        }
+        const enrollment = await prisma.enrollment.findFirst({
+            where: { studentId, sessionId: currentSession.id },
+        });
+        if (!enrollment) {
+            return sendError(res, "Enrollment doesn't exist", HTTP_STATUS.CONFLICT);
+        }
+        const enrollmentId = enrollment.id;
+        // ✅ Get all fee docs with PARTIAL or PENDING status
+        const feeDocs = await prisma.feeDoc.findMany({
+            where: {
+                enrollmentId,
+                status: { in: [PaymentStatus.PARTIAL, PaymentStatus.PENDING] },
+            },
+        });
+        let unpaidAmount = 0;
+        // ✅ Use for...of for async/await
+        for (const feeDoc of feeDocs) {
+            const paymentAmount = await prisma.feePayment.aggregate({
+                _sum: { amount: true, paidAmount: true },
+                where: { feeDocId: feeDoc.id, isPaid: false },
+            });
+            unpaidAmount += ((paymentAmount._sum.amount || 0) - (paymentAmount._sum.paidAmount || 0));
+        }
+        return sendSuccess(res, "Success", { unpaidAmount }, HTTP_STATUS.OK);
+    }
+    catch (error) {
+        console.error(error);
+        return sendError(res, "Internal server error", HTTP_STATUS.INTERNAL_SERVER_ERROR);
     }
 };
 // -------------------- FeeTransaction --------------------
