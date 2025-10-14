@@ -744,6 +744,46 @@ export declare const createCustomFieldService: (name: string, label: string, ent
     maxLength: number | null;
     createdById: string;
 }>;
+export declare const getCustomFieldService: (where?: any, include?: any) => Promise<({
+    [x: string]: ({
+        id: string;
+        createdAt: Date;
+        entityType: import("../../../generated/prisma/index.js").$Enums.ENTITES;
+        customFieldId: string;
+        entityId: string;
+        value: string;
+    } | {
+        id: string;
+        createdAt: Date;
+        entityType: import("../../../generated/prisma/index.js").$Enums.ENTITES;
+        customFieldId: string;
+        entityId: string;
+        value: string;
+    })[] | {
+        id: string;
+        createdAt: Date;
+        entityType: import("../../../generated/prisma/index.js").$Enums.ENTITES;
+        customFieldId: string;
+        entityId: string;
+        value: string;
+    }[];
+    [x: number]: never;
+    [x: symbol]: never;
+} & {
+    type: import("../../../generated/prisma/index.js").$Enums.customFieldType;
+    options: import("../../../generated/prisma/runtime/library.js").JsonValue | null;
+    name: string;
+    id: string;
+    createdAt: Date;
+    branchId: string;
+    entityType: import("../../../generated/prisma/index.js").$Enums.ENTITES;
+    label: string;
+    required: boolean;
+    regex: string | null;
+    minLength: number | null;
+    maxLength: number | null;
+    createdById: string;
+}) | null>;
 export declare const getSchoolsService: (where: any, include?: any) => Promise<({
     [x: string]: ({
         name: string;

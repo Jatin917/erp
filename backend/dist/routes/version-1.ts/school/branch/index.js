@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { createSchool, getBranches, getSchools, deleteSchool, editSchool } from "../../../../controllers/school/school/index.js";
+import { createSchool, getBranches, getSchools, deleteSchool, editSchool, createCustomFields } from "../../../../controllers/school/school/index.js";
 import { isPermitted } from "../../../../middlewares/permission/index.js";
 import multer from "multer";
 import { createOrUpdateClass, createSection, getAllClass, getAllSections, deleteSection, updateSection, getClassNames, createClassName } from "../../../../controllers/school/class/index.js";
@@ -19,5 +19,6 @@ branchRouter.get("/get-section", isPermitted, getAllSections);
 branchRouter.get("/get-class", isPermitted, getAllClass);
 branchRouter.get("/get-classNames", isPermitted, getClassNames);
 branchRouter.post("/create-className", isPermitted, createClassName);
+branchRouter.post("/create-customField", isPermitted, createCustomFields);
 export { branchRouter };
 //# sourceMappingURL=index.js.map

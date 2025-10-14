@@ -1,5 +1,5 @@
 import { error } from "console";
-import { Role as rolesAre } from "../../../../generated/prisma/index.js";
+import { Role as rolesAre, customFieldType } from "../../../../generated/prisma/index.js";
 import { HTTP_STATUS } from "../../../lib/http-codes.js";
 import { defaultPassword, prisma } from "../../../server.js";
 import path from "path";
@@ -8,7 +8,7 @@ import fs from "fs";
 import { OTP_TYPE } from "../../../lib/types.js";
 import { isEmailVerified } from "../../../services/otp.js";
 import { sendError } from "../../../lib/utils.js";
-import { createCustomFieldService, getBranchesService, getBranchService } from "../../../services/school/index.js";
+import { createCustomFieldService, getBranchesService, getBranchService, getCustomFieldService } from "../../../services/school/index.js";
 import { getUserService } from "../../../services/user/index.js";
 // Updated createBranch to accept tx for transactions
 const createBranch = async (tx, address, principalId, name, schoolId, softwareCharge) => {
@@ -337,12 +337,18 @@ export const createCustomFields = async (req, res) => {
         if (!branchId || !name || !label || !entityType || !type || !createdById) {
             return sendError(res, "Missing required fields", HTTP_STATUS.BAD_REQUEST);
         }
+        if ((type === customFieldType.MULTISELECT || type === customFieldType.SELECT || type === customFieldType.RADIO || type === customFieldType.CHECKBOX) && !options) {
+            return sendError(res, "Options are required with this fields", HTTP_STATUS.BAD_REQUEST);
+        }
         const branch = await getBranchService({ id: branchId });
         if (!branch) {
             return sendError(res, "Branch not found", HTTP_STATUS.NOT_FOUND);
         }
-        // Example: Create custom field (pseudo)
-        const customField = createCustomFieldService(name, label, entityType, type, options, required, branchId, createdById);
+        const alreadyCustomField = await getCustomFieldService({ name, branchId });
+        if (alreadyCustomField) {
+            return sendError(res, "Custom field with this name already exist", HTTP_STATUS.CONFLICT);
+        }
+        const customField = await createCustomFieldService(name, label, entityType, type, options, required, branchId, createdById);
         if (!customField) {
             return sendError(res, "Error Creating Custom Field", HTTP_STATUS.SERVICE_UNAVAILABLE);
         }
