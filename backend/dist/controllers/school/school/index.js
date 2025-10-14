@@ -8,7 +8,7 @@ import fs from "fs";
 import { OTP_TYPE } from "../../../lib/types.js";
 import { isEmailVerified } from "../../../services/otp.js";
 import { sendError, sendSuccess } from "../../../lib/utils.js";
-import { createCustomFieldService, getBranchesService, getBranchService, getCustomFieldService } from "../../../services/school/index.js";
+import { createCustomFieldService, getBranchesService, getBranchService, getCustomFieldsService } from "../../../services/school/index.js";
 import { getUserService } from "../../../services/user/index.js";
 // Updated createBranch to accept tx for transactions
 const createBranch = async (tx, address, principalId, name, schoolId, softwareCharge) => {
@@ -344,7 +344,7 @@ export const createCustomFields = async (req, res) => {
         if (!branch) {
             return sendError(res, "Branch not found", HTTP_STATUS.NOT_FOUND);
         }
-        const alreadyCustomField = await getCustomFieldService({ name, branchId });
+        const alreadyCustomField = await getCustomFieldsService({ name, branchId });
         if (alreadyCustomField.length > 0) {
             return sendError(res, "Custom field with this name already exist", HTTP_STATUS.CONFLICT);
         }
@@ -365,10 +365,11 @@ export const createCustomFields = async (req, res) => {
 export const getCustomFields = async (req, res) => {
     try {
         const branchId = req.query.branchId;
+        const entityType = req.query.entityType;
         if (!branchId) {
             return sendError(res, "Missing Fields", HTTP_STATUS.BAD_REQUEST);
         }
-        const customFields = await getCustomFieldService({ branchId });
+        const customFields = await getCustomFieldsService({ branchId, entityType });
         return sendSuccess(res, "Successfully Fetched Data", { fields: customFields }, HTTP_STATUS.OK);
     }
     catch (error) {

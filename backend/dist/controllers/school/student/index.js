@@ -6,11 +6,12 @@ import bcrypt from "bcrypt";
 import { defaultPassword, LIMIT, prisma } from "../../../server.js"; // your prisma instance
 import { HTTP_STATUS } from "../../../lib/http-codes.js";
 import XLSX from "xlsx";
-import { ClassEnum, } from "../../../../generated/prisma/index.js";
+import { ClassEnum, ENTITES, } from "../../../../generated/prisma/index.js";
 import { Prisma } from "@prisma/client/extension";
 import { fileURLToPath } from "url";
 import { connect } from "http2";
 import { sendError, sendSuccess } from "../../../lib/utils.js";
+import { createCustomFieldValue, getCustomFieldService } from "../../../services/school/index.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 function getStudentDir(sid, bid, admissionNo) {
@@ -49,7 +50,7 @@ async function generateBarcode(student) {
 // ----------------------
 // Create / Find User Helper
 // ----------------------
-async function findOrCreateUser(role, name, email, phone) {
+async function findOrCreateUser(tx, role, name, email, phone) {
     if (!email)
         return null;
     let user = await prisma.user.findFirst({
@@ -198,13 +199,13 @@ export const createStudent = async (req, res) => {
         }
         const student = await prisma.$transaction(async (tx) => {
             // ---------- Student User ----------
-            const studentUser = await findOrCreateUser("STUDENT", {
+            const studentUser = await findOrCreateUser(tx, "STUDENT", {
                 name: data.name,
                 email: data.studentEmail,
                 contact: data.studentMobile,
             });
             // ---------- Father ----------
-            const fatherUser = await findOrCreateUser("FATHER", {
+            const fatherUser = await findOrCreateUser(tx, "FATHER", {
                 name: data.fatherName,
                 email: data.fatherEmail,
                 contact: data.fatherMobile,
@@ -215,7 +216,7 @@ export const createStudent = async (req, res) => {
                 })
                 : null;
             // ---------- Mother ----------
-            const motherUser = await findOrCreateUser("MOTHER", {
+            const motherUser = await findOrCreateUser(tx, "MOTHER", {
                 name: data.motherName,
                 email: data.motherEmail,
                 contact: data.motherMobile,
@@ -315,6 +316,19 @@ export const createStudent = async (req, res) => {
                     branch: true,
                 },
             });
+            const parsedCustomFields = JSON.parse(data.customFields);
+            for (const field of parsedCustomFields) {
+                const customField = await getCustomFieldService({
+                    name: field.name,
+                    branchId: data.branchId,
+                }, {});
+                await createCustomFieldValue({
+                    customFieldId: customField.id,
+                    entityType: ENTITES.STUDENT,
+                    entityId: student.id,
+                    value: String(field.value),
+                }, tx);
+            }
             // ---------- Enrollment ----------
             await createEnrollment(tx, classNameId, branchId, student.id, data.sectionId || null, rollNo || null);
             return student; // ✅ return student object

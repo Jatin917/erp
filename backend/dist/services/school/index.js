@@ -17,9 +17,17 @@ export const createCustomFieldService = async (name, label, entityType, type, op
     });
     return data;
 };
-export const getCustomFieldService = async (where, include) => {
+export const getCustomFieldsService = async (where, include) => {
     const data = await prisma.customField.findMany({ where, include });
     return data;
+};
+export const getCustomFieldService = async (where, include) => {
+    const data = await prisma.customField.findFirst({ where, include });
+    return data;
+};
+export const createCustomFieldValue = async (data, tx) => {
+    const res = await tx.customFieldValue.create({ data });
+    return res;
 };
 export const getSchoolsService = async (where, include) => {
     const schools = await prisma.school.findMany({ where, include });

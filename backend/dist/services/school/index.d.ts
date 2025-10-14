@@ -1,4 +1,5 @@
 import type { customFieldType, ENTITES } from "../../../generated/prisma/index.js";
+import type { Prisma } from "@prisma/client/extension";
 export declare const getBranchService: (where: any, include?: any) => Promise<({
     [x: string]: ({
         id: string;
@@ -744,7 +745,7 @@ export declare const createCustomFieldService: (name: string, label: string, ent
     maxLength: number | null;
     createdById: string;
 }>;
-export declare const getCustomFieldService: (where?: any, include?: any) => Promise<({
+export declare const getCustomFieldsService: (where?: any, include?: any) => Promise<({
     [x: string]: ({
         id: string;
         createdAt: Date;
@@ -784,6 +785,47 @@ export declare const getCustomFieldService: (where?: any, include?: any) => Prom
     maxLength: number | null;
     createdById: string;
 })[]>;
+export declare const getCustomFieldService: (where?: any, include?: any) => Promise<({
+    [x: string]: ({
+        id: string;
+        createdAt: Date;
+        entityType: import("../../../generated/prisma/index.js").$Enums.ENTITES;
+        customFieldId: string;
+        entityId: string;
+        value: string;
+    } | {
+        id: string;
+        createdAt: Date;
+        entityType: import("../../../generated/prisma/index.js").$Enums.ENTITES;
+        customFieldId: string;
+        entityId: string;
+        value: string;
+    })[] | {
+        id: string;
+        createdAt: Date;
+        entityType: import("../../../generated/prisma/index.js").$Enums.ENTITES;
+        customFieldId: string;
+        entityId: string;
+        value: string;
+    }[];
+    [x: number]: never;
+    [x: symbol]: never;
+} & {
+    type: import("../../../generated/prisma/index.js").$Enums.customFieldType;
+    options: import("../../../generated/prisma/runtime/library.js").JsonValue | null;
+    name: string;
+    id: string;
+    createdAt: Date;
+    branchId: string;
+    entityType: import("../../../generated/prisma/index.js").$Enums.ENTITES;
+    label: string;
+    required: boolean;
+    regex: string | null;
+    minLength: number | null;
+    maxLength: number | null;
+    createdById: string;
+}) | null>;
+export declare const createCustomFieldValue: (data: any, tx: Prisma.TransactionClient) => Promise<any>;
 export declare const getSchoolsService: (where: any, include?: any) => Promise<({
     [x: string]: ({
         name: string;
