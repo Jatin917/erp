@@ -18,7 +18,7 @@ export const createCustomFieldService = async (name, label, entityType, type, op
     return data;
 };
 export const getCustomFieldService = async (where, include) => {
-    const data = await prisma.customField.findFirst({ where, include });
+    const data = await prisma.customField.findMany({ where, include });
     return data;
 };
 export const getSchoolsService = async (where, include) => {

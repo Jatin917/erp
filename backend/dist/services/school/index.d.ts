@@ -783,7 +783,7 @@ export declare const getCustomFieldService: (where?: any, include?: any) => Prom
     minLength: number | null;
     maxLength: number | null;
     createdById: string;
-}) | null>;
+})[]>;
 export declare const getSchoolsService: (where: any, include?: any) => Promise<({
     [x: string]: ({
         name: string;

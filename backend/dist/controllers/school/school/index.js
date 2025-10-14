@@ -7,7 +7,7 @@ import bcrypt from 'bcrypt';
 import fs from "fs";
 import { OTP_TYPE } from "../../../lib/types.js";
 import { isEmailVerified } from "../../../services/otp.js";
-import { sendError } from "../../../lib/utils.js";
+import { sendError, sendSuccess } from "../../../lib/utils.js";
 import { createCustomFieldService, getBranchesService, getBranchService, getCustomFieldService } from "../../../services/school/index.js";
 import { getUserService } from "../../../services/user/index.js";
 // Updated createBranch to accept tx for transactions
@@ -359,6 +359,19 @@ export const createCustomFields = async (req, res) => {
     }
     catch (error) {
         console.error("Error creating custom field:", error.message);
+        return sendError(res, error.message, HTTP_STATUS.INTERNAL_SERVER_ERROR);
+    }
+};
+export const getCustomFields = async (req, res) => {
+    try {
+        const branchId = req.query.branchId;
+        if (!branchId) {
+            return sendError(res, "Missing Fields", HTTP_STATUS.BAD_REQUEST);
+        }
+        const customFields = await getCustomFieldService({ branchId });
+        return sendSuccess(res, "Successfully Fetched Data", customFields, HTTP_STATUS.OK);
+    }
+    catch (error) {
         return sendError(res, error.message, HTTP_STATUS.INTERNAL_SERVER_ERROR);
     }
 };
