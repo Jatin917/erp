@@ -188,6 +188,13 @@ enum ClassEnum {
   ELEVENTH
   TWELFTH
 }
+
+enum ENTITES {
+  STUDENT
+  TEACHER
+  PARENT
+  USER
+} 
 model User {
   id              String   @id @default(uuid())
   name            String
@@ -207,6 +214,8 @@ model User {
   studentProfile      Student?       
   parents             Parent[]
   feeTransactions     FeeTransaction[]
+  customFields        CustomField[]
+
 }
 
 model School {
@@ -236,6 +245,7 @@ model Branch {
   sections          Section[]
   classLabels       ClassLabel[]
   discountsPolicies DiscountPolicy[]
+  customFields      CustomField[]
 }
 
 model Student {
@@ -325,7 +335,41 @@ model Student {
   father                Parent?   @relation("fatherToStudent", fields: [fatherId], references: [id])
   motherId              String?
   mother                Parent?   @relation("motherToStudent", fields: [motherId], references: [id])
+
 }
+
+model CustomField {
+  id          String   @id @default(uuid())
+  entityType  ENTITES   // e.g. "STUDENT", "TEACHER"
+  name        String   // e.g. "PAN Number"
+  label       String   // e.g. "Enter PAN Number"
+  type        String   // e.g. "text", "number", "date", "dropdown"
+  options     Json?    // For dropdowns or radio buttons
+  required    Boolean  @default(false)
+  regex       String?  // Optional validation pattern
+  minLength   Int?
+  maxLength   Int?
+  branchId    String
+  branch      Branch @relation(fields: [branchId], references: [id])
+  createdById String  
+  createdBy   User @relation(fields: [createdById], references: [id])
+  createdAt   DateTime @default(now())
+
+  customFieldValues CustomFieldValue[]
+}
+
+model CustomFieldValue {
+  id            String   @id @default(uuid())
+  customFieldId String
+  customField   CustomField @relation(fields: [customFieldId], references: [id])
+
+  entityType    ENTITES   // e.g. "STUDENT", "TEACHER"
+  entityId      String   // e.g. Student.id, Teacher.id, etc.
+
+  value         String
+  createdAt     DateTime @default(now())
+}
+
 
 model Parent {
   id        String @id @default(uuid())
