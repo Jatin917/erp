@@ -345,7 +345,7 @@ export const createCustomFields = async (req, res) => {
             return sendError(res, "Branch not found", HTTP_STATUS.NOT_FOUND);
         }
         const alreadyCustomField = await getCustomFieldService({ name, branchId });
-        if (alreadyCustomField) {
+        if (alreadyCustomField.length > 0) {
             return sendError(res, "Custom field with this name already exist", HTTP_STATUS.CONFLICT);
         }
         const customField = await createCustomFieldService(name, label, entityType, type, options, required, branchId, createdById);
@@ -369,7 +369,7 @@ export const getCustomFields = async (req, res) => {
             return sendError(res, "Missing Fields", HTTP_STATUS.BAD_REQUEST);
         }
         const customFields = await getCustomFieldService({ branchId });
-        return sendSuccess(res, "Successfully Fetched Data", customFields, HTTP_STATUS.OK);
+        return sendSuccess(res, "Successfully Fetched Data", { fields: customFields }, HTTP_STATUS.OK);
     }
     catch (error) {
         return sendError(res, error.message, HTTP_STATUS.INTERNAL_SERVER_ERROR);
