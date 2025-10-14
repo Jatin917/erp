@@ -7,6 +7,9 @@ import bcrypt from 'bcrypt';
 import fs from "fs";
 import { OTP_TYPE } from "../../../lib/types.js";
 import { isEmailVerified } from "../../../services/otp.js";
+import { sendError } from "../../../lib/utils.js";
+import { createCustomFieldService, getBranchesService, getBranchService } from "../../../services/school/index.js";
+import { getUserService } from "../../../services/user/index.js";
 // Updated createBranch to accept tx for transactions
 const createBranch = async (tx, address, principalId, name, schoolId, softwareCharge) => {
     try {
@@ -265,18 +268,9 @@ export const getBranches = async (req, res) => {
             .status(HTTP_STATUS.BAD_REQUEST)
             .json({ success: false, message: "Fill required fields" });
     }
-    const user = await prisma.user.findFirst({
-        where: { email: createdBy },
-    });
-    if (!user) {
-        return res.status(404).json({
-            success: false,
-            message: "User not found",
-        });
-    }
     let schools = [];
     try {
-        const user = await prisma.user.findFirst({ where: { email: createdBy } });
+        const user = await getUserService({ email: createdBy });
         if (!user) {
             return res
                 .status(HTTP_STATUS.BAD_REQUEST)
@@ -285,7 +279,7 @@ export const getBranches = async (req, res) => {
         const roles = user.role;
         // SUPERADMIN: return all branches
         if (roles.includes(rolesAre.SUPERADMIN)) {
-            const branches = await prisma.branch.findMany({ include: { academicSession: true } });
+            const branches = await getBranchesService({}, { academicSession: true });
             schools = branches.map(branch => ({
                 name: `${branch.name} ${branch.address}`,
                 id: branch.id,
@@ -299,10 +293,7 @@ export const getBranches = async (req, res) => {
         }
         // DIRECTOR: get schools + their branches
         if (roles.includes(rolesAre.DIRECTOR)) {
-            const foundSchools = await prisma.school.findMany({
-                where: { createdById: user.id },
-                include: { branches: true },
-            });
+            const foundSchools = await getSchools({ createdById: user.id }, { branches: true });
             // Flatten all branches from all schools and format them
             foundSchools.forEach((school) => {
                 if (school.branches?.length) {
@@ -318,9 +309,7 @@ export const getBranches = async (req, res) => {
         }
         // PRINCIPAL: get branches directly assigned
         if (roles.includes(rolesAre.PRINCIPAL)) {
-            const foundBranches = await prisma.branch.findMany({
-                where: { principalId: user.id },
-            });
+            const foundBranches = await getBranchesService({ principalId: user.id });
             schools = foundBranches.map((branch) => ({
                 name: `${branch.name} ${branch.address}`,
                 id: branch.id,
@@ -339,6 +328,32 @@ export const getBranches = async (req, res) => {
             success: false,
             message: error.message,
         });
+    }
+};
+export const createCustomFields = async (req, res) => {
+    try {
+        const { name, label, entityType, type, options, required, branchId } = req.body;
+        const createdById = req.user.id;
+        if (!branchId || !name || !label || !entityType || !type || !createdById) {
+            return sendError(res, "Missing required fields", HTTP_STATUS.BAD_REQUEST);
+        }
+        const branch = await getBranchService({ id: branchId });
+        if (!branch) {
+            return sendError(res, "Branch not found", HTTP_STATUS.NOT_FOUND);
+        }
+        // Example: Create custom field (pseudo)
+        const customField = createCustomFieldService(name, label, entityType, type, options, required, branchId, createdById);
+        if (!customField) {
+            return sendError(res, "Error Creating Custom Field", HTTP_STATUS.SERVICE_UNAVAILABLE);
+        }
+        return res.status(HTTP_STATUS.CREATED).json({
+            success: true,
+            data: customField,
+        });
+    }
+    catch (error) {
+        console.error("Error creating custom field:", error.message);
+        return sendError(res, error.message, HTTP_STATUS.INTERNAL_SERVER_ERROR);
     }
 };
 //# sourceMappingURL=index.js.map
