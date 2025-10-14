@@ -195,6 +195,29 @@ enum ENTITES {
   PARENT
   USER
 } 
+
+enum customFieldType {
+  TEXT          // simple text field
+  TEXTAREA      // multi-line text
+  NUMBER        // integer or float
+  DATE          // date picker
+  DATETIME      // date + time picker
+  EMAIL         // validated email
+  PHONE         // phone number input
+  BOOLEAN       // true/false checkbox
+  SELECT        // dropdown (single select)
+  MULTISELECT   // dropdown (multi-select)
+  RADIO         // radio buttons
+  CHECKBOX      // checkbox list
+  FILE          // file upload (store URL)
+  IMAGE         // image upload
+  URL           // website or link
+  CURRENCY      // money input
+  PERCENTAGE    // percentage (0–100)
+  RATING        // numeric rating (1–5)
+  COLOR         // color picker
+  JSON          // structured key-value input
+}
 model User {
   id              String   @id @default(uuid())
   name            String
@@ -343,7 +366,7 @@ model CustomField {
   entityType  ENTITES   // e.g. "STUDENT", "TEACHER"
   name        String   // e.g. "PAN Number"
   label       String   // e.g. "Enter PAN Number"
-  type        String   // e.g. "text", "number", "date", "dropdown"
+  type        customFieldType   // e.g. "text", "number", "date", "dropdown"
   options     Json?    // For dropdowns or radio buttons
   required    Boolean  @default(false)
   regex       String?  // Optional validation pattern
