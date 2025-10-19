@@ -584,6 +584,7 @@ model FeePayment {
   isPaid             Boolean   @default(false)
   fineAmount         Float     @default(0)
   lateFees           LateFee[]
+  feeAllocations     FeePaymentAllocation[]
   paidAmount         Float     @default(0)
   createdAt          DateTime @default(now())
 }   
@@ -606,6 +607,7 @@ model FeeTransaction {
   items          FeeTransactionItem[]
   discounts      Discount[]
   lateFees       LateFee[]
+  feeAllocations FeePaymentAllocation[]
 
   mode           PaymentMode
   referenceId    String?        // txn id, cheque no, UPI ref
@@ -622,6 +624,19 @@ model FeeTransactionItem {
 
   paidAmount    Float
 }
+
+model FeePaymentAllocation {
+  id                String   @id @default(uuid())
+  feePaymentId      String
+  feePayment        FeePayment @relation(fields: [feePaymentId], references: [id])
+
+  transactionId     String
+  transaction       FeeTransaction @relation(fields: [transactionId], references: [id])
+
+  allocatedAmount   Float
+  createdAt         DateTime @default(now())
+}
+
 
 model DiscountPolicy {
   id            String   @id @default(uuid())

@@ -31,12 +31,6 @@ export declare const getUnpaidFeePaymentAmount: (req: any, res: any) => Promise<
  * - Creates a feeTransaction and feeTransactionItems atomically
  */
 export declare const createTransaction: (req: any, res: any) => Promise<any>;
-export declare function processFeePayment(tx: any, feePaymentId: string, amount: number, mode: string, referenceId: string | null, remarks: string | null, createdById: string): Promise<{
-    txn: any;
-    txnItem: any;
-    updatedPayment: any;
-    doc: any;
-}>;
 export declare const payForFeePayment: (req: any, res: any) => Promise<import("express").Response<any, Record<string, any>>>;
 export declare const payForMultipleFeePayments: (req: any, res: any) => Promise<import("express").Response<any, Record<string, any>>>;
 export declare const revertPaymentForFeePayment: (req: any, res: any) => Promise<import("express").Response<any, Record<string, any>>>;
