@@ -1,3 +1,4 @@
+import { prisma } from "../../server.js";
 export async function processFeePayment(tx, feePaymentId, amount, mode, referenceId, remarks, createdById) {
     const feePayment = await tx.feePayment.findUnique({
         where: { id: feePaymentId },
@@ -85,4 +86,8 @@ export async function processFeePayment(tx, feePaymentId, amount, mode, referenc
     });
     return { txn, txnItem, updatedPayment, doc };
 }
+export const getStudentFeeDocs = async (where, include) => {
+    const feeDocs = await prisma.feeDoc.findMany({ where, include });
+    return feeDocs;
+};
 //# sourceMappingURL=index.js.map

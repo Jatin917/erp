@@ -10,6 +10,7 @@ import { fileURLToPath } from "url";
 import { sendError, sendSuccess } from "../../../lib/utils.js";
 import { MONTHS, numsSuffix } from "../../../lib/contants.js";
 import { processFeePayment } from "../../../services/fees/index.js";
+import { getEnrollment } from "../../../services/student/index.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const updatePayments = async (tx, feeDocId, amount, paymentType, payments) => {
@@ -929,9 +930,7 @@ export const getStudentFeeDocs = async (req, res) => {
         if (!currentSession) {
             return sendError(res, "Session doesn't exist", HTTP_STATUS.CONFLICT);
         }
-        const enrollment = await prisma.enrollment.findFirst({
-            where: { studentId, sessionId: currentSession.id },
-        });
+        const enrollment = await getEnrollment({ studentId, sessionId: currentSession.id }, {});
         if (!enrollment) {
             return sendError(res, "Enrollment doesn't exist", HTTP_STATUS.CONFLICT);
         }
@@ -941,9 +940,31 @@ export const getStudentFeeDocs = async (req, res) => {
                 discounts: true,
                 lateFees: true, // rules defined at FeeDoc level
                 payments: {
-                    include: { lateFees: true }, // applied late fees at payment level
+                    include: {
+                        lateFees: true, // applied late fees at payment level
+                        feeAllocations: {
+                            select: {
+                                allocatedAmount: true, // scalar field at this level
+                                transaction: {
+                                    select: {
+                                        amountPaid: true,
+                                        paidOn: true,
+                                        mode: true,
+                                        receiptNo: true,
+                                        lateFees: { select: { amount: true } },
+                                        discounts: { select: { appliedAmount: true } },
+                                        createdBy: {
+                                            select: { name: true, id: true }
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
                 },
-                transactions: { include: { transaction: true } },
+                transactions: {
+                    include: { transaction: true },
+                },
                 feeHead: true,
             },
         });
@@ -952,7 +973,6 @@ export const getStudentFeeDocs = async (req, res) => {
             const totalLateFeeAmt = doc.lateFees.reduce((sum, lt) => sum + lt.amount, 0);
             const currentDate = new Date();
             const afterAmount = doc.amount - discountTotalAmount;
-            console.log("p ", doc.payments);
             const payments = doc.payments.map((p) => ({
                 id: p.id,
                 name: p.name,
@@ -967,8 +987,7 @@ export const getStudentFeeDocs = async (req, res) => {
                     amount: lf.amount,
                     reason: lf.reason,
                 })),
-                mode: doc.transactions[0]?.transaction.mode,
-                paidOn: doc.transactions[0]?.transaction.paidOn
+                transactions: p.feeAllocations.map(t => t.transaction)
             }));
             return {
                 id: doc.id,
@@ -983,11 +1002,12 @@ export const getStudentFeeDocs = async (req, res) => {
                 payments,
             };
         });
-        return res.status(HTTP_STATUS.OK).json({
-            success: true,
-            message: "Student FeeDocs fetched",
-            data: { feeDocs: formattedDocs },
-        });
+        return sendSuccess(res, "Students Feedocs Fetched", { feeDocs: formattedDocs });
+        // return res.status(HTTP_STATUS.OK).json({
+        //   success: true,
+        //   message: "Student FeeDocs fetched",
+        //   data: { feeDocs: formattedDocs },
+        // });
     }
     catch (err) {
         return res
