@@ -244,7 +244,8 @@ model User {
   parents             Parent[]
   feeTransactions     FeeTransaction[]
   customFields        CustomField[]
-
+  Lectures            Lecture[]
+  markedAttendance    Attendance?
 }
 
 model School {
@@ -424,6 +425,9 @@ model Class {
 
   section     Section   @relation(fields: [sectionId], references: [id])
   sectionId   String // isko optional se hatana hain
+
+  subjects    Subject[]
+  lectures    Lecture[]
 }
 
 model ClassLabel {
@@ -476,6 +480,8 @@ model AcademicSession {
 
   enrollments    Enrollment[]
   feeTemplates   FeeTemplate[]
+
+  schoolDays     SchoolDay[]
 }
 
 model AcademicMonth {
@@ -506,6 +512,7 @@ model Enrollment {
   feeDocs                 FeeDoc[] 
   feeTransactions         FeeTransaction[]
   isPromoted Boolean      @default(false)
+  attendances             Attendance[]
   createdAt  DateTime     @default(now())
 }
 
@@ -685,3 +692,97 @@ model LateFee {
 
 
 
+//  attendance system
+enum AttendanceMode {
+  DAYWISE
+  PERIODWISE
+  BOTH
+}
+
+// kis particulay day school lag rha hain yaa nhi ye btayega initial jab school create honga tab decide ho skta hain school kin kin day lagegaa
+model SchoolDay {
+  id           String       @id @default(uuid())
+  date         DateTime
+  sessionId    String
+  session      AcademicSession @relation(fields: [sessionId], references: [id])
+  type         SchoolDayType
+  attendances  Attendance[]
+}
+
+enum SchoolDayType {
+  WORKING
+  NON_WORKING
+  HOLIDAY
+}
+enum Weekday {
+  MON
+  TUE
+  WED
+  THU
+  FRI
+  SAT
+  SUN
+}
+
+// kisi class ke kya kya subjects hain ye decide honga isse or us subjects ke kitne lectures hain
+model Subject {
+  id           String       @id @default(uuid())
+  name         String
+  classId      String
+  class        Class        @relation(fields: [classId], references: [id])
+  lectures     Lecture[]
+}
+
+
+// lecture of any class subject, teacher, 
+model Lecture {
+  id           String       @id @default(uuid())
+  classId      String
+  class        Class        @relation(fields: [classId], references: [id])
+  subjectId    String
+  subject      Subject      @relation(fields: [subjectId], references: [id])
+  teacherId    String
+  teacher      User      @relation(fields: [teacherId], references: [id])
+  startTime    String
+  endTime      String
+  dayOfWeek    Weekday
+  attendances  Attendance[]
+}
+
+// if lecture id null hain then wo pure din ki attendance if it is there then wo us lecture ki hi attendance hain bss
+model Attendance {
+  id            String        @id @default(uuid())
+  enrollmentId  String
+  enrollment    Enrollment    @relation(fields: [enrollmentId], references: [id])
+
+  schoolDayId   String
+  schoolDay     SchoolDay     @relation(fields: [schoolDayId], references: [id])
+
+  lectureId     String?
+  lecture       Lecture?      @relation(fields: [lectureId], references: [id])
+
+  type          AttendanceType
+  status        AttendanceStatus
+  method        AttendanceMethod
+  markedById    String?    @unique
+  markedBy      User?      @relation(fields: [markedById], references: [id])
+  markedAt      DateTime      @default(now())
+}
+enum AttendanceMethod {
+  MANUAL
+  QR
+  BIOMETRIC
+  GPS
+}
+
+enum AttendanceType {
+  DAYWISE
+  PERIODWISE
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+  LEAVE
+}
