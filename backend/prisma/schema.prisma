@@ -244,8 +244,9 @@ model User {
   parents             Parent[]
   feeTransactions     FeeTransaction[]
   customFields        CustomField[]
-  Lectures            Lecture[]
   markedAttendance    Attendance?
+  markedTeacherAttendance TeacherAttendance?
+  attendanceAuditALog AttendanceAuditLog[]
 }
 
 model School {
@@ -276,6 +277,7 @@ model Branch {
   classLabels       ClassLabel[]
   discountsPolicies DiscountPolicy[]
   customFields      CustomField[]
+  teachers          Teacher[]
 }
 
 model Student {
@@ -473,10 +475,10 @@ model AcademicSession {
   createdAt   DateTime       @default(now())
 
   months      AcademicMonth[] @relation("academicMonths")
-  startMonth  AcademicMonth @relation("SessionStartMonth", fields: [startMonthId], references: [id])
-  startMonthId String      @unique
-  endMonth    AcademicMonth @relation("SessionEndMonth", fields: [endMonthId], references: [id])
-  endMonthId   String       @unique
+  startMonth  AcademicMonth? @relation("SessionStartMonth", fields: [startMonthId], references: [id])
+  startMonthId String?      @unique
+  endMonth    AcademicMonth? @relation("SessionEndMonth", fields: [endMonthId], references: [id])
+  endMonthId   String?       @unique
 
   enrollments    Enrollment[]
   feeTemplates   FeeTemplate[]
@@ -699,14 +701,47 @@ enum AttendanceMode {
   BOTH
 }
 
+model Teacher {
+  id              String              @id @default(uuid())
+  name            String
+  branchId        String
+  branch          Branch              @relation(fields: [branchId], references: [id])
+  lectures        Lecture[]
+  attendances     TeacherAttendance[]
+  createdAt       DateTime            @default(now())
+}
+
+// if lectureId is not there means teacher is present for whole day if it is there teacher is present only for that lecture
+model TeacherAttendance {
+  id            String       @id @default(uuid())
+  teacherId     String
+  teacher       Teacher      @relation(fields: [teacherId], references: [id])
+
+  schoolDayId   String
+  schoolDay     SchoolDay    @relation(fields: [schoolDayId], references: [id])
+
+  lectureId     String?      // if marked period-wise
+  lecture       Lecture?     @relation(fields: [lectureId], references: [id])
+
+  type          AttendanceType // DAYWISE | PERIODWISE
+  status        AttendanceStatus // PRESENT | ABSENT | LATE | LEAVE
+  reason        String?
+  markedById    String?       @unique // usually admin or principal
+  markedBy      User?         @relation(fields: [markedById], references: [id])
+  markedAt      DateTime      @default(now())
+}
+
+
 // kis particulay day school lag rha hain yaa nhi ye btayega initial jab school create honga tab decide ho skta hain school kin kin day lagegaa
 model SchoolDay {
-  id           String       @id @default(uuid())
-  date         DateTime
-  sessionId    String
-  session      AcademicSession @relation(fields: [sessionId], references: [id])
-  type         SchoolDayType
-  attendances  Attendance[]
+  id                 String       @id @default(uuid())
+  date               DateTime
+  sessionId          String
+  session            AcademicSession @relation(fields: [sessionId], references: [id])
+  type               SchoolDayType
+  attendances        Attendance[]
+  teacherAttendances TeacherAttendance[]
+  lectures           Lecture[]
 }
 
 enum SchoolDayType {
@@ -736,17 +771,21 @@ model Subject {
 
 // lecture of any class subject, teacher, 
 model Lecture {
-  id           String       @id @default(uuid())
-  classId      String
-  class        Class        @relation(fields: [classId], references: [id])
-  subjectId    String
-  subject      Subject      @relation(fields: [subjectId], references: [id])
-  teacherId    String
-  teacher      User      @relation(fields: [teacherId], references: [id])
-  startTime    String
-  endTime      String
-  dayOfWeek    Weekday
-  attendances  Attendance[]
+  id                 String       @id @default(uuid())
+  classId            String
+  class              Class        @relation(fields: [classId], references: [id])
+  subjectId          String
+  subject            Subject      @relation(fields: [subjectId], references: [id])
+  teacherId          String
+  teacher            Teacher      @relation(fields: [teacherId], references: [id])
+  startTime          DateTime
+  endTime            DateTime
+  dayOfWeek          Weekday
+  schoolDayId        String
+  schoolDay          SchoolDay      @relation(fields: [schoolDayId], references: [id])
+  attendances        Attendance[]
+  teacherAttendances TeacherAttendance[]
+  auditAttendanceLog AttendanceAuditLog[]
 }
 
 // if lecture id null hain then wo pure din ki attendance if it is there then wo us lecture ki hi attendance hain bss
@@ -768,6 +807,18 @@ model Attendance {
   markedBy      User?      @relation(fields: [markedById], references: [id])
   markedAt      DateTime      @default(now())
 }
+
+model AttendanceAuditLog {
+  id             String   @id @default(uuid())
+  lectureId      String   @unique
+  lecture        Lecture  @relation(fields: [lectureId], references: [id])
+  action         String   // e.g. "REOPENED_BY_ADMIN", "SUBSTITUTE_ASSIGNED", "CANCELLED"
+  performedById  String   @unique// user who did it (admin / principal / teacher)
+  performedBy    User     @relation(fields: [performedById], references: [id])
+  remarks        String?  // optional note, like reason for reopening
+  createdAt      DateTime @default(now())
+}
+
 enum AttendanceMethod {
   MANUAL
   QR
@@ -785,4 +836,13 @@ enum AttendanceStatus {
   ABSENT
   LATE
   LEAVE
+}
+
+enum LectureStatus {
+  SCHEDULED
+  ONGOING
+  COMPLETED
+  BLOCKED           // teacher absent, attendance locked
+  REOPENED_BY_ADMIN // reopened manually
+  CANCELLED
 }

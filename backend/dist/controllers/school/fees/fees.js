@@ -2,7 +2,7 @@ import puppeteer from "puppeteer";
 import { FeePaymentType, PaymentStatus } from "../../../../generated/prisma/index.js";
 import { HTTP_STATUS } from "../../../lib/http-codes.js";
 import { PHOTO_URL, prisma } from "../../../server.js";
-import { getExecutablePath } from '../../../lib/services.js';
+import { getExecutablePath, normalizePath } from '../../../lib/services.js';
 import { Prisma } from "@prisma/client/extension";
 import path, { dirname } from "path";
 import ejs from 'ejs';
@@ -11,6 +11,7 @@ import { sendError, sendSuccess } from "../../../lib/utils.js";
 import { MONTHS, numsSuffix } from "../../../lib/contants.js";
 import { processFeePayment } from "../../../services/fees/index.js";
 import { getEnrollment } from "../../../services/student/index.js";
+import { getBranchService } from "../../../services/school/index.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const updatePayments = async (tx, feeDocId, amount, paymentType, payments) => {
@@ -385,6 +386,103 @@ export function generateDueDates(paymentType, options) {
 //       res.status(500).send('Internal Server Error');
 //     }
 //   }
+// -------------------- FeeReciept --------------------
+export const feeRecieptForTransaction = async (req, res) => {
+    try {
+        const { branchId, studentId, transactionId } = req.query;
+        const currentSession = await prisma.academicSession.findFirst({
+            where: { branchId, isCurrent: true },
+            include: {
+                branch: {
+                    select: {
+                        school: true,
+                        address: true,
+                        name: true,
+                        logoUrl: true,
+                        principal: true,
+                    },
+                },
+            },
+        });
+        if (!currentSession)
+            return sendError(res, "No Session Found for branch", HTTP_STATUS.BAD_REQUEST);
+        const enrollment = await prisma.enrollment.findFirst({
+            where: { studentId, sessionId: currentSession.id },
+            include: {
+                student: true,
+                class: { select: { classLabel: { select: { name: true } } } },
+                session: true,
+            },
+        });
+        if (!enrollment)
+            return sendError(res, "Enrollment not found", HTTP_STATUS.CONFLICT);
+        const student = enrollment.student;
+        if (!student)
+            return sendError(res, "Student does not exist", HTTP_STATUS.CONFLICT);
+        const transaction = await prisma.feePaymentAllocation.findFirst({
+            where: { transactionId: transactionId },
+            include: { transaction: true, feePayment: true },
+        });
+        const school = {
+            name: currentSession.branch.name || "",
+            principalName: currentSession.branch.principal?.name,
+            logo: currentSession.branch.logoUrl || "",
+            address: currentSession.branch.address || "",
+            phone: currentSession.branch.principal?.phone || "",
+            email: currentSession.branch.principal?.email || "",
+        };
+        // ✅ Normalize URLs
+        const normalizePath = (p) => p?.replace(/\\/g, "/").replace(/^\/+/, "") || "";
+        if (school.logo && !/^https?:\/\//.test(school.logo)) {
+            school.logo = `${PHOTO_URL.replace(/\/+$/, "")}/${normalizePath(school.logo)}`;
+        }
+        if (student.photoUrl && !/^https?:\/\//.test(student.photoUrl)) {
+            student.photoUrl = `${PHOTO_URL.replace(/\/+$/, "")}/${normalizePath(student.photoUrl)}`;
+        }
+        console.log("Resolved School Logo →", school.logo);
+        console.log("Resolved Student Photo →", student.photoUrl, transaction?.transaction);
+        // ✅ Render EJS
+        const html = await new Promise((resolve, reject) => {
+            ejs.renderFile(path.join(__dirname, "../../../../templates/feeCollection.ejs"), {
+                student: {
+                    name: student.name,
+                    admissionNo: student.admissionNo,
+                    class: enrollment?.class.classLabel.name,
+                    session: currentSession.name,
+                    photoUrl: student.photoUrl,
+                },
+                transaction: transaction?.transaction,
+                payment: transaction?.feePayment,
+                school,
+                PHOTO_URL,
+            }, (err, renderedHtml) => (err ? reject(err) : resolve(renderedHtml)));
+        });
+        // ✅ Puppeteer launch
+        const browser = await puppeteer.launch({
+            headless: true,
+            executablePath: getExecutablePath(),
+            args: ["--no-sandbox", "--disable-setuid-sandbox"],
+        });
+        const page = await browser.newPage();
+        // ✅ Set content and wait for images
+        await page.setContent(html, { waitUntil: "networkidle0" });
+        const pdfBuffer = await page.pdf({
+            format: "A4",
+            landscape: true,
+            printBackground: true, // crucial for images
+        });
+        await browser.close();
+        // ✅ Send headers for browser preview
+        res.setHeader("Content-Type", "application/pdf");
+        res.setHeader("Content-Disposition", "inline; filename=receipt.pdf");
+        res.setHeader("Content-Length", pdfBuffer.length);
+        res.send(pdfBuffer);
+    }
+    catch (err) {
+        console.log("Error generating receipt PDF:", err);
+        res.status(500).send("Internal Server Error");
+    }
+};
 // -------------------- FeeHead --------------------
 export const createFeeHead = async (req, res) => {
     try {
@@ -494,7 +592,10 @@ export const createFeeTemplate = async (req, res) => {
         if (!sessionId) {
             return sendError(res, "Missing SessionId", HTTP_STATUS.CONFLICT);
         }
-        const sessionStart = new Date(currentSession.startMonth?.startDate);
+        if (!currentSession.startMonth) {
+            return sendError(res, "StartMonth don't exist", HTTP_STATUS.CONFLICT);
+        }
+        const sessionStart = new Date(currentSession?.startMonth?.startDate);
         const selectedDueDate = new Date(dueDate);
         console.log("time ", sessionStart, selectedDueDate);
         // Add 1 hour (3600000 ms) to session start
@@ -947,6 +1048,7 @@ export const getStudentFeeDocs = async (req, res) => {
                                 allocatedAmount: true, // scalar field at this level
                                 transaction: {
                                     select: {
+                                        id: true,
                                         amountPaid: true,
                                         paidOn: true,
                                         mode: true,

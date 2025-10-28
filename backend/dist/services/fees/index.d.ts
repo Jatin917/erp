@@ -8,8 +8,8 @@ export declare const getStudentFeeDocs: (where: any, include: any) => Promise<({
     [x: string]: {
         id: string;
         createdAt: Date;
-        feeDocId: string | null;
         transactionId: string | null;
+        feeDocId: string | null;
         feeTemplateId: string | null;
         policyId: string | null;
         appliedAmount: number;
@@ -17,8 +17,8 @@ export declare const getStudentFeeDocs: (where: any, include: any) => Promise<({
         reason: string | null;
         id: string;
         amount: number;
-        feeDocId: string | null;
         transactionId: string | null;
+        feeDocId: string | null;
         feeTemplateId: string | null;
         paymentId: string | null;
     }[] | {
@@ -35,43 +35,43 @@ export declare const getStudentFeeDocs: (where: any, include: any) => Promise<({
     }[] | ({
         id: string;
         createdAt: Date;
-        feeDocId: string | null;
         transactionId: string | null;
+        feeDocId: string | null;
         feeTemplateId: string | null;
         policyId: string | null;
         appliedAmount: number;
     } | {
         id: string;
         createdAt: Date;
-        feeDocId: string | null;
         transactionId: string | null;
+        feeDocId: string | null;
         feeTemplateId: string | null;
         policyId: string | null;
         appliedAmount: number;
     })[] | ({
         id: string;
-        feeDocId: string;
         transactionId: string;
+        feeDocId: string;
         paidAmount: number;
     } | {
         id: string;
-        feeDocId: string;
         transactionId: string;
+        feeDocId: string;
         paidAmount: number;
     })[] | ({
         reason: string | null;
         id: string;
         amount: number;
-        feeDocId: string | null;
         transactionId: string | null;
+        feeDocId: string | null;
         feeTemplateId: string | null;
         paymentId: string | null;
     } | {
         reason: string | null;
         id: string;
         amount: number;
-        feeDocId: string | null;
         transactionId: string | null;
+        feeDocId: string | null;
         feeTemplateId: string | null;
         paymentId: string | null;
     })[] | ({
@@ -98,8 +98,8 @@ export declare const getStudentFeeDocs: (where: any, include: any) => Promise<({
         paidAmount: number;
     })[] | {
         id: string;
-        feeDocId: string;
         transactionId: string;
+        feeDocId: string;
         paidAmount: number;
     }[];
     [x: number]: never;

@@ -17,4 +17,10 @@ export const getExecutablePath = () => {
         return '/usr/bin/chromium-browser'; // or '/usr/bin/google-chrome' depending on your setup
     }
 };
+// utils/parseUrl.js
+export const normalizePath = (path) => {
+    if (!path)
+        return "";
+    return path.replace(/\\/g, "/").replace(/^\/+/, "");
+};
 //# sourceMappingURL=services.js.map

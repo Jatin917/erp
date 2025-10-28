@@ -5,6 +5,7 @@ export declare function generateDueDates(paymentType: FeePaymentType, options: {
     months?: number;
     templateDueDate?: string;
 }): Date[];
+export declare const feeRecieptForTransaction: (req: any, res: any) => Promise<import("express").Response<any, Record<string, any>> | undefined>;
 export declare const createFeeHead: (req: any, res: any) => Promise<any>;
 export declare const listFeeHeads: (req: any, res: any) => Promise<any>;
 export declare const updateFeeHead: (req: any, res: any) => Promise<any>;

@@ -10,6 +10,7 @@ import { isEmailVerified } from "../../../services/otp.js";
 import { sendError, sendSuccess } from "../../../lib/utils.js";
 import { createCustomFieldService, getBranchesService, getBranchService, getCustomFieldsService } from "../../../services/school/index.js";
 import { getUserService } from "../../../services/user/index.js";
+import { createSchoolDays } from "../../../services/attendance/index.js";
 // Updated createBranch to accept tx for transactions
 const createBranch = async (tx, address, principalId, name, schoolId, softwareCharge) => {
     try {
@@ -67,53 +68,38 @@ const findOrCreateUser = async (role, userData, tx) => {
     }
 };
 export const createSchool = async (req, res) => {
-    const file = req.file; // Multer puts uploaded file here
+    const file = req.file;
     try {
-        const schoolName = req.body.schoolName || req.body.name;
-        const principals = req.body.principals ? JSON.parse(req.body.principals) : null;
-        const currentSession = req.body.currentSession;
-        const softwareCharge = req.body.softwareCharge;
+        const { schoolName, name, currentSession, softwareCharge, startMonthName, endMonthName, } = req.body;
         const director = req.body.directors ? JSON.parse(req.body.directors) : null;
+        const principals = req.body.principals ? JSON.parse(req.body.principals) : null;
         const academicMonths = req.body.academicMonths ? JSON.parse(req.body.academicMonths) : [];
-        const startMonthName = req.body.startMonthName;
-        const endMonthName = req.body.endMonthName;
-        if (!director || !schoolName || !principals || !currentSession || academicMonths.length === 0) {
-            return res.status(HTTP_STATUS.BAD_REQUEST).json({
-                message: "Required field not provided",
-                success: false,
-            });
+        const finalSchoolName = schoolName || name;
+        if (!director || !principals || !finalSchoolName || !currentSession || academicMonths.length === 0) {
+            return res.status(400).json({ success: false, message: "Required fields missing" });
         }
         let schoolId = "";
-        let branchIds = [];
+        const branchIds = [];
         await prisma.$transaction(async (tx) => {
+            // 1️⃣ Create or find director
             const directorId = await findOrCreateUser("DIRECTOR", director, tx);
+            // 2️⃣ Create school
             const school = await tx.school.create({
-                data: {
-                    name: schoolName,
-                    createdById: directorId,
-                },
+                data: { name: finalSchoolName, createdById: directorId },
             });
-            if (!school) {
-                throw new Error("Error Creating School");
-            }
             schoolId = school.id;
+            // 3️⃣ Create branches + academic sessions
             for (const principal of principals) {
-                const principalId = await findOrCreateUser("PRINCIPAL", { name: principal.name, email: principal.email, contact: principal.contact }, tx);
-                const branch = await createBranch(tx, principal.branch.address, principalId, schoolName, school.id, softwareCharge);
-                if (!branch)
-                    throw new Error("Error creating branch");
+                const principalId = await findOrCreateUser("PRINCIPAL", principal, tx);
+                const branch = await createBranch(tx, principal.branch.address, principalId, finalSchoolName, school.id, softwareCharge);
+                if (!branch) {
+                    throw new Error("Branch don't exist");
+                }
                 branchIds.push(branch.id);
-                // Create session
+                // 🔹 Create academic months first
                 const session = await tx.academicSession.create({
-                    data: {
-                        name: currentSession,
-                        branchId: branch.id,
-                        isCurrent: true,
-                        startMonthId: '0',
-                        endMonthId: '0'
-                    },
+                    data: { name: currentSession, branch: { connect: { id: branch.id } }, isCurrent: true },
                 });
-                // Create academic months
                 const createdMonths = await Promise.all(academicMonths.map((m) => tx.academicMonth.create({
                     data: {
                         name: m.name,
@@ -122,12 +108,20 @@ export const createSchool = async (req, res) => {
                         sessionId: session.id,
                     },
                 })));
-                // Set start & end month
+                // 🔹 Link start and end months correctly
                 const startMonth = createdMonths.find((m) => m.name === startMonthName);
                 const endMonth = createdMonths.find((m) => m.name === endMonthName);
-                if (!startMonth || !endMonth) {
-                    throw new Error("Start or End month not found in academicMonths");
-                }
+                if (!startMonth || !endMonth)
+                    throw new Error("Start or End month not found");
+                // 🔹 Create school days within session duration
+                await createSchoolDays({
+                    tx,
+                    sessionId: session.id,
+                    startDate: startMonth.startDate,
+                    endDate: endMonth.endDate,
+                    workingDays: [1, 2, 3, 4, 5, 6],
+                });
+                // 🔹 Update academic session after month creation
                 await tx.academicSession.update({
                     where: { id: session.id },
                     data: {
@@ -136,13 +130,12 @@ export const createSchool = async (req, res) => {
                     },
                 });
             }
-            if (!file) {
-                throw new Error("NO File Found. Please Try Again");
-            }
+            if (!file)
+                throw new Error("Logo file missing");
         });
-        // ---------- File Handling AFTER transaction ----------
+        // 4️⃣ File upload (outside transaction)
         for (const branchId of branchIds) {
-            const uploadDir = path.join("uploads", String(schoolId), String(branchId));
+            const uploadDir = path.join("uploads", schoolId, branchId);
             fs.mkdirSync(uploadDir, { recursive: true });
             const ext = path.extname(file.originalname);
             const destPath = path.join(uploadDir, `logo${ext}`);
@@ -152,19 +145,15 @@ export const createSchool = async (req, res) => {
                 data: { logoUrl: destPath },
             });
         }
-        return res.status(HTTP_STATUS.CREATED).json({
+        res.status(201).json({
             success: true,
-            message: "Created School with default branch and academic months",
+            message: "School, branches, session & academic months created successfully",
         });
     }
     catch (error) {
-        if (file && fs.existsSync(file.path)) {
+        if (file && fs.existsSync(file.path))
             fs.unlinkSync(file.path);
-        }
-        return res.status(HTTP_STATUS.BAD_REQUEST).json({
-            success: false,
-            message: error.message,
-        });
+        res.status(400).json({ success: false, message: error.message });
     }
 };
 export const getSchools = async (req, res) => {

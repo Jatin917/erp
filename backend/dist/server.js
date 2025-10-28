@@ -25,11 +25,13 @@ export const REDIS_URL = process.env.REDIS_URL || "redis://redis:6379";
 // set up server
 app.use(cors({ origin: '*' }));
 app.set('view engine', 'ejs');
+app.set('views', path.join(__dirname, '..', 'templates'));
 app.use(express.static(path.resolve('public')));
 app.use(express.json({ limit: '500mb' }));
 app.use(express.urlencoded({ limit: '500mb', extended: true }));
 app.use('/api/v1', router_v1);
 app.use("/uploads", express.static(path.join(__dirname, "..", "uploads")));
+app.use("/templates", express.static(path.join(__dirname, "..", "templates")));
 export const LIMIT = 20;
 app.get("/", (req, res) => {
     res.send("<h1>Backend is running<h1/>");

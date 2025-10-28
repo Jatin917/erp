@@ -91,6 +91,20 @@ export declare const getUserService: (where: any, include?: any) => Promise<({
         remarks: string | null;
         referenceId: string | null;
         receiptNo: string;
+    })[] | ({
+        id: string;
+        createdAt: Date;
+        remarks: string | null;
+        lectureId: string;
+        action: string;
+        performedById: string;
+    } | {
+        id: string;
+        createdAt: Date;
+        remarks: string | null;
+        lectureId: string;
+        action: string;
+        performedById: string;
     })[] | {
         name: string;
         id: string;
@@ -116,6 +130,13 @@ export declare const getUserService: (where: any, include?: any) => Promise<({
         remarks: string | null;
         referenceId: string | null;
         receiptNo: string;
+    }[] | {
+        id: string;
+        createdAt: Date;
+        remarks: string | null;
+        lectureId: string;
+        action: string;
+        performedById: string;
     }[];
     [x: number]: never;
     [x: symbol]: never;

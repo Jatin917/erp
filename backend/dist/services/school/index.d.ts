@@ -154,8 +154,8 @@ export declare const getBranchService: (where: any, include?: any) => Promise<({
         branchId: string;
         isCurrent: boolean;
         isLocked: boolean;
-        startMonthId: string;
-        endMonthId: string;
+        startMonthId: string | null;
+        endMonthId: string | null;
     } | {
         name: string;
         id: string;
@@ -163,8 +163,8 @@ export declare const getBranchService: (where: any, include?: any) => Promise<({
         branchId: string;
         isCurrent: boolean;
         isLocked: boolean;
-        startMonthId: string;
-        endMonthId: string;
+        startMonthId: string | null;
+        endMonthId: string | null;
     })[] | ({
         name: string;
         id: string;
@@ -235,6 +235,16 @@ export declare const getBranchService: (where: any, include?: any) => Promise<({
         minLength: number | null;
         maxLength: number | null;
         createdById: string;
+    })[] | ({
+        name: string;
+        id: string;
+        createdAt: Date;
+        branchId: string;
+    } | {
+        name: string;
+        id: string;
+        createdAt: Date;
+        branchId: string;
     })[] | {
         id: string;
         createdAt: Date;
@@ -315,8 +325,8 @@ export declare const getBranchService: (where: any, include?: any) => Promise<({
         branchId: string;
         isCurrent: boolean;
         isLocked: boolean;
-        startMonthId: string;
-        endMonthId: string;
+        startMonthId: string | null;
+        endMonthId: string | null;
     }[] | {
         name: string;
         id: string;
@@ -352,6 +362,11 @@ export declare const getBranchService: (where: any, include?: any) => Promise<({
         minLength: number | null;
         maxLength: number | null;
         createdById: string;
+    }[] | {
+        name: string;
+        id: string;
+        createdAt: Date;
+        branchId: string;
     }[];
     [x: number]: never;
     [x: symbol]: never;
@@ -519,8 +534,8 @@ export declare const getBranchesService: (where?: any, include?: any) => Promise
         branchId: string;
         isCurrent: boolean;
         isLocked: boolean;
-        startMonthId: string;
-        endMonthId: string;
+        startMonthId: string | null;
+        endMonthId: string | null;
     } | {
         name: string;
         id: string;
@@ -528,8 +543,8 @@ export declare const getBranchesService: (where?: any, include?: any) => Promise
         branchId: string;
         isCurrent: boolean;
         isLocked: boolean;
-        startMonthId: string;
-        endMonthId: string;
+        startMonthId: string | null;
+        endMonthId: string | null;
     })[] | ({
         name: string;
         id: string;
@@ -600,6 +615,16 @@ export declare const getBranchesService: (where?: any, include?: any) => Promise
         minLength: number | null;
         maxLength: number | null;
         createdById: string;
+    })[] | ({
+        name: string;
+        id: string;
+        createdAt: Date;
+        branchId: string;
+    } | {
+        name: string;
+        id: string;
+        createdAt: Date;
+        branchId: string;
     })[] | {
         id: string;
         createdAt: Date;
@@ -680,8 +705,8 @@ export declare const getBranchesService: (where?: any, include?: any) => Promise
         branchId: string;
         isCurrent: boolean;
         isLocked: boolean;
-        startMonthId: string;
-        endMonthId: string;
+        startMonthId: string | null;
+        endMonthId: string | null;
     }[] | {
         name: string;
         id: string;
@@ -717,6 +742,11 @@ export declare const getBranchesService: (where?: any, include?: any) => Promise
         minLength: number | null;
         maxLength: number | null;
         createdById: string;
+    }[] | {
+        name: string;
+        id: string;
+        createdAt: Date;
+        branchId: string;
     }[];
     [x: number]: never;
     [x: symbol]: never;

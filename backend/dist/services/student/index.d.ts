@@ -33,6 +33,26 @@ export declare const getEnrollment: (where: any, include: any) => Promise<({
         referenceId: string | null;
         receiptNo: string;
     }[] | ({
+        type: import("../../../generated/prisma/index.js").$Enums.AttendanceType;
+        id: string;
+        enrollmentId: string;
+        lectureId: string | null;
+        status: import("../../../generated/prisma/index.js").$Enums.AttendanceStatus;
+        schoolDayId: string;
+        method: import("../../../generated/prisma/index.js").$Enums.AttendanceMethod;
+        markedById: string | null;
+        markedAt: Date;
+    } | {
+        type: import("../../../generated/prisma/index.js").$Enums.AttendanceType;
+        id: string;
+        enrollmentId: string;
+        lectureId: string | null;
+        status: import("../../../generated/prisma/index.js").$Enums.AttendanceStatus;
+        schoolDayId: string;
+        method: import("../../../generated/prisma/index.js").$Enums.AttendanceMethod;
+        markedById: string | null;
+        markedAt: Date;
+    })[] | ({
         id: string;
         createdAt: Date;
         amount: number;
@@ -53,6 +73,16 @@ export declare const getEnrollment: (where: any, include: any) => Promise<({
         afterAmount: number;
         status: import("../../../generated/prisma/index.js").$Enums.PaymentStatus;
     })[] | {
+        type: import("../../../generated/prisma/index.js").$Enums.AttendanceType;
+        id: string;
+        enrollmentId: string;
+        lectureId: string | null;
+        status: import("../../../generated/prisma/index.js").$Enums.AttendanceStatus;
+        schoolDayId: string;
+        method: import("../../../generated/prisma/index.js").$Enums.AttendanceMethod;
+        markedById: string | null;
+        markedAt: Date;
+    }[] | {
         id: string;
         createdAt: Date;
         amount: number;
