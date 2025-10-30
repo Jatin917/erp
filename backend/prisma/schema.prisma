@@ -454,6 +454,7 @@ model Subject {
   classId  String
   lectures Lecture[]
   class    Class     @relation(fields: [classId], references: [id])
+  createdAt DateTime @default(now())
 }
 
 model Lecture {

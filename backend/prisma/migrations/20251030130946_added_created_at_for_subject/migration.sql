@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "public"."Subject" ADD COLUMN     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;
