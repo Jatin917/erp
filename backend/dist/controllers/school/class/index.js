@@ -362,15 +362,15 @@ export const createSubject = async (req, res) => {
 };
 export const getSubjects = async (req, res) => {
     try {
-        const { classId } = req.params;
-        if (!classId) {
-            return sendError(res, "classId is required", HTTP_STATUS.BAD_REQUEST);
+        const { branchId } = req.query;
+        if (!branchId) {
+            return sendError(res, "branchId is required", HTTP_STATUS.BAD_REQUEST);
         }
         const subjects = await prisma.subject.findMany({
-            where: { classId },
+            where: { class: { branchId } },
             orderBy: { createdAt: "desc" },
         });
-        return sendSuccess(res, "Subjects fetched successfully", subjects);
+        return sendSuccess(res, "Subjects fetched successfully", { subjects });
     }
     catch (error) {
         return sendError(res, error.message, HTTP_STATUS.INTERNAL_SERVER_ERROR);
