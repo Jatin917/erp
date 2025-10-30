@@ -1,6 +1,11 @@
 import { error } from "console";
 import { HTTP_STATUS } from "../../../lib/http-codes.js";
 import { prisma } from "../../../server.js";
+import { connect } from "http2";
+import { sendError, sendSuccess } from "../../../lib/utils.js";
+import { isEmailVerified } from "../../../services/otp.js";
+import { OTP_TYPE } from "../../../lib/types.js";
+import { findOrCreateUser } from "../../../services/user/index.js";
 export const getAllClass = async (req, res) => {
     try {
         const { branchId, name } = req.query;
@@ -331,6 +336,77 @@ export const createClassName = async (req, res) => {
             message: "Internal server error",
             data: null,
         });
+    }
+};
+export const createSubject = async (req, res) => {
+    try {
+        const { classId, name } = req.body;
+        if (!classId || !name) {
+            return sendError(res, "classId and name are required", HTTP_STATUS.BAD_REQUEST);
+        }
+        // ✅ Create subject linked to the class
+        const subject = await prisma.subject.create({
+            data: {
+                name,
+                class: {
+                    connect: { id: classId },
+                },
+            },
+        });
+        return sendSuccess(res, "Subject created successfully", subject, HTTP_STATUS.CREATED);
+    }
+    catch (error) {
+        return sendError(res, error.message, HTTP_STATUS.INTERNAL_SERVER_ERROR);
+    }
+};
+export const createFaculty = async (req, res) => {
+    try {
+        const { name, email, contact, roles, branchId } = req.body;
+        if (!name || !email || !roles || !branchId) {
+            return sendError(res, "name, email, and role are required", HTTP_STATUS.BAD_REQUEST);
+        }
+        const success = await isEmailVerified(email, OTP_TYPE.VERIFY_OTP);
+        if (success) {
+            return sendError(res, "email is not verified", HTTP_STATUS.BAD_REQUEST);
+        }
+        let user;
+        for (const role of roles) {
+            user = await findOrCreateUser({ name, email, phone: contact, role });
+            if (!user) {
+                return sendError(res, "User creation failed", HTTP_STATUS.CONFLICT);
+            }
+        }
+        const faculty = await prisma.schoolFaculty.create({ data: { name, branchId, userid: user.id } });
+        if (!faculty) {
+            return sendError(res, "Error creating faculty", HTTP_STATUS.BAD_REQUEST);
+        }
+        return sendSuccess(res, "User created successfully", {}, HTTP_STATUS.CREATED);
+    }
+    catch (error) {
+        return sendError(res, error.message, HTTP_STATUS.INTERNAL_SERVER_ERROR);
+    }
+};
+export const getFaculty = async (req, res) => {
+    try {
+        const { branchId } = req.query;
+        if (!branchId) {
+            return sendError(res, "branch id required ", HTTP_STATUS.BAD_REQUEST);
+        }
+        const faculty = await prisma.schoolFaculty.findMany({ where: { branchId }, include: { user: { select: { role: true, email: true } } } });
+        const formattedFaculty = faculty.map(f => {
+            return {
+                name: f.name,
+                email: f.user.email,
+                id: f.id,
+                roles: f.user.role,
+                userid: f.userid
+            };
+        });
+        console.log("faculty is ", faculty, formattedFaculty);
+        return sendSuccess(res, "faculty founded", { faculty: formattedFaculty });
+    }
+    catch (error) {
+        return sendError(res, error.message, HTTP_STATUS.INTERNAL_SERVER_ERROR);
     }
 };
 //# sourceMappingURL=index.js.map

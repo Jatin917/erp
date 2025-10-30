@@ -6,4 +6,7 @@ export declare const updateSection: (req: any, res: any) => Promise<any>;
 export declare const deleteSection: (req: any, res: any) => Promise<any>;
 export declare const getClassNames: (req: any, res: any) => Promise<any>;
 export declare const createClassName: (req: any, res: any) => Promise<any>;
+export declare const createSubject: (req: any, res: any) => Promise<import("express").Response<any, Record<string, any>>>;
+export declare const createFaculty: (req: any, res: any) => Promise<import("express").Response<any, Record<string, any>>>;
+export declare const getFaculty: (req: any, res: any) => Promise<import("express").Response<any, Record<string, any>>>;
 //# sourceMappingURL=index.d.ts.map

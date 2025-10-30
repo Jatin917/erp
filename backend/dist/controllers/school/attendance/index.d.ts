@@ -1,3 +1,4 @@
 import type { Request, Response } from "express";
 export declare const getSchoolDays: (req: Request, res: Response) => Promise<void>;
+export declare const generateLectures: (req: Request, res: Response) => Promise<void>;
 //# sourceMappingURL=index.d.ts.map

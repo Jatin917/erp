@@ -12,6 +12,7 @@ import { fileURLToPath } from "url";
 import { connect } from "http2";
 import { sendError, sendSuccess } from "../../../lib/utils.js";
 import { createCustomFieldValue, getCustomFieldService } from "../../../services/school/index.js";
+import { findOrCreateUser } from "../../../services/user/index.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 function getStudentDir(sid, bid, admissionNo) {
@@ -46,37 +47,6 @@ async function generateBarcode(student) {
     console.log("image is ");
     // Return relative path for frontend usage
     return path.join("..", "..", "..", "..", "uploads", student.branch.schoolId, student.branchId, student.admissionNo, `${student.id}-barcode.png`);
-}
-// ----------------------
-// Create / Find User Helper
-// ----------------------
-async function findOrCreateUser(tx, role, name, email, phone) {
-    if (!email)
-        return null;
-    let user = await prisma.user.findFirst({
-        where: { OR: [{ email }, { phone }] },
-    });
-    if (user) {
-        return prisma.user.update({
-            where: { id: user.id },
-            data: { name, email, phone, role: { push: role } },
-        });
-    }
-    else {
-        const hashedPwd = await bcrypt.hash(defaultPassword, 10);
-        console.log("name is ", name);
-        return prisma.user.create({
-            data: {
-                name,
-                email,
-                phone,
-                password: hashedPwd,
-                role: [role],
-                isEmailVerified: false,
-                isPhoneVerified: false,
-            },
-        });
-    }
 }
 async function createEnrollment(tx, classNameId, branchId, studentId, sectionId, rollNo) {
     let cls = await tx.class.findFirst({
@@ -199,13 +169,13 @@ export const createStudent = async (req, res) => {
         }
         const student = await prisma.$transaction(async (tx) => {
             // ---------- Student User ----------
-            const studentUser = await findOrCreateUser(tx, "STUDENT", {
+            const studentUser = await findOrCreateUser({ tx, role: "STUDENT",
                 name: data.name,
                 email: data.studentEmail,
                 contact: data.studentMobile,
             });
             // ---------- Father ----------
-            const fatherUser = await findOrCreateUser(tx, "FATHER", {
+            const fatherUser = await findOrCreateUser({ tx, role: "FATHER",
                 name: data.fatherName,
                 email: data.fatherEmail,
                 contact: data.fatherMobile,
@@ -216,7 +186,7 @@ export const createStudent = async (req, res) => {
                 })
                 : null;
             // ---------- Mother ----------
-            const motherUser = await findOrCreateUser(tx, "MOTHER", {
+            const motherUser = await findOrCreateUser({ tx, role: "MOTHER",
                 name: data.motherName,
                 email: data.motherEmail,
                 contact: data.motherMobile,
@@ -395,13 +365,13 @@ export const bulkUploadStudents = async (req, res) => {
                 }
                 const student = await prisma.$transaction(async (tx) => {
                     // ---------- Student User ----------
-                    const studentUser = await findOrCreateUser("STUDENT", {
+                    const studentUser = await findOrCreateUser({ tx, role: "STUDENT",
                         name: data.name,
                         email: data.studentEmail,
                         contact: data.studentMobile,
                     });
                     // ---------- Father ----------
-                    const fatherUser = await findOrCreateUser("FATHER", {
+                    const fatherUser = await findOrCreateUser({ tx, roel: "FATHER",
                         name: data.fatherName,
                         email: data.fatherEmail,
                         contact: data.fatherMobile,
@@ -412,7 +382,7 @@ export const bulkUploadStudents = async (req, res) => {
                         })
                         : null;
                     // ---------- Mother ----------
-                    const motherUser = await findOrCreateUser("MOTHER", {
+                    const motherUser = await findOrCreateUser({ tx, role: "MOTHER",
                         name: data.motherName,
                         email: data.motherEmail,
                         contact: data.motherMobile,

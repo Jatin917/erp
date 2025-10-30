@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
   output   = "../generated/prisma"
@@ -13,6 +7,500 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+model User {
+  id                      String                   @id @default(uuid())
+  name                    String
+  email                   String                   @unique
+  phone                   String?
+  password                String
+  role                    Role[]                   @default([])
+  createdAt               DateTime                 @default(now())
+  isPhoneVerified         Boolean
+  isEmailVerified         Boolean
+  permissions             Permission[]             @default([])
+  markedAttendance        Attendance?
+  attendanceAuditALog     AttendanceAuditLog?
+  principalAssignment     Branch?                  @relation("PrincipalBranch")
+  teacherClasses          ClassTeacher[]
+  customFields            CustomField[]
+  feeTransactions         FeeTransaction[]
+  parents                 Parent[]
+  directorSchools         School[]                 @relation("DirectorSchools")
+  markedTeacherAttendance SchoolFacultyAttendance?
+  studentProfile          Student?
+  schoolFaculty           SchoolFaculty?
+}
+
+model School {
+  id          String   @id @default(uuid())
+  name        String
+  createdById String
+  createdAt   DateTime @default(now())
+  branches    Branch[]
+  createdBy   User     @relation("DirectorSchools", fields: [createdById], references: [id])
+}
+
+model Branch {
+  id                String            @id @default(uuid())
+  name              String
+  schoolId          String
+  principalId       String?           @unique
+  address           String
+  logoUrl           String?
+  createdAt         DateTime          @default(now())
+  softwareCharge    Float             @default(0)
+  academicSession   AcademicSession[]
+  principal         User?             @relation("PrincipalBranch", fields: [principalId], references: [id])
+  school            School            @relation(fields: [schoolId], references: [id])
+  classes           Class[]
+  classLabels       ClassLabel[]
+  customFields      CustomField[]
+  discountsPolicies DiscountPolicy[]
+  teachers          SchoolFaculty[]
+  sections          Section[]
+  students          Student[]
+}
+
+model Student {
+  id                      String       @id @default(uuid())
+  userId                  String?      @unique
+  branchId                String
+  aadhaar                 String?
+  abcId                   String?
+  admissionNo             String?
+  allergies               String?
+  barcodeUrl              String?
+  birthCertificateUrl     String?
+  bpl                     String?
+  bplCertificateUrl       String?
+  citizenship             String?
+  dob                     DateTime?
+  familySssmId            String?
+  fatherAadhaar           String?
+  fatherCitizenship       String?
+  fatherEmail             String?
+  fatherIdUrl             String?
+  fatherMobile            String?
+  fatherName              String?
+  fatherOccupation        String?
+  fatherPan               String?
+  fatherPassport          String?
+  fatherVisaNo            String?
+  fatherVisaType          String?
+  fatherVisaValidity      DateTime?
+  gender                  String?
+  migrationCertificateUrl String?
+  minority                String?
+  motherAadhaar           String?
+  motherCitizenship       String?
+  motherEmail             String?
+  motherIdUrl             String?
+  motherMobile            String?
+  motherName              String?
+  motherOccupation        String?
+  motherPan               String?
+  motherPassport          String?
+  motherVisaNo            String?
+  motherVisaType          String?
+  motherVisaValidity      DateTime?
+  permanentAddress        String?
+  photoUrl                String?
+  previousBoard           String?
+  previousClassMarks      String?
+  previousClassPassed     String?
+  previousClassYear       String?
+  previousSchoolName      String?
+  result                  Json?
+  resultStatus            String?
+  scStObc                 String?
+  scStObcCertificateUrl   String?
+  specialChild            Boolean?     @default(false)
+  sssmId                  String?
+  studentEmail            String?
+  studentMobile           String?
+  tcNo                    String?
+  temporaryAddress        String?
+  visaNo                  String?
+  visaType                String?
+  visaValidity            DateTime?
+  studentId               String?
+  fatherId                String?
+  motherId                String?
+  name                    String
+  createdAt               DateTime     @default(now())
+  enrollments             Enrollment[]
+  branch                  Branch       @relation(fields: [branchId], references: [id])
+  father                  Parent?      @relation("fatherToStudent", fields: [fatherId], references: [id])
+  mother                  Parent?      @relation("motherToStudent", fields: [motherId], references: [id])
+  user                    User?        @relation(fields: [userId], references: [id])
+}
+
+model CustomField {
+  id                String             @id @default(uuid())
+  entityType        ENTITES
+  name              String
+  label             String
+  options           Json?
+  required          Boolean            @default(false)
+  regex             String?
+  minLength         Int?
+  maxLength         Int?
+  branchId          String
+  createdById       String
+  createdAt         DateTime           @default(now())
+  type              customFieldType
+  branch            Branch             @relation(fields: [branchId], references: [id])
+  createdBy         User               @relation(fields: [createdById], references: [id])
+  customFieldValues CustomFieldValue[]
+}
+
+model CustomFieldValue {
+  id            String      @id @default(uuid())
+  customFieldId String
+  entityType    ENTITES
+  entityId      String
+  value         String
+  createdAt     DateTime    @default(now())
+  customField   CustomField @relation(fields: [customFieldId], references: [id])
+}
+
+model Parent {
+  id        String    @id @default(uuid())
+  type      String
+  userId    String
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id])
+  fatherOf  Student[] @relation("fatherToStudent")
+  motherOf  Student[] @relation("motherToStudent")
+}
+
+model Class {
+  id           String         @id @default(uuid())
+  branchId     String
+  createdAt    DateTime       @default(now())
+  sectionId    String
+  classLabelId String
+  branch       Branch         @relation(fields: [branchId], references: [id])
+  classLabel   ClassLabel     @relation(fields: [classLabelId], references: [id])
+  section      Section        @relation(fields: [sectionId], references: [id])
+  classTeacher ClassTeacher[]
+  enrollments  Enrollment[]
+  lectures     Lecture[]
+  subjects     Subject[]
+}
+
+model ClassLabel {
+  id           String        @id @default(uuid())
+  name         String
+  branchId     String
+  createdAt    DateTime      @default(now())
+  classes      Class[]
+  branch       Branch        @relation(fields: [branchId], references: [id])
+  feeTemplates FeeTemplate[]
+}
+
+model Section {
+  id        String   @id @default(uuid())
+  name      String
+  branchId  String
+  createdAt DateTime @default(now())
+  classes   Class[]
+  branch    Branch   @relation(fields: [branchId], references: [id])
+}
+
+model ClassTeacher {
+  classId   String
+  teacherId String
+  createdAt DateTime @default(now())
+  class     Class    @relation(fields: [classId], references: [id])
+  teacher   User     @relation(fields: [teacherId], references: [id])
+
+  @@id([classId, teacherId])
+}
+
+model AcademicSession {
+  id           String          @id @default(uuid())
+  name         String
+  isCurrent    Boolean         @default(false)
+  isLocked     Boolean         @default(false)
+  createdAt    DateTime        @default(now())
+  branchId     String
+  endMonthId   String?         @unique
+  startMonthId String?         @unique
+  months       AcademicMonth[] @relation("academicMonths")
+  branch       Branch          @relation(fields: [branchId], references: [id])
+  endMonth     AcademicMonth?  @relation("SessionEndMonth", fields: [endMonthId], references: [id])
+  startMonth   AcademicMonth?  @relation("SessionStartMonth", fields: [startMonthId], references: [id])
+  enrollments  Enrollment[]
+  feeTemplates FeeTemplate[]
+  schoolDays   SchoolDay[]
+}
+
+model AcademicMonth {
+  id                   String           @id @default(uuid())
+  name                 String
+  startDate            DateTime
+  endDate              DateTime
+  sessionId            String
+  session              AcademicSession  @relation("academicMonths", fields: [sessionId], references: [id])
+  AcademicSessionEnd   AcademicSession? @relation("SessionEndMonth")
+  AcademicSessionStart AcademicSession? @relation("SessionStartMonth")
+  feePayment           FeePayment?
+}
+
+model Enrollment {
+  id              String           @id @default(uuid())
+  studentId       String
+  classId         String
+  sessionId       String
+  rollNo          String
+  isPromoted      Boolean          @default(false)
+  createdAt       DateTime         @default(now())
+  attendances     Attendance[]
+  class           Class            @relation(fields: [classId], references: [id])
+  session         AcademicSession  @relation(fields: [sessionId], references: [id])
+  student         Student          @relation(fields: [studentId], references: [id])
+  feeDocs         FeeDoc[]
+  feeTransactions FeeTransaction[]
+}
+
+model FeeHead {
+  id           String        @id @default(uuid())
+  name         String
+  createdAt    DateTime      @default(now())
+  feeDocs      FeeDoc[]
+  feeTemplates FeeTemplate[]
+}
+
+model FeeTemplate {
+  id            String          @id @default(uuid())
+  sessionId     String
+  branchId      String
+  classLabelId  String
+  feeHeadId     String
+  amount        Float
+  createdAt     DateTime        @default(now())
+  dueDate       DateTime        @default(now())
+  installements Float?
+  paymentType   FeePaymentType  @default(ONE_TIME)
+  discounts     Discount[]
+  feeDocs       FeeDoc[]
+  classLabel    ClassLabel      @relation(fields: [classLabelId], references: [id])
+  feeHead       FeeHead         @relation(fields: [feeHeadId], references: [id])
+  session       AcademicSession @relation(fields: [sessionId], references: [id])
+  lateFees      LateFee[]
+}
+
+model FeeDoc {
+  id           String               @id @default(uuid())
+  createdAt    DateTime             @default(now())
+  amount       Float
+  enrollmentId String
+  feeHeadId    String
+  paymentType  FeePaymentType
+  templateId   String?
+  afterAmount  Float                @default(0)
+  status       PaymentStatus        @default(PENDING)
+  discounts    Discount[]
+  eenrollment  Enrollment           @relation(fields: [enrollmentId], references: [id])
+  feeHead      FeeHead              @relation(fields: [feeHeadId], references: [id])
+  template     FeeTemplate?         @relation(fields: [templateId], references: [id])
+  payments     FeePayment[]
+  transactions FeeTransactionItem[]
+  lateFees     LateFee[]
+}
+
+model FeePayment {
+  id              String                 @id @default(uuid())
+  feeDocId        String
+  academicMonthId String?                @unique
+  name            String?
+  amount          Float
+  dueDate         DateTime
+  isPaid          Boolean                @default(false)
+  createdAt       DateTime               @default(now())
+  paidAmount      Float                  @default(0)
+  fineAmount      Float                  @default(0)
+  academicMonth   AcademicMonth?         @relation(fields: [academicMonthId], references: [id])
+  feeDoc          FeeDoc                 @relation(fields: [feeDocId], references: [id])
+  feeAllocations  FeePaymentAllocation[]
+  lateFees        LateFee[]
+}
+
+model FeeTransaction {
+  id             String                 @id @default(uuid())
+  amountPaid     Float
+  paidOn         DateTime               @default(now())
+  remarks        String?
+  createdById    String
+  enrollmentId   String
+  mode           PaymentMode
+  receiptNo      String                 @unique
+  referenceId    String?
+  returnedAmt    Float                  @default(0)
+  discounts      Discount[]
+  feeAllocations FeePaymentAllocation[]
+  createdBy      User                   @relation(fields: [createdById], references: [id])
+  enrollment     Enrollment             @relation(fields: [enrollmentId], references: [id])
+  items          FeeTransactionItem[]
+  lateFees       LateFee[]
+}
+
+model FeeTransactionItem {
+  id            String         @id @default(uuid())
+  transactionId String
+  feeDocId      String
+  paidAmount    Float
+  feeDoc        FeeDoc         @relation(fields: [feeDocId], references: [id])
+  transaction   FeeTransaction @relation(fields: [transactionId], references: [id])
+}
+
+model FeePaymentAllocation {
+  id              String         @id @default(uuid())
+  feePaymentId    String
+  transactionId   String
+  allocatedAmount Float
+  createdAt       DateTime       @default(now())
+  feePayment      FeePayment     @relation(fields: [feePaymentId], references: [id])
+  transaction     FeeTransaction @relation(fields: [transactionId], references: [id])
+}
+
+model DiscountPolicy {
+  id           String       @id @default(uuid())
+  name         String
+  description  String?
+  discountType DiscountType
+  percentage   Float?
+  amount       Float?
+  usageLimit   Int?
+  expiryDate   DateTime?
+  createdAt    DateTime     @default(now())
+  branchId     String
+  discounts    Discount[]
+  branch       Branch       @relation(fields: [branchId], references: [id])
+}
+
+model Discount {
+  id            String          @id @default(uuid())
+  feeDocId      String?
+  feeTemplateId String?
+  transactionId String?
+  appliedAmount Float
+  createdAt     DateTime        @default(now())
+  policyId      String?
+  feeDoc        FeeDoc?         @relation(fields: [feeDocId], references: [id])
+  feeTemplate   FeeTemplate?    @relation(fields: [feeTemplateId], references: [id])
+  policy        DiscountPolicy? @relation(fields: [policyId], references: [id])
+  transaction   FeeTransaction? @relation(fields: [transactionId], references: [id])
+}
+
+model LateFee {
+  id            String          @id @default(uuid())
+  feeDocId      String?
+  feeTemplateId String?
+  transactionId String?
+  amount        Float
+  reason        String?
+  paymentId     String?
+  feeDoc        FeeDoc?         @relation(fields: [feeDocId], references: [id])
+  feeTemplate   FeeTemplate?    @relation(fields: [feeTemplateId], references: [id])
+  payment       FeePayment?     @relation(fields: [paymentId], references: [id])
+  transaction   FeeTransaction? @relation(fields: [transactionId], references: [id])
+}
+
+model SchoolFaculty {
+  id          String                    @id @default(uuid())
+  userid      String                    @unique @default("1d04d74e-2e18-4d9e-a1c2-6c65e9d65d42")
+  user        User                      @relation(fields: [userid], references: [id])
+  name        String
+  branchId    String
+  createdAt   DateTime                  @default(now())
+  lectures    Lecture[]
+  branch      Branch                    @relation(fields: [branchId], references: [id])
+  attendances SchoolFacultyAttendance[]
+}
+
+model SchoolFacultyAttendance {
+  id          String           @id @default(uuid())
+  teacherId   String
+  schoolDayId String
+  lectureId   String?
+  type        AttendanceType
+  status      AttendanceStatus
+  reason      String?
+  markedById  String?          @unique
+  markedAt    DateTime         @default(now())
+  lecture     Lecture?         @relation(fields: [lectureId], references: [id])
+  markedBy    User?            @relation(fields: [markedById], references: [id])
+  schoolDay   SchoolDay        @relation(fields: [schoolDayId], references: [id])
+  teacher     SchoolFaculty    @relation(fields: [teacherId], references: [id])
+}
+
+model SchoolDay {
+  id                 String                    @id @default(uuid())
+  date               DateTime
+  sessionId          String
+  type               SchoolDayType
+  attendances        Attendance[]
+  lectures           Lecture[]
+  session            AcademicSession           @relation(fields: [sessionId], references: [id])
+  teacherAttendances SchoolFacultyAttendance[]
+}
+
+model Subject {
+  id       String    @id @default(uuid())
+  name     String
+  classId  String
+  lectures Lecture[]
+  class    Class     @relation(fields: [classId], references: [id])
+}
+
+model Lecture {
+  id                 String                    @id @default(uuid())
+  classId            String
+  subjectId          String
+  teacherId          String
+  dayOfWeek          Weekday
+  schoolDayId        String
+  startTime          DateTime
+  endTime            DateTime
+  attendances        Attendance[]
+  auditAttendanceLog AttendanceAuditLog?
+  class              Class                     @relation(fields: [classId], references: [id])
+  schoolDay          SchoolDay                 @relation(fields: [schoolDayId], references: [id])
+  subject            Subject                   @relation(fields: [subjectId], references: [id])
+  teacher            SchoolFaculty             @relation(fields: [teacherId], references: [id])
+  teacherAttendances SchoolFacultyAttendance[]
+}
+
+model Attendance {
+  id           String           @id @default(uuid())
+  enrollmentId String
+  schoolDayId  String
+  lectureId    String?
+  type         AttendanceType
+  status       AttendanceStatus
+  method       AttendanceMethod
+  markedById   String?          @unique
+  markedAt     DateTime         @default(now())
+  enrollment   Enrollment       @relation(fields: [enrollmentId], references: [id])
+  lecture      Lecture?         @relation(fields: [lectureId], references: [id])
+  markedBy     User?            @relation(fields: [markedById], references: [id])
+  schoolDay    SchoolDay        @relation(fields: [schoolDayId], references: [id])
+}
+
+model AttendanceAuditLog {
+  id            String   @id @default(uuid())
+  lectureId     String   @unique
+  action        String
+  performedById String   @unique
+  remarks       String?
+  createdAt     DateTime @default(now())
+  lecture       Lecture  @relation(fields: [lectureId], references: [id])
+  performedBy   User     @relation(fields: [performedById], references: [id])
+}
+
 enum Role {
   SUPERADMIN
   DIRECTOR
@@ -26,6 +514,15 @@ enum Role {
   FATHER
   MOTHER
 }
+
+enum SchoolFacultyRole {
+  TEACHER
+  LIBRARIAN
+  RECEPTIONIST
+  ACCOUNTANT
+  SCHOOL_ADMIN
+}
+
 enum PaymentMode {
   CASH
   UPI
@@ -34,17 +531,20 @@ enum PaymentMode {
   CHEQUE
   CARD
 }
+
 enum SessionStatus {
   UPCOMING
   ACTIVE
   COMPLETED
   LOCKED
 }
+
 enum PaymentStatus {
   PENDING
   PARTIAL
   PAID
 }
+
 enum LeaveType {
   CASUAL
   SICK
@@ -59,7 +559,6 @@ enum DiscountType {
   FIXED
 }
 
-
 enum FeeHeadType {
   ADMISSION
   TUITION
@@ -71,81 +570,68 @@ enum FeeHeadType {
   LIBRARY
   ACTIVITY
 }
+
 enum Permission {
   ALL
-
-  // ---------- School ----------
   CREATE_SCHOOL
   VIEW_SCHOOL
   EDIT_SCHOOL
   DELETE_SCHOOL
-
-  // ---------- Branch ----------
   CREATE_BRANCH
   VIEW_BRANCH
   EDIT_BRANCH
   DELETE_BRANCH
-
-  // ---------- Class ----------
   CREATE_CLASS
   VIEW_CLASS
   EDIT_CLASS
   DELETE_CLASS
   CREATE_CLASSNAME
   VIEW_CLASSNAME
-
-  // ---------- Student ----------
   CREATE_STUDENT
   VIEW_STUDENT
   EDIT_STUDENT
   DELETE_STUDENT
   BULK_UPLOAD_STUDENTS
   GET_BULK_UPLOAD_SHEET
-
-  // ---------- Parent ----------
   CREATE_PARENT
   VIEW_PARENT
   EDIT_PARENT
   DELETE_PARENT
-
-  // ---------- FeeHead ----------
   CREATE_FEE_HEAD
   VIEW_FEE_HEAD
   EDIT_FEE_HEAD
   DELETE_FEE_HEAD
-
-  // ---------- FeeTemplate ----------
   CREATE_FEE_TEMPLATE
   VIEW_FEE_TEMPLATE
   EDIT_FEE_TEMPLATE
   DELETE_FEE_TEMPLATE
-
-  // ---------- FeeDoc ----------
   GENERATE_FEE_DOCS
   VIEW_FEE_DOCS
   EDIT_FEE_DOC
   DELETE_FEE_DOC
-
-  // ---------- FeePayment ----------
   CREATE_FEE_PAYMENT
   VIEW_FEE_PAYMENTS
   EDIT_FEE_PAYMENT
   DELETE_FEE_PAYMENT
-
-  // ---------- FeeTransaction ----------
   CREATE_FEE_TRANSACTION
   VIEW_FEE_TRANSACTIONS
   VIEW_BRANCH_FEE_REPORT
-
-  // ---------- Session ----------
   CREATE_SESSION
   VIEW_SESSION
   EDIT_SESSION
   DELETE_SESSION
   LOCK_SESSION
   PROMOTE_STUDENTS
-
-  // ---------- DISCOUNT POLICY ----------
+  VIEW_REPORTS
+  EXPORT_REPORTS
+  GENERATE_ID_CARD
+  GENERATE_TRANSFER_CERTIFICATE
+  UPLOAD_DOCUMENT
+  VIEW_DOCUMENT
+  DELETE_DOCUMENT
+  SEND_NOTIFICATION
+  VIEW_NOTIFICATIONS
+  DELETE_NOTIFICATION
   CREATE_DISCOUNT_POLICY
   VIEW_DISCOUNT_POLICY
   UPDATE_DISCOUNT_POLICY
@@ -153,28 +639,11 @@ enum Permission {
   APPLY_DISCOUNT
   DELETE_APPLY_DISCOUNT
   VIEW_APPLY_DISCOUNT
-
-  // ---------- Reports ----------
-  VIEW_REPORTS
-  EXPORT_REPORTS
-
-  // ---------- Documents ----------
-  GENERATE_ID_CARD
-  GENERATE_TRANSFER_CERTIFICATE
-  UPLOAD_DOCUMENT
-  VIEW_DOCUMENT
-  DELETE_DOCUMENT
-
-  // ---------- Notifications ----------
-  SEND_NOTIFICATION
-  VIEW_NOTIFICATIONS
-  DELETE_NOTIFICATION
-
-  GET_CUSTOM_FIELD 
-	CREATE_CUSTOM_FIELD
-	UPDATE_CUSTOM_FIELD
-	DELETE_CUSTOM_FIELD 
-	REORDER_CUSTOM_FIELD 
+  GET_CUSTOM_FIELD
+  CREATE_CUSTOM_FIELD
+  UPDATE_CUSTOM_FIELD
+  DELETE_CUSTOM_FIELD
+  REORDER_CUSTOM_FIELD
 }
 
 enum ClassEnum {
@@ -200,324 +669,30 @@ enum ENTITES {
   TEACHER
   PARENT
   USER
-} 
+}
 
 enum customFieldType {
-  TEXT          // simple text field
-  TEXTAREA      // multi-line text
-  NUMBER        // integer or float
-  DATE          // date picker
-  DATETIME      // date + time picker
-  EMAIL         // validated email
-  PHONE         // phone number input
-  BOOLEAN       // true/false checkbox
-  SELECT        // dropdown (single select)
-  MULTISELECT   // dropdown (multi-select)
-  RADIO         // radio buttons
-  CHECKBOX      // checkbox list
-  FILE          // file upload (store URL)
-  IMAGE         // image upload
-  URL           // website or link
-  CURRENCY      // money input
-  PERCENTAGE    // percentage (0–100)
-  RATING        // numeric rating (1–5)
-  COLOR         // color picker
-  JSON          // structured key-value input
+  TEXT
+  TEXTAREA
+  NUMBER
+  DATE
+  DATETIME
+  EMAIL
+  PHONE
+  BOOLEAN
+  SELECT
+  MULTISELECT
+  RADIO
+  CHECKBOX
+  FILE
+  IMAGE
+  URL
+  CURRENCY
+  PERCENTAGE
+  RATING
+  COLOR
+  JSON
 }
-model User {
-  id              String   @id @default(uuid())
-  name            String
-  email           String   @unique
-  phone           String?
-  password        String
-  role            Role[]   @default([])
-  permissions     Permission[] @default([])
-  createdAt       DateTime @default(now())
-  isPhoneVerified Boolean
-  isEmailVerified Boolean
-
-  // Relationships
-  directorSchools     School[]       @relation("DirectorSchools")
-  principalAssignment Branch?        @relation("PrincipalBranch")
-  teacherClasses      ClassTeacher[]
-  studentProfile      Student?       
-  parents             Parent[]
-  feeTransactions     FeeTransaction[]
-  customFields        CustomField[]
-  markedAttendance    Attendance?
-  markedTeacherAttendance TeacherAttendance?
-  attendanceAuditALog AttendanceAuditLog[]
-}
-
-model School {
-  id          String   @id @default(uuid())
-  name        String
-  createdBy   User     @relation("DirectorSchools", fields: [createdById], references: [id])
-  createdById String
-  createdAt   DateTime @default(now())
-
-  branches    Branch[]
-}
-
-model Branch {
-  id                String   @id @default(uuid())
-  name              String
-  address           String
-  school            School   @relation(fields: [schoolId], references: [id])
-  schoolId          String
-  logoUrl           String?
-  principal         User?    @relation("PrincipalBranch", fields: [principalId], references: [id])
-  principalId       String?  @unique
-  createdAt         DateTime @default(now())
-  softwareCharge    Float    @default(0)
-  classes           Class[]
-  students          Student[]
-  academicSession   AcademicSession[]
-  sections          Section[]
-  classLabels       ClassLabel[]
-  discountsPolicies DiscountPolicy[]
-  customFields      CustomField[]
-  teachers          Teacher[]
-}
-
-model Student {
-  id                   String   @id @default(uuid())
-  user                 User?     @relation(fields: [userId], references: [id])
-  userId               String?   @unique
-  studentId            String?
-  branchId             String 
-  branch               Branch   @relation(fields: [branchId], references: [id])
-
-  // ----- Personal Details -----
-  name                 String
-  admissionNo          String?
-  gender               String?
-  dob                  DateTime?
-  aadhaar              String?
-  birthCertificateUrl  String?
-  abcId                String?
-  sssmId               String?
-  familySssmId         String?
-  minority             String?
-  scStObc              String?
-  bpl                  String?
-  scStObcCertificateUrl String?
-  bplCertificateUrl    String?
-  specialChild         Boolean? @default(false)
-  allergies            String?
-  studentEmail         String?
-  studentMobile        String?
-  citizenship          String?
-  visaNo               String?
-  visaType             String?
-  visaValidity         DateTime?
-
-  // ----- Previous Education -----
-  previousSchoolName   String?
-  previousClassPassed  String?
-  previousClassMarks   String?
-  previousClassYear    String?
-  previousBoard        String?
-  migrationCertificateUrl String?
-  tcNo                 String?
-
-  // ----- Address -----
-  permanentAddress     String?
-  temporaryAddress     String?
-
-  // ----- Father Details -----
-  fatherName           String?
-  fatherOccupation     String?
-  fatherEmail          String?
-  fatherMobile         String?
-  fatherAadhaar        String?
-  fatherIdUrl          String?
-  fatherPan            String?
-  fatherPassport       String?
-  fatherCitizenship    String?
-  fatherVisaNo         String?
-  fatherVisaType       String?
-  fatherVisaValidity   DateTime?
-
-  // ----- Mother Details -----
-  motherName           String?
-  motherOccupation     String?
-  motherEmail          String?
-  motherMobile         String?
-  motherAadhaar        String?
-  motherIdUrl          String?
-  motherPan            String?
-  motherPassport       String?
-  motherCitizenship    String?
-  motherVisaNo         String?
-  motherVisaType       String?
-  motherVisaValidity   DateTime?
-
-  // ----- Extras -----
-  result                Json?
-  resultStatus          String?
-  photoUrl              String?
-  barcodeUrl            String?
-
-  createdAt             DateTime @default(now())
-
-  // Relationships
-  enrollments           Enrollment[]
-  fatherId              String?
-  father                Parent?   @relation("fatherToStudent", fields: [fatherId], references: [id])
-  motherId              String?
-  mother                Parent?   @relation("motherToStudent", fields: [motherId], references: [id])
-
-}
-
-model CustomField {
-  id          String   @id @default(uuid())
-  entityType  ENTITES   // e.g. "STUDENT", "TEACHER"
-  name        String   // e.g. "PAN Number"
-  label       String   // e.g. "Enter PAN Number"
-  type        customFieldType   // e.g. "text", "number", "date", "dropdown"
-  options     Json?    // For dropdowns or radio buttons
-  required    Boolean  @default(false)
-  regex       String?  // Optional validation pattern
-  minLength   Int?
-  maxLength   Int?
-  branchId    String
-  branch      Branch @relation(fields: [branchId], references: [id])
-  createdById String  
-  createdBy   User @relation(fields: [createdById], references: [id])
-  createdAt   DateTime @default(now())
-
-  customFieldValues CustomFieldValue[]
-}
-
-model CustomFieldValue {
-  id            String   @id @default(uuid())
-  customFieldId String
-  customField   CustomField @relation(fields: [customFieldId], references: [id])
-
-  entityType    ENTITES   // e.g. "STUDENT", "TEACHER"
-  entityId      String   // e.g. Student.id, Teacher.id, etc.
-
-  value         String
-  createdAt     DateTime @default(now())
-}
-
-
-model Parent {
-  id        String @id @default(uuid())
-  type      String
-  userId    String
-  user      User   @relation(fields: [userId], references: [id])
-  createdAt DateTime @default(now())
-
-  fatherOf  Student[] @relation("fatherToStudent")
-  motherOf  Student[] @relation("motherToStudent")
-}
-
-model Class {
-  id             String   @id @default(uuid())
-  classLabel     ClassLabel @relation(fields: [classLabelId], references: [id])
-  classLabelId   String //isko optional nhi rkhna hain
-  branch         Branch   @relation(fields: [branchId], references: [id])
-  branchId       String
-  createdAt      DateTime @default(now())
-
-  classTeacher   ClassTeacher[]
-  enrollments    Enrollment[]
-
-  section     Section   @relation(fields: [sectionId], references: [id])
-  sectionId   String // isko optional se hatana hain
-
-  subjects    Subject[]
-  lectures    Lecture[]
-}
-
-model ClassLabel {
-  id           String @id @default(uuid())
-  name         String
-  branch       Branch   @relation(fields: [branchId], references: [id])
-  branchId     String
-  classes      Class[]
-  feeTemplates FeeTemplate[]
-  createdAt    DateTime @default(now())
-}
-
-model Section {
-  id        String   @id @default(uuid())
-  name      String
-  branch    Branch   @relation(fields: [branchId], references: [id])
-  branchId  String
-  createdAt DateTime @default(now())
-
-  classes   Class[]   // optional: a section may have 0 or many classes
-}
-
-
-model ClassTeacher {
-  classId   String
-  teacherId String
-  createdAt DateTime @default(now())
-
-  class   Class @relation(fields: [classId], references: [id])
-  teacher User  @relation(fields: [teacherId], references: [id])
-
-  @@id([classId, teacherId])
-}
-
-
-model AcademicSession {
-  id          String         @id @default(uuid())
-  name        String         // e.g., "2025–26"
-  branch      Branch         @relation(fields: [branchId], references: [id])
-  branchId    String
-  isCurrent   Boolean        @default(false)
-  isLocked    Boolean        @default(false)
-  createdAt   DateTime       @default(now())
-
-  months      AcademicMonth[] @relation("academicMonths")
-  startMonth  AcademicMonth? @relation("SessionStartMonth", fields: [startMonthId], references: [id])
-  startMonthId String?      @unique
-  endMonth    AcademicMonth? @relation("SessionEndMonth", fields: [endMonthId], references: [id])
-  endMonthId   String?       @unique
-
-  enrollments    Enrollment[]
-  feeTemplates   FeeTemplate[]
-
-  schoolDays     SchoolDay[]
-}
-
-model AcademicMonth {
-  id          String          @id @default(uuid())
-  name        String          // July, August, etc.
-  startDate   DateTime
-  endDate     DateTime
-  session     AcademicSession @relation("academicMonths", fields: [sessionId], references: [id])
-  sessionId   String
-
-  AcademicSessionStart AcademicSession? @relation("SessionStartMonth")
-
-  AcademicSessionEnd AcademicSession?  @relation("SessionEndMonth")
-
-  feePayment  FeePayment?
-}
-
-
-model Enrollment {
-  id                      String    @id @default(uuid())
-  student                 Student   @relation(fields: [studentId], references: [id])
-  studentId               String
-  class                   Class     @relation(fields: [classId], references: [id])
-  classId                 String
-  session                 AcademicSession @relation(fields: [sessionId], references: [id])
-  sessionId               String
-  rollNo                  String
-  feeDocs                 FeeDoc[] 
-  feeTransactions         FeeTransaction[]
-  isPromoted Boolean      @default(false)
-  attendances             Attendance[]
-  createdAt  DateTime     @default(now())
-}
-
 
 enum FeePaymentType {
   MONTHLY
@@ -525,223 +700,10 @@ enum FeePaymentType {
   ONE_TIME
 }
 
-model FeeHead {
-  id        String   @id @default(uuid())
-  name      String
-  createdAt DateTime @default(now())
-  feeTemplates FeeTemplate[]
-  feeDocs      FeeDoc[]
-}
-
-model FeeTemplate {
-  id              String   @id @default(uuid())
-  session         AcademicSession @relation(fields: [sessionId], references: [id])
-  sessionId       String
-  branchId        String
-  classLabel      ClassLabel @relation(fields: [classLabelId], references: [id])
-  classLabelId    String
-    
-  feeHeadId       String
-  feeHead         FeeHead  @relation(fields: [feeHeadId], references: [id])
-    
-  amount          Float
-  discounts       Discount[]     // optional default discounts
-  lateFees        LateFee[]      // optional default late fees
-  feeDocs         FeeDoc[]       // generated per student
-
-  paymentType     FeePaymentType @default(ONE_TIME)     //isko isliye rkh rhe hain as jab bahut sare student ko default payment kaise krenge wo krna hain tb  
-  installements   Float?         // jab user payment type installments choose krega tab kitni installments banegi uske liye
-  dueDate         DateTime @default(now())  // due date bhi honi chahiye na har payment ke liye
-  createdAt       DateTime @default(now())
-}
-
-model FeeDoc {
-  id               String       @id @default(uuid())
-  eenrollment      Enrollment @relation(fields: [enrollmentId], references: [id])
-  enrollmentId     String
-
-  templateId       String?
-  template         FeeTemplate? @relation(fields: [templateId], references: [id])
-   
-  feeHeadId        String
-  feeHead          FeeHead  @relation(fields: [feeHeadId], references: [id])
-   
-  paymentType      FeePaymentType
-  amount           Float
-  afterAmount      Float    @default(0)    //amount after deducting discounts
-  status           PaymentStatus   @default(PENDING) // Pending | Partial | Paid
-   
-  payments         FeePayment[] // linked payment schedules
-  transactions     FeeTransactionItem[]
-  discounts        Discount[]
-  lateFees         LateFee[]
-   
-  createdAt        DateTime @default(now())
-}
-
-model FeePayment {
-  id                 String   @id @default(uuid())
-  feeDocId           String
-  feeDoc             FeeDoc   @relation(fields: [feeDocId], references: [id])
-   
-  academicMonthId    String? @unique  // if monthly, link to academic month
-  academicMonth      AcademicMonth? @relation(fields: [academicMonthId], references: [id])
-   
-  name               String?   // "July installment" / "Admission Fee"
-  amount             Float
-  dueDate            DateTime
-  isPaid             Boolean   @default(false)
-  fineAmount         Float     @default(0)
-  lateFees           LateFee[]
-  feeAllocations     FeePaymentAllocation[]
-  paidAmount         Float     @default(0)
-  createdAt          DateTime @default(now())
-}   
-
-model FeeTransaction {
-  id             String   @id @default(uuid())
-
-  enrollmentId   String
-  enrollment     Enrollment  @relation(fields: [enrollmentId], references: [id])
-
-  amountPaid     Float
-  returnedAmt    Float    @default(0)
-  paidOn         DateTime @default(now())
-  remarks        String?
-
-  createdById    String
-  createdBy      User     @relation(fields: [createdById], references: [id])
-
-  // Relations
-  items          FeeTransactionItem[]
-  discounts      Discount[]
-  lateFees       LateFee[]
-  feeAllocations FeePaymentAllocation[]
-
-  mode           PaymentMode
-  referenceId    String?        // txn id, cheque no, UPI ref
-  receiptNo      String         @unique
-}
-
-model FeeTransactionItem {
-  id            String   @id @default(uuid())
-  transactionId String
-  transaction   FeeTransaction @relation(fields: [transactionId], references: [id])
-
-  feeDocId      String
-  feeDoc        FeeDoc @relation(fields: [feeDocId], references: [id])
-
-  paidAmount    Float
-}
-
-model FeePaymentAllocation {
-  id                String   @id @default(uuid())
-  feePaymentId      String
-  feePayment        FeePayment @relation(fields: [feePaymentId], references: [id])
-
-  transactionId     String
-  transaction       FeeTransaction @relation(fields: [transactionId], references: [id])
-
-  allocatedAmount   Float
-  createdAt         DateTime @default(now())
-}
-
-
-model DiscountPolicy {
-  id            String   @id @default(uuid())
-  name          String
-  description   String?
-  discountType  DiscountType
-  discounts     Discount[]
-  branchId      String
-  branch        Branch @relation(fields: [branchId], references: [id])
-  percentage    Float?
-  amount        Float?
-  usageLimit    Int?
-  expiryDate    DateTime?
-  createdAt     DateTime @default(now())
-}
-
-model Discount {
-  id             String   @id @default(uuid())
-  feeDocId       String?
-  feeDoc         FeeDoc? @relation(fields: [feeDocId], references: [id])
-  transactionId  String?
-  transaction    FeeTransaction? @relation(fields: [transactionId], references: [id])
-  feeTemplateId  String?
-  feeTemplate    FeeTemplate?    @relation(fields: [feeTemplateId], references: [id])
-
-  policyId       String?
-  policy         DiscountPolicy? @relation(fields: [policyId], references: [id])
-
-  appliedAmount  Float   // final computed discount (percentage → converted to fixed)
-  createdAt      DateTime @default(now())
-}
-
-model LateFee {
-  id            String   @id @default(uuid())
-  feeDocId      String?
-  feeDoc        FeeDoc? @relation(fields: [feeDocId], references: [id])
-  feeTemplateId String?
-  feeTemplate   FeeTemplate? @relation(fields: [feeTemplateId], references: [id])
-  transactionId String?
-  transaction   FeeTransaction? @relation(fields: [transactionId], references: [id])
-  paymentId     String?
-  payment       FeePayment?   @relation(fields: [paymentId], references: [id])
-  amount        Float
-  reason        String?
-}
-
-
-
-//  attendance system
 enum AttendanceMode {
   DAYWISE
   PERIODWISE
   BOTH
-}
-
-model Teacher {
-  id              String              @id @default(uuid())
-  name            String
-  branchId        String
-  branch          Branch              @relation(fields: [branchId], references: [id])
-  lectures        Lecture[]
-  attendances     TeacherAttendance[]
-  createdAt       DateTime            @default(now())
-}
-
-// if lectureId is not there means teacher is present for whole day if it is there teacher is present only for that lecture
-model TeacherAttendance {
-  id            String       @id @default(uuid())
-  teacherId     String
-  teacher       Teacher      @relation(fields: [teacherId], references: [id])
-
-  schoolDayId   String
-  schoolDay     SchoolDay    @relation(fields: [schoolDayId], references: [id])
-
-  lectureId     String?      // if marked period-wise
-  lecture       Lecture?     @relation(fields: [lectureId], references: [id])
-
-  type          AttendanceType // DAYWISE | PERIODWISE
-  status        AttendanceStatus // PRESENT | ABSENT | LATE | LEAVE
-  reason        String?
-  markedById    String?       @unique // usually admin or principal
-  markedBy      User?         @relation(fields: [markedById], references: [id])
-  markedAt      DateTime      @default(now())
-}
-
-
-// kis particulay day school lag rha hain yaa nhi ye btayega initial jab school create honga tab decide ho skta hain school kin kin day lagegaa
-model SchoolDay {
-  id                 String       @id @default(uuid())
-  date               DateTime
-  sessionId          String
-  session            AcademicSession @relation(fields: [sessionId], references: [id])
-  type               SchoolDayType
-  attendances        Attendance[]
-  teacherAttendances TeacherAttendance[]
-  lectures           Lecture[]
 }
 
 enum SchoolDayType {
@@ -749,6 +711,7 @@ enum SchoolDayType {
   NON_WORKING
   HOLIDAY
 }
+
 enum Weekday {
   MON
   TUE
@@ -757,66 +720,6 @@ enum Weekday {
   FRI
   SAT
   SUN
-}
-
-// kisi class ke kya kya subjects hain ye decide honga isse or us subjects ke kitne lectures hain
-model Subject {
-  id           String       @id @default(uuid())
-  name         String
-  classId      String
-  class        Class        @relation(fields: [classId], references: [id])
-  lectures     Lecture[]
-}
-
-
-// lecture of any class subject, teacher, 
-model Lecture {
-  id                 String       @id @default(uuid())
-  classId            String
-  class              Class        @relation(fields: [classId], references: [id])
-  subjectId          String
-  subject            Subject      @relation(fields: [subjectId], references: [id])
-  teacherId          String
-  teacher            Teacher      @relation(fields: [teacherId], references: [id])
-  startTime          DateTime
-  endTime            DateTime
-  dayOfWeek          Weekday
-  schoolDayId        String
-  schoolDay          SchoolDay      @relation(fields: [schoolDayId], references: [id])
-  attendances        Attendance[]
-  teacherAttendances TeacherAttendance[]
-  auditAttendanceLog AttendanceAuditLog[]
-}
-
-// if lecture id null hain then wo pure din ki attendance if it is there then wo us lecture ki hi attendance hain bss
-model Attendance {
-  id            String        @id @default(uuid())
-  enrollmentId  String
-  enrollment    Enrollment    @relation(fields: [enrollmentId], references: [id])
-
-  schoolDayId   String
-  schoolDay     SchoolDay     @relation(fields: [schoolDayId], references: [id])
-
-  lectureId     String?
-  lecture       Lecture?      @relation(fields: [lectureId], references: [id])
-
-  type          AttendanceType
-  status        AttendanceStatus
-  method        AttendanceMethod
-  markedById    String?    @unique
-  markedBy      User?      @relation(fields: [markedById], references: [id])
-  markedAt      DateTime      @default(now())
-}
-
-model AttendanceAuditLog {
-  id             String   @id @default(uuid())
-  lectureId      String   @unique
-  lecture        Lecture  @relation(fields: [lectureId], references: [id])
-  action         String   // e.g. "REOPENED_BY_ADMIN", "SUBSTITUTE_ASSIGNED", "CANCELLED"
-  performedById  String   @unique// user who did it (admin / principal / teacher)
-  performedBy    User     @relation(fields: [performedById], references: [id])
-  remarks        String?  // optional note, like reason for reopening
-  createdAt      DateTime @default(now())
 }
 
 enum AttendanceMethod {
@@ -842,7 +745,7 @@ enum LectureStatus {
   SCHEDULED
   ONGOING
   COMPLETED
-  BLOCKED           // teacher absent, attendance locked
-  REOPENED_BY_ADMIN // reopened manually
+  BLOCKED
+  REOPENED_BY_ADMIN
   CANCELLED
 }

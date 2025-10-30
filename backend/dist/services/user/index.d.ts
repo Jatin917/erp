@@ -1,3 +1,5 @@
+import type { Prisma } from "@prisma/client/extension";
+import type { Role } from "../../../generated/prisma/index.js";
 export declare const getUserService: (where: any, include?: any) => Promise<({
     [x: string]: ({
         type: import("../../../generated/prisma/index.js").$Enums.customFieldType;
@@ -73,38 +75,24 @@ export declare const getUserService: (where: any, include?: any) => Promise<({
         id: string;
         mode: import("../../../generated/prisma/index.js").$Enums.PaymentMode;
         createdById: string;
-        enrollmentId: string;
         amountPaid: number;
-        returnedAmt: number;
         paidOn: Date;
         remarks: string | null;
-        referenceId: string | null;
+        enrollmentId: string;
         receiptNo: string;
+        referenceId: string | null;
+        returnedAmt: number;
     } | {
         id: string;
         mode: import("../../../generated/prisma/index.js").$Enums.PaymentMode;
         createdById: string;
-        enrollmentId: string;
         amountPaid: number;
-        returnedAmt: number;
         paidOn: Date;
         remarks: string | null;
-        referenceId: string | null;
+        enrollmentId: string;
         receiptNo: string;
-    })[] | ({
-        id: string;
-        createdAt: Date;
-        remarks: string | null;
-        lectureId: string;
-        action: string;
-        performedById: string;
-    } | {
-        id: string;
-        createdAt: Date;
-        remarks: string | null;
-        lectureId: string;
-        action: string;
-        performedById: string;
+        referenceId: string | null;
+        returnedAmt: number;
     })[] | {
         name: string;
         id: string;
@@ -123,20 +111,13 @@ export declare const getUserService: (where: any, include?: any) => Promise<({
         id: string;
         mode: import("../../../generated/prisma/index.js").$Enums.PaymentMode;
         createdById: string;
-        enrollmentId: string;
         amountPaid: number;
-        returnedAmt: number;
         paidOn: Date;
         remarks: string | null;
-        referenceId: string | null;
+        enrollmentId: string;
         receiptNo: string;
-    }[] | {
-        id: string;
-        createdAt: Date;
-        remarks: string | null;
-        lectureId: string;
-        action: string;
-        performedById: string;
+        referenceId: string | null;
+        returnedAmt: number;
     }[];
     [x: number]: never;
     [x: symbol]: never;
@@ -148,8 +129,15 @@ export declare const getUserService: (where: any, include?: any) => Promise<({
     email: string;
     phone: string | null;
     password: string;
-    permissions: import("../../../generated/prisma/index.js").$Enums.Permission[];
     isPhoneVerified: boolean;
     isEmailVerified: boolean;
+    permissions: import("../../../generated/prisma/index.js").$Enums.Permission[];
 }) | null>;
+export declare function findOrCreateUser({ name, email, phone, role, tx, }: {
+    name: string;
+    email: string;
+    phone: string;
+    role: Role;
+    tx?: Prisma.TransactionClient;
+}): Promise<any>;
 //# sourceMappingURL=index.d.ts.map

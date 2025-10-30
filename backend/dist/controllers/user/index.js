@@ -1,6 +1,11 @@
 import { Console } from 'console';
 import { HTTP_STATUS } from '../../lib/http-codes.js';
-import { prisma } from '../../server.js';
+import { defaultPassword, prisma } from '../../server.js';
+import { sendError, sendSuccess } from '../../lib/utils.js';
+import bcrypt from "bcrypt";
+import { findOrCreateUser } from '../../services/user/index.js';
+import { isEmailVerified } from '../../services/otp.js';
+import { OTP_TYPE } from '../../lib/types.js';
 export const permitPermission = async (req, res) => {
     try {
         const { permissionToWhomId, permissionsToAllow, permissionsToDeny } = req.body;

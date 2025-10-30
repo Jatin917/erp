@@ -11,8 +11,8 @@ export declare const getStudentFeeDocs: (where: any, include: any) => Promise<({
         transactionId: string | null;
         feeDocId: string | null;
         feeTemplateId: string | null;
-        policyId: string | null;
         appliedAmount: number;
+        policyId: string | null;
     }[] | {
         reason: string | null;
         id: string;
@@ -30,24 +30,24 @@ export declare const getStudentFeeDocs: (where: any, include: any) => Promise<({
         feeDocId: string;
         academicMonthId: string | null;
         isPaid: boolean;
-        fineAmount: number;
         paidAmount: number;
+        fineAmount: number;
     }[] | ({
         id: string;
         createdAt: Date;
         transactionId: string | null;
         feeDocId: string | null;
         feeTemplateId: string | null;
-        policyId: string | null;
         appliedAmount: number;
+        policyId: string | null;
     } | {
         id: string;
         createdAt: Date;
         transactionId: string | null;
         feeDocId: string | null;
         feeTemplateId: string | null;
-        policyId: string | null;
         appliedAmount: number;
+        policyId: string | null;
     })[] | ({
         id: string;
         transactionId: string;
@@ -83,8 +83,8 @@ export declare const getStudentFeeDocs: (where: any, include: any) => Promise<({
         feeDocId: string;
         academicMonthId: string | null;
         isPaid: boolean;
-        fineAmount: number;
         paidAmount: number;
+        fineAmount: number;
     } | {
         name: string | null;
         id: string;
@@ -94,8 +94,8 @@ export declare const getStudentFeeDocs: (where: any, include: any) => Promise<({
         feeDocId: string;
         academicMonthId: string | null;
         isPaid: boolean;
-        fineAmount: number;
         paidAmount: number;
+        fineAmount: number;
     })[] | {
         id: string;
         transactionId: string;
@@ -109,9 +109,9 @@ export declare const getStudentFeeDocs: (where: any, include: any) => Promise<({
     createdAt: Date;
     amount: number;
     enrollmentId: string;
-    templateId: string | null;
     feeHeadId: string;
     paymentType: import("../../../generated/prisma/index.js").$Enums.FeePaymentType;
+    templateId: string | null;
     afterAmount: number;
     status: import("../../../generated/prisma/index.js").$Enums.PaymentStatus;
 })[]>;

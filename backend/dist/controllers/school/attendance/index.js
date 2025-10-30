@@ -22,43 +22,38 @@ export const getSchoolDays = async (req, res) => {
 // /* ============================================================
 //    GENERATE LECTURES
 // ============================================================ */
-// export const generateLectures = async (req: Request, res: Response) => {
-//   try {
-//     const { classId, timetable, sessionId } = req.body;
-//     const schoolDays = await prisma.schoolDay.findMany({
-//       where: { sessionId, type: "WORKING" },
-//     });
-//     const lectures = [];
-//     for (const day of schoolDays) {
-//       const weekday = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"][
-//         new Date(day.date).getDay()
-//       ] as Weekday;
-//       const slots = timetable[weekday];
-//       if (!slots) continue;
-//       for (const slot of slots) {
-//         lectures.push({
-//           classId,
-//           subjectId: slot.subjectId,
-//           teacherId: slot.teacherId,
-//           startTime: slot.startTime,
-//           endTime: slot.endTime,
-//           dayOfWeek: weekday,
-//           schoolDayId: day.id,
-//           status: LectureStatus.SCHEDULED,
-//         });
-//       }
-//     }
-//     await prisma.lecture.createMany({ data: lectures });
-//     sendSuccess(
-//       res,
-//       "Lectures generated successfully",
-//       { total: lectures.length },
-//       HTTP_STATUS.CREATED
-//     );
-//   } catch (err: any) {
-//     sendError(res, err.message, HTTP_STATUS.INTERNAL_SERVER_ERROR);
-//   }
-// };
+export const generateLectures = async (req, res) => {
+    try {
+        const { classId, timetable, sessionId } = req.body;
+        const schoolDays = await prisma.schoolDay.findMany({
+            where: { sessionId, type: "WORKING" },
+        });
+        const lectures = [];
+        for (const day of schoolDays) {
+            const weekday = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"][new Date(day.date).getDay()];
+            const slots = timetable[weekday];
+            if (!slots)
+                continue;
+            for (const slot of slots) {
+                lectures.push({
+                    classId,
+                    subjectId: slot.subjectId,
+                    teacherId: slot.teacherId,
+                    startTime: slot.startTime,
+                    endTime: slot.endTime,
+                    dayOfWeek: weekday,
+                    schoolDayId: day.id,
+                    status: LectureStatus.SCHEDULED,
+                });
+            }
+        }
+        await prisma.lecture.createMany({ data: lectures });
+        sendSuccess(res, "Lectures generated successfully", { total: lectures.length }, HTTP_STATUS.CREATED);
+    }
+    catch (err) {
+        sendError(res, err.message, HTTP_STATUS.INTERNAL_SERVER_ERROR);
+    }
+};
 // /* ============================================================
 //    UPDATE LECTURE
 // ============================================================ */
