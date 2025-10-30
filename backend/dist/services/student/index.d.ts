@@ -36,8 +36,8 @@ export declare const getEnrollment: (where: any, include: any) => Promise<({
         type: import("../../../generated/prisma/index.js").$Enums.AttendanceType;
         id: string;
         enrollmentId: string;
-        status: import("../../../generated/prisma/index.js").$Enums.AttendanceStatus;
         schoolDayId: string;
+        status: import("../../../generated/prisma/index.js").$Enums.AttendanceStatus;
         lectureId: string | null;
         method: import("../../../generated/prisma/index.js").$Enums.AttendanceMethod;
         markedById: string | null;
@@ -46,8 +46,8 @@ export declare const getEnrollment: (where: any, include: any) => Promise<({
         type: import("../../../generated/prisma/index.js").$Enums.AttendanceType;
         id: string;
         enrollmentId: string;
-        status: import("../../../generated/prisma/index.js").$Enums.AttendanceStatus;
         schoolDayId: string;
+        status: import("../../../generated/prisma/index.js").$Enums.AttendanceStatus;
         lectureId: string | null;
         method: import("../../../generated/prisma/index.js").$Enums.AttendanceMethod;
         markedById: string | null;
@@ -76,8 +76,8 @@ export declare const getEnrollment: (where: any, include: any) => Promise<({
         type: import("../../../generated/prisma/index.js").$Enums.AttendanceType;
         id: string;
         enrollmentId: string;
-        status: import("../../../generated/prisma/index.js").$Enums.AttendanceStatus;
         schoolDayId: string;
+        status: import("../../../generated/prisma/index.js").$Enums.AttendanceStatus;
         lectureId: string | null;
         method: import("../../../generated/prisma/index.js").$Enums.AttendanceMethod;
         markedById: string | null;

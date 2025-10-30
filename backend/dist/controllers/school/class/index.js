@@ -24,6 +24,7 @@ export const getAllClass = async (req, res) => {
             include: {
                 classes: {
                     select: {
+                        id: true,
                         section: { select: { id: true, name: true } },
                     },
                 },
@@ -34,7 +35,7 @@ export const getAllClass = async (req, res) => {
         for (const cls of classLabels) {
             let entry = grouped[cls.name];
             if (!entry) {
-                entry = { name: cls.name, sections: [] };
+                entry = { classId: cls.classes[0]?.id || "", name: cls.name, sections: [] };
                 grouped[cls.name] = entry;
             }
             for (const c of cls.classes) {
@@ -354,6 +355,58 @@ export const createSubject = async (req, res) => {
             },
         });
         return sendSuccess(res, "Subject created successfully", subject, HTTP_STATUS.CREATED);
+    }
+    catch (error) {
+        return sendError(res, error.message, HTTP_STATUS.INTERNAL_SERVER_ERROR);
+    }
+};
+export const getSubjects = async (req, res) => {
+    try {
+        const { classId } = req.params;
+        if (!classId) {
+            return sendError(res, "classId is required", HTTP_STATUS.BAD_REQUEST);
+        }
+        const subjects = await prisma.subject.findMany({
+            where: { classId },
+            orderBy: { createdAt: "desc" },
+        });
+        return sendSuccess(res, "Subjects fetched successfully", subjects);
+    }
+    catch (error) {
+        return sendError(res, error.message, HTTP_STATUS.INTERNAL_SERVER_ERROR);
+    }
+};
+export const updateSubject = async (req, res) => {
+    try {
+        const { subjectId } = req.params;
+        const { name } = req.body;
+        if (!subjectId || !name) {
+            return sendError(res, "subjectId and name are required", HTTP_STATUS.BAD_REQUEST);
+        }
+        const subject = await prisma.subject.update({
+            where: { id: subjectId },
+            data: { name },
+        });
+        return sendSuccess(res, "Subject updated successfully", subject);
+    }
+    catch (error) {
+        return sendError(res, error.message, HTTP_STATUS.INTERNAL_SERVER_ERROR);
+    }
+};
+export const deleteSubject = async (req, res) => {
+    try {
+        const { subjectId } = req.params;
+        if (!subjectId) {
+            return sendError(res, "subjectId is required", HTTP_STATUS.BAD_REQUEST);
+        }
+        const subjects = await prisma.subject.delete({
+            where: { id: subjectId },
+            include: { lectures: true }
+        });
+        if (subjects.lectures.length > 0) {
+            return sendError(res, "Cannot Delete Subject having already created lectures", HTTP_STATUS.CONFLICT);
+        }
+        return sendSuccess(res, "Subject deleted successfully");
     }
     catch (error) {
         return sendError(res, error.message, HTTP_STATUS.INTERNAL_SERVER_ERROR);

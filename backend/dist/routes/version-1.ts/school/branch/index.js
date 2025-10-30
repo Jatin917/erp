@@ -2,7 +2,7 @@ import { Router } from "express";
 import { createSchool, getBranches, getSchools, deleteSchool, editSchool, createCustomFields, getCustomFields } from "../../../../controllers/school/school/index.js";
 import { isPermitted } from "../../../../middlewares/permission/index.js";
 import multer from "multer";
-import { createSubject, createOrUpdateClass, createSection, getAllClass, getAllSections, deleteSection, updateSection, getClassNames, createClassName, createFaculty, getFaculty } from "../../../../controllers/school/class/index.js";
+import { createSubject, createOrUpdateClass, createSection, getAllClass, getAllSections, deleteSection, updateSection, getClassNames, createClassName, createFaculty, getFaculty, getSubjects, deleteSubject, updateSubject } from "../../../../controllers/school/class/index.js";
 const branchRouter = Router();
 // @ts-ignore
 const upload = multer({ dest: "uploads/" });
@@ -22,6 +22,9 @@ branchRouter.post("/create-className", isPermitted, createClassName);
 branchRouter.post("/create-customField", isPermitted, createCustomFields);
 branchRouter.get("/get-customField", isPermitted, getCustomFields);
 branchRouter.post("/create-subject", isPermitted, createSubject);
+branchRouter.get("/get-subjects", isPermitted, getSubjects);
+branchRouter.delete("/delete-subject", isPermitted, deleteSubject);
+branchRouter.put("/update-subject", isPermitted, updateSubject);
 branchRouter.post("/create-faculty", isPermitted, createFaculty);
 branchRouter.get("/get-faculty", isPermitted, getFaculty);
 export { branchRouter };
