@@ -473,6 +473,7 @@ model Lecture {
   subject            Subject                   @relation(fields: [subjectId], references: [id])
   teacher            SchoolFaculty             @relation(fields: [teacherId], references: [id])
   teacherAttendances SchoolFacultyAttendance[]
+  status             LectureStatus
 }
 
 model Attendance {
