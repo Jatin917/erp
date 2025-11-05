@@ -441,11 +441,15 @@ export const createFaculty = async (req, res) => {
 };
 export const getFaculty = async (req, res) => {
     try {
-        const { branchId } = req.query;
+        const { branchId, role } = req.query;
         if (!branchId) {
             return sendError(res, "branch id required ", HTTP_STATUS.BAD_REQUEST);
         }
-        const faculty = await prisma.schoolFaculty.findMany({ where: { branchId }, include: { user: { select: { role: true, email: true } } } });
+        const where = { branchId };
+        if (role) {
+            where.role = role;
+        }
+        const faculty = await prisma.schoolFaculty.findMany({ where, include: { user: { select: { role: true, email: true } } } });
         const formattedFaculty = faculty.map(f => {
             return {
                 name: f.name,
