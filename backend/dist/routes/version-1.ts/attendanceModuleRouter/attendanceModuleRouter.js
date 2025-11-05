@@ -1,4 +1,4 @@
-import { getSchoolDays } from "../../../controllers/school/attendance/index.js";
+import { getSchoolDays, upsertLectureFromDate } from "../../../controllers/school/attendance/index.js";
 import { isPermitted } from "../../../middlewares/permission/index.js";
 import { Router } from "express";
 export const attendanceModuleRouter = Router();

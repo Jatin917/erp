@@ -109,10 +109,10 @@ export declare const getStudentFeeDocs: (where: any, include: any) => Promise<({
     createdAt: Date;
     amount: number;
     enrollmentId: string;
+    status: import("../../../generated/prisma/index.js").$Enums.PaymentStatus;
     feeHeadId: string;
     paymentType: import("../../../generated/prisma/index.js").$Enums.FeePaymentType;
     templateId: string | null;
     afterAmount: number;
-    status: import("../../../generated/prisma/index.js").$Enums.PaymentStatus;
 })[]>;
 //# sourceMappingURL=index.d.ts.map
