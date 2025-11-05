@@ -170,7 +170,7 @@ export const getTimeTable = async (req, res) => {
             },
         });
         if (!lectures.length) {
-            return sendError(res, "No lectures found", HTTP_STATUS.NOT_FOUND);
+            return sendSuccess(res, "No lectures found", [], HTTP_STATUS.OK);
         }
         const seen = new Set();
         const formatLectures = lectures

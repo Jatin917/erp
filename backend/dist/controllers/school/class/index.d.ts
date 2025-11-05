@@ -12,4 +12,5 @@ export declare const updateSubject: (req: any, res: any) => Promise<import("expr
 export declare const deleteSubject: (req: any, res: any) => Promise<import("express").Response<any, Record<string, any>>>;
 export declare const createFaculty: (req: any, res: any) => Promise<import("express").Response<any, Record<string, any>>>;
 export declare const getFaculty: (req: any, res: any) => Promise<import("express").Response<any, Record<string, any>>>;
+export declare const updateFaculty: (req: any, res: any) => Promise<import("express").Response<any, Record<string, any>>>;
 //# sourceMappingURL=index.d.ts.map

@@ -362,12 +362,16 @@ export const createSubject = async (req, res) => {
 };
 export const getSubjects = async (req, res) => {
     try {
-        const { branchId } = req.query;
+        const { branchId, classId } = req.query;
         if (!branchId) {
             return sendError(res, "branchId is required", HTTP_STATUS.BAD_REQUEST);
         }
+        const where = { class: { branchId } };
+        if (classId) {
+            where.classId = classId;
+        }
         const subjects = await prisma.subject.findMany({
-            where: { class: { branchId } },
+            where,
             orderBy: { createdAt: "desc" },
         });
         return sendSuccess(res, "Subjects fetched successfully", { subjects });
@@ -447,7 +451,11 @@ export const getFaculty = async (req, res) => {
         }
         const where = { branchId };
         if (role) {
-            where.role = role;
+            where.user = {
+                role: {
+                    has: role
+                }
+            };
         }
         const faculty = await prisma.schoolFaculty.findMany({ where, include: { user: { select: { role: true, email: true } } } });
         const formattedFaculty = faculty.map(f => {
@@ -459,8 +467,27 @@ export const getFaculty = async (req, res) => {
                 userid: f.userid
             };
         });
-        console.log("faculty is ", faculty, formattedFaculty);
         return sendSuccess(res, "faculty founded", { faculty: formattedFaculty });
+    }
+    catch (error) {
+        return sendError(res, error.message, HTTP_STATUS.INTERNAL_SERVER_ERROR);
+    }
+};
+export const updateFaculty = async (req, res) => {
+    try {
+        const { id, roles } = req.body;
+        if (!id || !roles) {
+            return sendError(res, "Please provide Required Fields", HTTP_STATUS.BAD_REQUEST);
+        }
+        const faculty = await prisma.user.update({
+            where: { id },
+            data: {
+                role: {
+                    push: roles // roles can be ["TEACHER"] or ["ADMIN","STUDENT"]
+                }
+            }
+        });
+        return sendSuccess(res, "Updated", { faculty: { userid: faculty.id, roles: faculty.role } }, HTTP_STATUS.CREATED);
     }
     catch (error) {
         return sendError(res, error.message, HTTP_STATUS.INTERNAL_SERVER_ERROR);

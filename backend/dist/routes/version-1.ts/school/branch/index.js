@@ -2,7 +2,7 @@ import { Router } from "express";
 import { createSchool, getBranches, getSchools, deleteSchool, editSchool, createCustomFields, getCustomFields } from "../../../../controllers/school/school/index.js";
 import { isPermitted } from "../../../../middlewares/permission/index.js";
 import multer from "multer";
-import { createSubject, createOrUpdateClass, createSection, getAllClass, getAllSections, deleteSection, updateSection, getClassNames, createClassName, createFaculty, getFaculty, getSubjects, deleteSubject, updateSubject } from "../../../../controllers/school/class/index.js";
+import { createSubject, createOrUpdateClass, createSection, getAllClass, getAllSections, deleteSection, updateSection, getClassNames, createClassName, createFaculty, getFaculty, getSubjects, deleteSubject, updateSubject, updateFaculty } from "../../../../controllers/school/class/index.js";
 import { getTimeTable, upsertLectureFromDate } from "../../../../controllers/school/attendance/index.js";
 const branchRouter = Router();
 // @ts-ignore
@@ -28,6 +28,7 @@ branchRouter.delete("/delete-subject", isPermitted, deleteSubject);
 branchRouter.put("/update-subject", isPermitted, updateSubject);
 branchRouter.post("/create-faculty", isPermitted, createFaculty);
 branchRouter.get("/get-faculty", isPermitted, getFaculty);
+branchRouter.patch("/update-faculty", isPermitted, updateFaculty);
 branchRouter.post("/generate-lecture", isPermitted, upsertLectureFromDate);
 branchRouter.get("/get-timetable", isPermitted, getTimeTable);
 export { branchRouter };
