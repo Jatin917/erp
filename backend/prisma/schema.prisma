@@ -464,8 +464,8 @@ model Lecture {
   teacherId          String
   dayOfWeek          Weekday
   schoolDayId        String
-  startTime          DateTime
-  endTime            DateTime
+  startTime          String
+  endTime            String
   attendances        Attendance[]
   auditAttendanceLog AttendanceAuditLog?
   class              Class                     @relation(fields: [classId], references: [id])

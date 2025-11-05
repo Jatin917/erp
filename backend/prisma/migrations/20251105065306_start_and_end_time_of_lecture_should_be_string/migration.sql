@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "public"."Lecture" ALTER COLUMN "startTime" SET DATA TYPE TEXT,
+ALTER COLUMN "endTime" SET DATA TYPE TEXT;
