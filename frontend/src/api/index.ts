@@ -136,25 +136,25 @@ export const downloadSampleSheetForBulkUpload = async () => {;
 
 export const createClassApi = async (authdata:any) =>{
   const email = getCreatedBy();
-  authdata = {...authdata, email, task:PermissionConstant.CREATE_CLASS};
+  authdata = {...authdata, createdBy:email, task:PermissionConstant.CREATE_CLASS};
   const {data} = await API.post("/school/create-class", authdata);
   return data;
 }
 export const createSectionApi = async (authdata:any) =>{
   const email = getCreatedBy();
-  authdata = {...authdata, email, task:PermissionConstant.CREATE_CLASS};
+  authdata = {...authdata, createdBy:email, task:PermissionConstant.CREATE_CLASS};
   const {data} = await API.post("/school/create-section", authdata);
   return data;
 }
 export const getAllClassApi = async (params:any) =>{
   const email = getCreatedBy();
-  params = {...params, email, task:PermissionConstant.VIEW_CLASS};
+  params = {...params, createdBy:email, task:PermissionConstant.VIEW_CLASS};
   const {data} = await API.get("/school/get-class", {params});
   return data;
 }
 export const getAllSectionApi = async (params:any) =>{
   const email = getCreatedBy();
-  params = {...params, email, task:PermissionConstant.VIEW_CLASS};
+  params = {...params, createdBy:email, task:PermissionConstant.VIEW_CLASS};
   const {data} = await API.get("/school/get-section", {params});
   return data;
 }

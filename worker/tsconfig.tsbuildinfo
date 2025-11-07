@@ -1,0 +1,1 @@
+{"root":["./src/index.ts","./src/jobs/producers.ts","./src/jobs/queues.ts","./src/utils/mailer.ts","./src/worker/email.worker.ts"],"version":"5.9.3"}

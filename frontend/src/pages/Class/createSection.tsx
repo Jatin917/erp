@@ -5,37 +5,72 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  useCreateSection,
+  useGetAllSections,
+//   useUpdateSection,
+//   useDeleteSection,
+} from "@/hooks/schoolQuery";
+import { useSchoolStore } from "@/store/schoolStore";
 
 export default function SectionPage() {
-  const [sections, setSections] = useState<string[]>(["A", "B", "C"]);
   const [sectionName, setSectionName] = useState("");
-  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [editingSection, setEditingSection] = useState<any | null>(null);
 
+  const { activeSchool } = useSchoolStore();
+
+  // ✅ Hooks
+  const { data: sections = [], refetch } = useGetAllSections({
+    branchId: activeSchool?.id,
+  });
+  const { mutate: createSection } = useCreateSection();
+//   const { mutate: updateSection } = useUpdateSection();
+//   const { mutate: deleteSection } = useDeleteSection();
+
+  // ✅ Handlers
   const handleSubmit = () => {
-    if (!sectionName.trim()) return;
+    if (!sectionName.trim() || !activeSchool?.id) return;
 
-    if (editingIndex !== null) {
-      // Update existing section
-      const updated = [...sections];
-      updated[editingIndex] = sectionName.trim();
-      setSections(updated);
-      setEditingIndex(null);
+    if (editingSection) {
+      // Update
+    //   updateSection(
+    //     { id: editingSection.id, name: sectionName },
+    //     { onSuccess: () => refetch() }
+    //   );
+      setEditingSection(null);
     } else {
-      // Add new section
-      setSections([...sections, sectionName.trim()]);
+      // Create
+      createSection(
+        { name: sectionName, branchId: activeSchool.id },
+        { onSuccess: () => refetch() }
+      );
     }
 
     setSectionName("");
   };
 
-  const handleEdit = (index: number) => {
-    setSectionName(sections[index]);
-    setEditingIndex(index);
+  const handleEdit = (section: any) => {
+    setSectionName(section.name);
+    setEditingSection(section);
   };
 
-  const handleDelete = (index: number) => {
-    setSections(sections.filter((_, i) => i !== index));
+  const handleDelete = (id: string) => {
+    // deleteSection(
+    //   { id },
+    //   {
+    //     onSuccess: () => {
+    //       refetch();
+    //     },
+    //   }
+    // );
   };
 
   return (
@@ -43,7 +78,9 @@ export default function SectionPage() {
       {/* Left Form */}
       <Card>
         <CardHeader>
-          <CardTitle>{editingIndex !== null ? "Edit Section" : "Create Section"}</CardTitle>
+          <CardTitle>
+            {editingSection ? "Edit Section" : "Create Section"}
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
@@ -56,7 +93,7 @@ export default function SectionPage() {
             />
           </div>
           <Button className="w-full" onClick={handleSubmit}>
-            {editingIndex !== null ? "Update Section" : "Add Section"}
+            {editingSection ? "Update Section" : "Add Section"}
           </Button>
         </CardContent>
       </Card>
@@ -76,14 +113,22 @@ export default function SectionPage() {
             </TableHeader>
             <TableBody>
               {sections.length > 0 ? (
-                sections.map((sec, i) => (
-                  <TableRow key={i}>
-                    <TableCell>{sec}</TableCell>
+                sections.map((sec: any) => (
+                  <TableRow key={sec.id}>
+                    <TableCell>{sec.name}</TableCell>
                     <TableCell className="text-right space-x-2">
-                      <Button variant="secondary" size="sm" onClick={() => handleEdit(i)}>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => handleEdit(sec)}
+                      >
                         Edit
                       </Button>
-                      <Button variant="destructive" size="sm" onClick={() => handleDelete(i)}>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => handleDelete(sec.id)}
+                      >
                         Delete
                       </Button>
                     </TableCell>
@@ -91,7 +136,10 @@ export default function SectionPage() {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={2} className="text-center text-muted-foreground">
+                  <TableCell
+                    colSpan={2}
+                    className="text-center text-muted-foreground"
+                  >
                     No sections created yet.
                   </TableCell>
                 </TableRow>

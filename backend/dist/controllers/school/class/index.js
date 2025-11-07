@@ -1,11 +1,12 @@
 import { error } from "console";
 import { HTTP_STATUS } from "../../../lib/http-codes.js";
-import { prisma } from "../../../server.js";
+import { defaultPassword, prisma } from "../../../server.js";
 import { connect } from "http2";
 import { sendError, sendSuccess } from "../../../lib/utils.js";
 import { isEmailVerified } from "../../../services/otp.js";
 import { OTP_TYPE } from "../../../lib/types.js";
 import { findOrCreateUser } from "../../../services/user/index.js";
+import { sendWelcomeEmail } from "../../../services/producers-notifications/producer.email.js";
 export const getAllClass = async (req, res) => {
     try {
         const { branchId, name } = req.query;
@@ -437,6 +438,7 @@ export const createFaculty = async (req, res) => {
         if (!faculty) {
             return sendError(res, "Error creating faculty", HTTP_STATUS.BAD_REQUEST);
         }
+        await sendWelcomeEmail({ name: user.name, email: user.email, password: defaultPassword, roles: user.role });
         return sendSuccess(res, "User created successfully", {}, HTTP_STATUS.CREATED);
     }
     catch (error) {

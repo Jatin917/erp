@@ -8,6 +8,7 @@ import { Permission as PrismaPermission } from "../../../../generated/prisma/ind
 import { TOKEN_TTL } from "../../../lib/contants.js";
 import { userInfo } from "os";
 import { isEmailVerified } from "../../../services/otp.js";
+import { sendError } from "../../../lib/utils.js";
 export const registerUser = async (req, res) => {
     try {
         // Ensure req.body is parsed and is an object
@@ -48,7 +49,10 @@ export const registerUser = async (req, res) => {
 };
 export const changePassword = async (req, res) => {
     try {
-        const { email, oldPassword, newPassword } = req.body;
+        const { email, currentPassword: oldPassword, newPassword, confirmPassword } = req.body;
+        if (newPassword !== confirmPassword) {
+            return sendError(res, "Password Should Match", HTTP_STATUS.BAD_REQUEST);
+        }
         // Find user by email
         const user = await prisma.user.findFirst({ where: { email } });
         if (!user) {

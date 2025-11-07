@@ -70,10 +70,14 @@ export const useFetchSchools = () => {
 
 
 
-export const useGetAllClasses = () =>
+export const useGetAllClasses = (filters:{branchId:string | null, name:string}) =>
   useQuery({
-    queryKey: ["classes"],
-    queryFn: getAllClassApi,
+    queryKey: ["classes", filters],
+    queryFn: async () => {
+      if(!filters.branchId) return[];
+      const data = await getAllClassApi(filters);
+      return data.data;
+    },
     // @ts-ignore
     onError: (err: any) => {
       toast.error("Failed to fetch classes");
@@ -82,10 +86,13 @@ export const useGetAllClasses = () =>
   });
 
 // Fetch all sections (optionally filtered by branch)
-export const useGetAllSections = (filters: Object) =>
+export const useGetAllSections = (filters:{branchId:string | null}) =>
   useQuery({
     queryKey: ["sections", filters],
-    queryFn: () => getAllSectionApi(filters),
+    queryFn: async () => {
+      const data = await getAllSectionApi(filters)
+      return data.data;
+    },
     enabled: !!filters,
     // @ts-ignore
     onError: (err: any) => {

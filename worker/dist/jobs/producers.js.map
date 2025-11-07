@@ -1,0 +1,1 @@
+{"version":3,"file":"producers.js","sourceRoot":"","sources":["../../src/jobs/producers.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,UAAU,EAAE,MAAM,aAAa,CAAC;AAEzC,MAAM,CAAC,MAAM,gBAAgB,GAAG,KAAK,EAAE,IAAsD,EAAE,EAAE;IAC/F,MAAM,UAAU,CAAC,GAAG,CAAC,oBAAoB,EAAE,IAAI,CAAC,CAAC;IACjD,OAAO,CAAC,GAAG,CAAC,iCAAiC,IAAI,CAAC,KAAK,EAAE,CAAC,CAAC;AAC7D,CAAC,CAAC"}
