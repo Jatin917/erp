@@ -7,7 +7,7 @@ const connection = new Redis(process.env.REDIS_URL, { maxRetriesPerRequest: null
 const emailWorker = new Worker('email-queue', async (job) => {
     const { email, name, password, roles = [] } = job.data;
     console.log(`📧 Sending welcome email to ${email} with roles: ${roles.join(', ')}`);
-    // Format roles nicely as HTML list or inline string
+    // Format roles nicely
     const roleList = roles.length > 1
         ? `<ul style="margin: 0; padding-left: 20px; color: #4f46e5;">
              ${roles.map((r) => `<li>${r}</li>`).join('')}
@@ -62,7 +62,7 @@ const emailWorker = new Worker('email-queue', async (job) => {
             </div>
 
             <p style="font-size: 15px; color: #555;">
-              Please update your password after your first login for security reasons.
+              Once logged in, please make sure to update your password for security reasons.
             </p>
 
             <div style="text-align: center; margin-top: 25px;">
@@ -75,8 +75,22 @@ const emailWorker = new Worker('email-queue', async (job) => {
                   text-decoration: none;
                   font-weight: 500;
                   display: inline-block;
+                  margin-bottom: 10px;
                 ">
                 Go to Dashboard
+              </a>
+              <br />
+              <a href="${'https://erp.kashishcomputers.com/change-password'}"
+                style="
+                  background-color: #10b981;
+                  color: white;
+                  padding: 12px 24px;
+                  border-radius: 6px;
+                  text-decoration: none;
+                  font-weight: 500;
+                  display: inline-block;
+                ">
+                Change Password
               </a>
             </div>
 
