@@ -54,13 +54,13 @@ export declare const getUserService: (where: any, include?: any) => Promise<({
         createdAt: Date;
         createdById: string;
     })[] | ({
-        createdAt: Date;
         classId: string;
         teacherId: string;
+        createdAt: Date;
     } | {
-        createdAt: Date;
         classId: string;
         teacherId: string;
+        createdAt: Date;
     })[] | ({
         type: string;
         id: string;
@@ -99,9 +99,9 @@ export declare const getUserService: (where: any, include?: any) => Promise<({
         createdAt: Date;
         createdById: string;
     }[] | {
-        createdAt: Date;
         classId: string;
         teacherId: string;
+        createdAt: Date;
     }[] | {
         type: string;
         id: string;

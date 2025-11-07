@@ -10,6 +10,7 @@ import cors from 'cors';
 import multer from 'multer';
 import { fileURLToPath } from 'node:url';
 import { dirname } from 'node:path';
+import { initDailyScheduler } from './services/producers-notifications/producers/daily-job-scheduler.js';
 dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -59,4 +60,7 @@ else {
         app.listen(PORT, () => console.log(`Listening on port ${PORT}`));
     }
 }
+(async () => {
+    await initDailyScheduler(); // sets up the daily job if not already there
+})();
 //# sourceMappingURL=server.js.map

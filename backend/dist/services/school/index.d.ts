@@ -4,18 +4,18 @@ export declare const getBranchService: (where: any, include?: any) => Promise<({
     [x: string]: ({
         name: string;
         id: string;
-        createdAt: Date;
         isCurrent: boolean;
         isLocked: boolean;
+        createdAt: Date;
         branchId: string;
         endMonthId: string | null;
         startMonthId: string | null;
     } | {
         name: string;
         id: string;
-        createdAt: Date;
         isCurrent: boolean;
         isLocked: boolean;
+        createdAt: Date;
         branchId: string;
         endMonthId: string | null;
         startMonthId: string | null;
@@ -116,8 +116,8 @@ export declare const getBranchService: (where: any, include?: any) => Promise<({
     })[] | ({
         name: string;
         id: string;
-        createdAt: Date;
         result: import("../../../generated/prisma/runtime/library.js").JsonValue | null;
+        createdAt: Date;
         branchId: string;
         userId: string | null;
         aadhaar: string | null;
@@ -183,8 +183,8 @@ export declare const getBranchService: (where: any, include?: any) => Promise<({
     } | {
         name: string;
         id: string;
-        createdAt: Date;
         result: import("../../../generated/prisma/runtime/library.js").JsonValue | null;
+        createdAt: Date;
         branchId: string;
         userId: string | null;
         aadhaar: string | null;
@@ -250,9 +250,9 @@ export declare const getBranchService: (where: any, include?: any) => Promise<({
     })[] | {
         name: string;
         id: string;
-        createdAt: Date;
         isCurrent: boolean;
         isLocked: boolean;
+        createdAt: Date;
         branchId: string;
         endMonthId: string | null;
         startMonthId: string | null;
@@ -306,8 +306,8 @@ export declare const getBranchService: (where: any, include?: any) => Promise<({
     }[] | {
         name: string;
         id: string;
-        createdAt: Date;
         result: import("../../../generated/prisma/runtime/library.js").JsonValue | null;
+        createdAt: Date;
         branchId: string;
         userId: string | null;
         aadhaar: string | null;
@@ -376,29 +376,29 @@ export declare const getBranchService: (where: any, include?: any) => Promise<({
 } & {
     name: string;
     id: string;
+    createdAt: Date;
     principalId: string | null;
     schoolId: string;
     address: string;
     logoUrl: string | null;
-    createdAt: Date;
     softwareCharge: number;
 }) | null>;
 export declare const getBranchesService: (where?: any, include?: any) => Promise<({
     [x: string]: ({
         name: string;
         id: string;
-        createdAt: Date;
         isCurrent: boolean;
         isLocked: boolean;
+        createdAt: Date;
         branchId: string;
         endMonthId: string | null;
         startMonthId: string | null;
     } | {
         name: string;
         id: string;
-        createdAt: Date;
         isCurrent: boolean;
         isLocked: boolean;
+        createdAt: Date;
         branchId: string;
         endMonthId: string | null;
         startMonthId: string | null;
@@ -499,8 +499,8 @@ export declare const getBranchesService: (where?: any, include?: any) => Promise
     })[] | ({
         name: string;
         id: string;
-        createdAt: Date;
         result: import("../../../generated/prisma/runtime/library.js").JsonValue | null;
+        createdAt: Date;
         branchId: string;
         userId: string | null;
         aadhaar: string | null;
@@ -566,8 +566,8 @@ export declare const getBranchesService: (where?: any, include?: any) => Promise
     } | {
         name: string;
         id: string;
-        createdAt: Date;
         result: import("../../../generated/prisma/runtime/library.js").JsonValue | null;
+        createdAt: Date;
         branchId: string;
         userId: string | null;
         aadhaar: string | null;
@@ -633,9 +633,9 @@ export declare const getBranchesService: (where?: any, include?: any) => Promise
     })[] | {
         name: string;
         id: string;
-        createdAt: Date;
         isCurrent: boolean;
         isLocked: boolean;
+        createdAt: Date;
         branchId: string;
         endMonthId: string | null;
         startMonthId: string | null;
@@ -689,8 +689,8 @@ export declare const getBranchesService: (where?: any, include?: any) => Promise
     }[] | {
         name: string;
         id: string;
-        createdAt: Date;
         result: import("../../../generated/prisma/runtime/library.js").JsonValue | null;
+        createdAt: Date;
         branchId: string;
         userId: string | null;
         aadhaar: string | null;
@@ -759,11 +759,11 @@ export declare const getBranchesService: (where?: any, include?: any) => Promise
 } & {
     name: string;
     id: string;
+    createdAt: Date;
     principalId: string | null;
     schoolId: string;
     address: string;
     logoUrl: string | null;
-    createdAt: Date;
     softwareCharge: number;
 })[]>;
 export declare const createCustomFieldService: (name: string, label: string, entityType: ENTITES, type: customFieldType, options: string[], required: boolean, branchId: string, createdById: string) => Promise<{
@@ -866,29 +866,29 @@ export declare const getSchoolsService: (where: any, include?: any) => Promise<(
     [x: string]: ({
         name: string;
         id: string;
+        createdAt: Date;
         principalId: string | null;
         schoolId: string;
         address: string;
         logoUrl: string | null;
-        createdAt: Date;
         softwareCharge: number;
     } | {
         name: string;
         id: string;
+        createdAt: Date;
         principalId: string | null;
         schoolId: string;
         address: string;
         logoUrl: string | null;
-        createdAt: Date;
         softwareCharge: number;
     })[] | {
         name: string;
         id: string;
+        createdAt: Date;
         principalId: string | null;
         schoolId: string;
         address: string;
         logoUrl: string | null;
-        createdAt: Date;
         softwareCharge: number;
     }[];
     [x: number]: never;
@@ -898,5 +898,33 @@ export declare const getSchoolsService: (where: any, include?: any) => Promise<(
     id: string;
     createdAt: Date;
     createdById: string;
+})[]>;
+export declare function getLecturesForToday(): Promise<({
+    teacher: {
+        name: string;
+        id: string;
+        user: {
+            role: import("../../../generated/prisma/index.js").$Enums.Role[];
+            name: string;
+            id: string;
+            createdAt: Date;
+            email: string;
+            phone: string | null;
+            password: string;
+            isPhoneVerified: boolean;
+            isEmailVerified: boolean;
+            permissions: import("../../../generated/prisma/index.js").$Enums.Permission[];
+        };
+    };
+} & {
+    id: string;
+    classId: string;
+    subjectId: string;
+    teacherId: string;
+    dayOfWeek: import("../../../generated/prisma/index.js").$Enums.Weekday;
+    schoolDayId: string;
+    startTime: string;
+    endTime: string;
+    status: import("../../../generated/prisma/index.js").$Enums.LectureStatus;
 })[]>;
 //# sourceMappingURL=index.d.ts.map

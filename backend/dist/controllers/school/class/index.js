@@ -6,7 +6,7 @@ import { sendError, sendSuccess } from "../../../lib/utils.js";
 import { isEmailVerified } from "../../../services/otp.js";
 import { OTP_TYPE } from "../../../lib/types.js";
 import { findOrCreateUser } from "../../../services/user/index.js";
-import { sendWelcomeEmail } from "../../../services/producers-notifications/producer.email.js";
+import { sendWelcomeEmail } from "../../../services/producers-notifications/producers/producer.email.js";
 export const getAllClass = async (req, res) => {
     try {
         const { branchId, name } = req.query;

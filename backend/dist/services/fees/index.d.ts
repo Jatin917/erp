@@ -106,10 +106,10 @@ export declare const getStudentFeeDocs: (where: any, include: any) => Promise<({
     [x: symbol]: never;
 } & {
     id: string;
+    status: import("../../../generated/prisma/index.js").$Enums.PaymentStatus;
     createdAt: Date;
     amount: number;
     enrollmentId: string;
-    status: import("../../../generated/prisma/index.js").$Enums.PaymentStatus;
     feeHeadId: string;
     paymentType: import("../../../generated/prisma/index.js").$Enums.FeePaymentType;
     templateId: string | null;
