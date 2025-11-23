@@ -9,7 +9,9 @@
     "start": "npm run build && node dist/server.js",
     "start:dev": "ts-node src/server.ts",
     "dev": "nodemon",
-    "prisma:generate": "prisma generate"
+    "prisma:generate": "prisma generate",
+    "worker-daily-jobScheduler":"node dist/services/producers-notifications/worker/daily-job-scheduler.js",
+    "worker-teacher-attendance":"node dist/services/producers-notifications/worker/teacher-attendance-worker.js"
   },
   "keywords": [],
   "author": "",

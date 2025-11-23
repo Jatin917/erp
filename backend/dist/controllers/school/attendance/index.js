@@ -8,7 +8,7 @@ import { HTTP_STATUS } from "../../../lib/http-codes.js";
 export const getSchoolDays = async (req, res) => {
     try {
         const { sessionId } = req.query;
-        console.log("session id");
+        // console.log("session id");
         const days = await prisma.schoolDay.findMany({
             where: { sessionId: sessionId },
             orderBy: { date: "asc" },
@@ -50,6 +50,7 @@ export const upsertLectureFromDate = async (req, res) => {
             },
             orderBy: { date: "asc" },
         });
+        console.log("schoolDays date ", schoolDays[0]);
         if (!schoolDays.length) {
             return sendError(res, "No working days found after applyDate", HTTP_STATUS.NOT_FOUND);
         }
@@ -58,7 +59,8 @@ export const upsertLectureFromDate = async (req, res) => {
         let cancelledCount = 0;
         await prisma.$transaction(async (tx) => {
             for (const day of schoolDays) {
-                const dayOfWeek = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"][new Date(day.date).getDay()];
+                const dayOfWeek = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"][new Date(day.date).getDay()];
+                console.log("dayOfWeek ", dayOfWeek, "weekDay ", weekDay);
                 if (dayOfWeek !== weekDay)
                     continue;
                 // 🔹 3️⃣ Check for existing teacher lecture conflict
@@ -198,7 +200,7 @@ export const getTimeTable = async (req, res) => {
             if (!groupedLectures[lecture.day]) {
                 groupedLectures[lecture.day] = [];
             }
-            console.log("lecture ", lecture);
+            // console.log("lecture ", lecture);
             groupedLectures[lecture.day]?.push(lecture);
         }
         return sendSuccess(res, "Lectures fetched successfully", {
