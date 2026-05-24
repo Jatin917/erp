@@ -4,9 +4,8 @@
     // File Layout
     "rootDir": "./src",
     "outDir": "./dist",
-    "baseUrl": "./src", 
     "paths": {
-      "@src/*": ["./*"]
+      "@src/*": ["./src/*"]
     },
 
     // Environment Settings
@@ -44,5 +43,6 @@
     "noUncheckedSideEffectImports": true,
     "moduleDetection": "force",
     "skipLibCheck": true,
-  }
+  },
+  "include": ["src/**/*"]
 }

@@ -11,6 +11,7 @@ import { sendError, sendSuccess } from "../../../lib/utils.js";
 import { createCustomFieldService, getBranchesService, getBranchService, getCustomFieldsService } from "../../../services/school/index.js";
 import { getUserService } from "../../../services/user/index.js";
 import { createSchoolDays } from "../../../services/attendance/index.js";
+import { syncCustomFieldsToRegistry } from "../../../registry/seed/sync-custom-fields.js";
 // Updated createBranch to accept tx for transactions
 const createBranch = async (tx, address, principalId, name, schoolId, softwareCharge) => {
     try {
@@ -341,6 +342,7 @@ export const createCustomFields = async (req, res) => {
         if (!customField) {
             return sendError(res, "Error Creating Custom Field", HTTP_STATUS.SERVICE_UNAVAILABLE);
         }
+        await syncCustomFieldsToRegistry();
         return res.status(HTTP_STATUS.CREATED).json({
             success: true,
             data: customField,

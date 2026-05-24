@@ -753,29 +753,91 @@ enum LectureStatus {
 }
 
 
+enum FieldCategory {
+  RAW
+  SUMMARY
+  COMPUTED
+  CUSTOM
+}
+
+enum RegistryDataType {
+  STRING
+  NUMBER
+  BOOLEAN
+  DATE
+  DATETIME
+  JSON
+  ENUM
+  RELATION_ID
+  MONEY
+  PERCENTAGE
+}
+
+enum FieldResolverType {
+  COLUMN
+  RELATION
+  AGGREGATE
+  EXPRESSION
+  CUSTOM_FIELD
+  STATIC
+}
+
+enum SourceModule {
+  STUDENT
+  ENROLLMENT
+  ATTENDANCE
+  FEE
+  PARENT
+  EXAM
+  TRANSPORT
+  ACADEMIC
+  SYSTEM
+}
+
 model FieldRegistry {
+  id                 String            @id @default(cuid())
+  fieldKey           String            @unique
+  label              String
+  description        String?
 
-  id               String   @id @default(cuid())
+  sourceModule       SourceModule
+  sourceTable        String
+  sourceColumn       String?
 
-  fieldKey         String   @unique
-  label            String
+  fieldCategory      FieldCategory     @default(RAW)
+  dataType           RegistryDataType
+  enumName           String?
 
-  sourceModule     String
-  sourceTable      String
-  sourceColumn     String?
+  resolverType       FieldResolverType @default(COLUMN)
+  resolverConfig     Json?
 
-  dataType         String
+  isFilterable       Boolean           @default(true)
+  isSortable         Boolean           @default(true)
+  isExportable       Boolean           @default(true)
+  isVisibleInPicker  Boolean           @default(true)
 
-  isCustom         Boolean  @default(false)
+  isSystemField      Boolean           @default(true)
+  isCustom           Boolean           @default(false)
+  isActive           Boolean           @default(true)
+  deprecatedAt       DateTime?
 
-  resolverType     String?
-  resolverConfig   Json?
+  branchId           String?
+  schoolId           String?
 
-  isFilterable     Boolean  @default(true)
-  isSortable       Boolean  @default(true)
+  groupKey           String?
+  displayOrder       Int               @default(0)
 
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  requiredPermission Permission?
+
+  schemaVersion      Int               @default(1)
+  seededFrom         String?
+
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+
+  @@index([sourceModule, isActive])
+  @@index([branchId, isCustom])
+  @@index([groupKey])
 }
 
 
