@@ -30,6 +30,7 @@ branchRouter.post("/create-faculty", isPermitted, createFaculty);
 branchRouter.get("/get-faculty", isPermitted, getFaculty);
 branchRouter.patch("/update-faculty", isPermitted, updateFaculty);
 branchRouter.post("/generate-lecture", isPermitted, upsertLectureFromDate);
+// branchRouter.delete("/delete-lecture", isPermitted, deleteLecture);
 branchRouter.get("/get-timetable", isPermitted, getTimeTable);
 export { branchRouter };
 //# sourceMappingURL=index.js.map

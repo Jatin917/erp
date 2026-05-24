@@ -22,6 +22,39 @@ export const getSchoolDays = async (req, res) => {
 // /* ============================================================
 //    GENERATE LECTURES
 // ============================================================ */
+/**
+ * Helper function to convert time string (HH:MM) to minutes for comparison
+ */
+function timeToMinutes(t) {
+    const parts = t.split(":");
+    if (parts.length !== 2) {
+        throw new Error(`Invalid time format: ${t}. Expected HH:MM`);
+    }
+    const h = Number(parts[0]);
+    const m = Number(parts[1]);
+    if (!Number.isInteger(h) || !Number.isInteger(m) || h < 0 || h > 23 || m < 0 || m > 59) {
+        throw new Error(`Invalid time format: ${t}. Expected HH:MM`);
+    }
+    return h * 60 + m;
+}
+/**
+ * Check if two time slots overlap
+ * @param start1 Start time of first slot (HH:MM format)
+ * @param end1 End time of first slot (HH:MM format)
+ * @param start2 Start time of second slot (HH:MM format)
+ * @param end2 End time of second slot (HH:MM format)
+ * @returns true if slots overlap, false otherwise
+ */
+function doTimeSlotsOverlap(start1, end1, start2, end2) {
+    const s1 = timeToMinutes(start1);
+    const e1 = timeToMinutes(end1);
+    const s2 = timeToMinutes(start2);
+    const e2 = timeToMinutes(end2);
+    // Disallow:
+    //  - if start2 < end1  (means new starts before previous ends)
+    //  - and start2 != end1 (we allow exactly touching boundaries)
+    return !(e1 <= s2 || e2 <= s1);
+}
 export const upsertLectureFromDate = async (req, res) => {
     try {
         const { classId, branchId, weekDay, lecture, // { subjectId, teacherId, startTime, endTime }
@@ -60,28 +93,7 @@ export const upsertLectureFromDate = async (req, res) => {
         await prisma.$transaction(async (tx) => {
             for (const day of schoolDays) {
                 const dayOfWeek = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"][new Date(day.date).getDay()];
-                console.log("dayOfWeek ", dayOfWeek, "weekDay ", weekDay);
-                if (dayOfWeek !== weekDay)
-                    continue;
-                // 🔹 3️⃣ Check for existing teacher lecture conflict
-                const conflictLecture = await tx.lecture.findFirst({
-                    where: {
-                        teacherId: lecture.teacherId,
-                        schoolDayId: day.id,
-                        startTime: lecture.startTime,
-                        endTime: lecture.endTime,
-                        status: LectureStatus.SCHEDULED,
-                        NOT: { classId }, // teacher teaching elsewhere
-                    },
-                });
-                if (conflictLecture) {
-                    await tx.lecture.update({
-                        where: { id: conflictLecture.id },
-                        data: { status: LectureStatus.CANCELLED },
-                    });
-                    cancelledCount++;
-                }
-                // 🔹 4️⃣ Upsert (update if exists in same class, else create)
+                // 🔹 3️⃣ Check for existing lecture in same class with same time (for update)
                 const existingLecture = await tx.lecture.findFirst({
                     where: {
                         classId,
@@ -90,6 +102,36 @@ export const upsertLectureFromDate = async (req, res) => {
                         endTime: lecture.endTime,
                     },
                 });
+                // 🔹 4️⃣ Check for overlapping time slot conflicts BEFORE creating/updating
+                // Check for teacher conflicts (same teacher, overlapping time, same day)
+                const teacherConflicts = await tx.lecture.findMany({
+                    where: {
+                        teacherId: lecture.teacherId,
+                        schoolDayId: day.id,
+                        status: LectureStatus.SCHEDULED,
+                        ...(existingLecture ? { NOT: { id: existingLecture.id } } : {}), // Exclude the lecture being updated
+                    },
+                });
+                // Check if any teacher conflict has overlapping time
+                const teacherTimeConflict = teacherConflicts.find((conflict) => doTimeSlotsOverlap(conflict.startTime, conflict.endTime, lecture.startTime, lecture.endTime));
+                if (teacherTimeConflict) {
+                    throw new Error(`Teacher conflict: Teacher is already scheduled for an overlapping time slot (${teacherTimeConflict.startTime} - ${teacherTimeConflict.endTime}) on ${day.date.toISOString().split('T')[0]}`);
+                }
+                // Check for class conflicts (same class, overlapping time, same day, different lecture)
+                const classConflicts = await tx.lecture.findMany({
+                    where: {
+                        classId,
+                        schoolDayId: day.id,
+                        status: LectureStatus.SCHEDULED,
+                        ...(existingLecture ? { NOT: { id: existingLecture.id } } : {}), // Exclude the lecture being updated
+                    },
+                });
+                // Check if any class conflict has overlapping time
+                const classTimeConflict = classConflicts.find((conflict) => doTimeSlotsOverlap(conflict.startTime, conflict.endTime, lecture.startTime, lecture.endTime));
+                if (classTimeConflict) {
+                    throw new Error(`Class conflict: Class already has a scheduled lecture for an overlapping time slot (${classTimeConflict.startTime} - ${classTimeConflict.endTime}) on ${day.date.toISOString().split('T')[0]}`);
+                }
+                // 🔹 5️⃣ If no conflicts, proceed with upsert
                 if (existingLecture) {
                     await tx.lecture.update({
                         where: { id: existingLecture.id },
@@ -126,6 +168,10 @@ export const upsertLectureFromDate = async (req, res) => {
         }, HTTP_STATUS.OK);
     }
     catch (err) {
+        // Check if it's a conflict error
+        if (err.message.includes('conflict') || err.message.includes('Conflict')) {
+            return sendError(res, err.message, HTTP_STATUS.CONFLICT);
+        }
         return sendError(res, err.message, HTTP_STATUS.INTERNAL_SERVER_ERROR);
     }
 };

@@ -751,3 +751,33 @@ enum LectureStatus {
   REOPENED_BY_ADMIN
   CANCELLED
 }
+
+
+model FieldRegistry {
+
+  id               String   @id @default(cuid())
+
+  fieldKey         String   @unique
+  label            String
+
+  sourceModule     String
+  sourceTable      String
+  sourceColumn     String?
+
+  dataType         String
+
+  isCustom         Boolean  @default(false)
+
+  resolverType     String?
+  resolverConfig   Json?
+
+  isFilterable     Boolean  @default(true)
+  isSortable       Boolean  @default(true)
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+
+
+

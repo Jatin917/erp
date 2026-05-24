@@ -2,10 +2,10 @@ import { schedulerQueue, teacherAttendanceQueue } from "../queues/queue.js";
 // Run at 5:00 AM every day
 export async function initDailyScheduler() {
     await schedulerQueue.add('daily-job', {}, {
-        repeat: { cron: '52 15 * * *' }, // Every day at 5:00 AM
+        repeat: { cron: '00 5 * * *' }, // Every day at 5:00 AM
         removeOnComplete: true,
         jobId: 'daily-scheduler',
     });
-    console.log(' Daily scheduler job registered (runs 2 pm every day)');
+    console.log(' Daily scheduler job registered (runs 5 am every day)');
 }
 //# sourceMappingURL=daily-job-scheduler.js.map

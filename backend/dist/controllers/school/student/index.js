@@ -151,12 +151,13 @@ function mapClassInput(input) {
 // ----------------------
 export const createStudent = async (req, res) => {
     try {
-        const { className, branchId, rollNo, dob, ...data } = req.body;
+        const { className, class: classFromFrontend, branchId, rollNo, dob, ...data } = req.body;
         const photo = req.file;
-        if (!branchId || !className) {
+        const resolvedClassName = className || classFromFrontend;
+        if (!branchId || !resolvedClassName) {
             return sendError(res, "branchId and className required", HTTP_STATUS.BAD_REQUEST);
         }
-        const classLabel = await prisma.classLabel.findFirst({ where: { branchId, name: className } });
+        const classLabel = await prisma.classLabel.findFirst({ where: { branchId, name: resolvedClassName } });
         if (!classLabel) {
             return sendError(res, "ClassName don't exist", HTTP_STATUS.CONFLICT);
         }
@@ -169,10 +170,12 @@ export const createStudent = async (req, res) => {
         }
         const student = await prisma.$transaction(async (tx) => {
             // ---------- Student User ----------
+            const studentEmail = data.studentEmail || data.email || null;
+            const studentMobile = data.studentMobile || data.mobile || data.phone || null;
             const studentUser = await findOrCreateUser({ tx, role: "STUDENT",
                 name: data.name,
-                email: data.studentEmail,
-                contact: data.studentMobile,
+                email: studentEmail,
+                contact: studentMobile,
             });
             // ---------- Father ----------
             const fatherUser = await findOrCreateUser({ tx, role: "FATHER",
@@ -228,8 +231,8 @@ export const createStudent = async (req, res) => {
                     bplCertificateUrl: data.bplCertificateUrl || null,
                     specialChild: data.specialChild ? Boolean(data.specialChild) : false,
                     allergies: data.allergies || null,
-                    studentEmail: data.studentEmail || null,
-                    studentMobile: data.studentMobile || null,
+                    studentEmail: studentEmail,
+                    studentMobile: studentMobile,
                     // ---------- Citizenship & Visa ----------
                     citizenship: data.citizenship || null,
                     visaNo: data.visaNo || null,
@@ -286,11 +289,13 @@ export const createStudent = async (req, res) => {
                     branch: true,
                 },
             });
-            const parsedCustomFields = JSON.parse(data.customFields);
+            const parsedCustomFields = typeof data.customFields === "string" && data.customFields.trim().length
+                ? JSON.parse(data.customFields)
+                : [];
             for (const field of parsedCustomFields) {
                 const customField = await getCustomFieldService({
                     name: field.name,
-                    branchId: data.branchId,
+                    branchId: branchId,
                 }, {});
                 await createCustomFieldValue({
                     customFieldId: customField.id,
@@ -340,8 +345,9 @@ export const bulkUploadStudents = async (req, res) => {
                 .status(400)
                 .json({ success: false, message: "No file uploaded" });
         }
-        const { branchId, className } = req.body;
-        if (!branchId || !className) {
+        const { branchId, className, class: classFromFrontend } = req.body;
+        const resolvedClassName = className || classFromFrontend;
+        if (!branchId || !resolvedClassName) {
             return sendError(res, "branchId and className required", HTTP_STATUS.BAD_REQUEST);
         }
         const filePath = req.file.path; // multer stores file temporarily
@@ -352,7 +358,7 @@ export const bulkUploadStudents = async (req, res) => {
         try {
             for (const row of sheetData) {
                 const { rollNo, dob, ...data } = row;
-                const classLabel = await prisma.classLabel.findFirst({ where: { branchId, name: className } });
+                const classLabel = await prisma.classLabel.findFirst({ where: { branchId, name: resolvedClassName } });
                 if (!classLabel) {
                     return sendError(res, "ClassName don't exist", HTTP_STATUS.CONFLICT);
                 }
@@ -365,10 +371,12 @@ export const bulkUploadStudents = async (req, res) => {
                 }
                 const student = await prisma.$transaction(async (tx) => {
                     // ---------- Student User ----------
+                    const studentEmail = data.studentEmail || data.email || null;
+                    const studentMobile = data.studentMobile || data.mobile || data.phone || null;
                     const studentUser = await findOrCreateUser({ tx, role: "STUDENT",
                         name: data.name,
-                        email: data.studentEmail,
-                        contact: data.studentMobile,
+                        email: studentEmail,
+                        contact: studentMobile,
                     });
                     // ---------- Father ----------
                     const fatherUser = await findOrCreateUser({ tx, roel: "FATHER",
@@ -424,8 +432,8 @@ export const bulkUploadStudents = async (req, res) => {
                             bplCertificateUrl: data.bplCertificateUrl || null,
                             specialChild: data.specialChild ? Boolean(data.specialChild) : false,
                             allergies: data.allergies || null,
-                            studentEmail: data.studentEmail || null,
-                            studentMobile: data.studentMobile || null,
+                            studentEmail: studentEmail,
+                            studentMobile: studentMobile,
                             // ---------- Citizenship & Visa ----------
                             citizenship: data.citizenship || null,
                             visaNo: data.visaNo || null,
@@ -689,7 +697,7 @@ export const getStudentDetail = async (req, res) => {
             name: student.name,
             admissionNo: student.admissionNo,
             rollNo: latestEnrollment?.rollNo || null,
-            email: student.email,
+            email: student.studentEmail,
             mobile: student.fatherMobile,
             fatherName: student.fatherName,
             dob: student.dob,
