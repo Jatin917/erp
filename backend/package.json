@@ -10,7 +10,7 @@
     "start:dev": "ts-node src/server.ts",
     "dev": "nodemon",
     "prisma:generate": "prisma generate",
-    "prisma:seed": "ts-node prisma/seed.ts",
+    "prisma:seed": "node --loader ts-node/esm prisma/seed.ts",
     "worker-daily-jobScheduler":"node dist/services/producers-notifications/worker/daily-job-scheduler.js",
     "worker-teacher-attendance":"node dist/services/producers-notifications/worker/teacher-attendance-worker.js"
   },
