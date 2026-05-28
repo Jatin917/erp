@@ -1,6 +1,6 @@
 import { HTTP_STATUS } from "../../lib/http-codes.js";
 import { sendError, sendSuccess } from "../../lib/utils.js";
-import { getActiveRegistryFields } from "../../registry/services/field-registry.service.js";
+import { fieldRegistryService } from "../../reports/services/field-registry.service.js";
 export const getReportFields = async (req, res) => {
     try {
         const sourceModule = req.query.sourceModule;
@@ -10,7 +10,8 @@ export const getReportFields = async (req, res) => {
             filters.sourceModule = sourceModule;
         if (groupKey)
             filters.groupKey = groupKey;
-        const fields = await getActiveRegistryFields(filters);
+        await fieldRegistryService.ensureLoaded();
+        const fields = fieldRegistryService.list(filters);
         return sendSuccess(res, "Report fields fetched successfully", { fields }, HTTP_STATUS.OK);
     }
     catch (error) {
