@@ -11,7 +11,10 @@ export const getReportFields = async (req, res) => {
         if (groupKey)
             filters.groupKey = groupKey;
         await fieldRegistryService.ensureLoaded();
-        const fields = fieldRegistryService.list(filters);
+        const fields = fieldRegistryService.list(filters).map(({ fieldKey, label }) => ({
+            key: fieldKey,
+            label,
+        }));
         return sendSuccess(res, "Report fields fetched successfully", { fields }, HTTP_STATUS.OK);
     }
     catch (error) {

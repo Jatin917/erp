@@ -12,5 +12,5 @@ router_v1.use("/auth", userRouter);
 router_v1.use("/student", TokenCheck, studentRouter);
 router_v1.use("/fee", feeModuleRouter);
 router_v1.use("/attendance", TokenCheck, attendanceModuleRouter);
-router_v1.use("/reports", TokenCheck, reportsRouter);
+router_v1.use("/reports", reportsRouter);
 //# sourceMappingURL=route.js.map
