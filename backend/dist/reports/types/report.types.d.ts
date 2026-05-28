@@ -1,5 +1,5 @@
 import type { FieldRegistry, SourceModule } from "../../../generated/prisma/index.js";
-export type ReportFormat = "json";
+export type ReportFormat = "json" | "csv";
 export type ReportFilters = Record<string, string | number | boolean>;
 export interface ReportRunRequest {
     fields: string[];
@@ -8,15 +8,19 @@ export interface ReportRunRequest {
     branchId: string;
     sessionId?: string;
 }
+export interface ReportRunMeta {
+    rowCount: number;
+    fields: string[];
+    branchId: string;
+    sessionId: string;
+}
 export interface ReportRunResponse {
     format: ReportFormat;
-    meta: {
-        rowCount: number;
-        fields: string[];
-        branchId: string;
-        sessionId: string;
-    };
-    rows: ReportRow[];
+    meta: ReportRunMeta;
+    /** Populated for JSON (and as source data for other formatters). */
+    rows?: ReportRow[];
+    /** Populated for CSV and future file-oriented formatters. */
+    content?: string;
 }
 export type ReportRow = Record<string, unknown>;
 export interface ReportExecutionContext {

@@ -1,0 +1,1 @@
+{"version":3,"file":"json.formatter.js","sourceRoot":"","sources":["../../../src/reports/formatters/json.formatter.ts"],"names":[],"mappings":"AACA,OAAO,EAAE,eAAe,EAAE,MAAM,gCAAgC,CAAC;AAEjE,MAAM,OAAO,aAAc,SAAQ,eAAe;IACvC,MAAM,GAAG,MAAe,CAAC;IAElC,YAAY,CAAC,IAAiB,EAAE,IAAmB;QACjD,OAAO;YACL,MAAM,EAAE,IAAI,CAAC,MAAM;YACnB,IAAI;YACJ,IAAI;SACL,CAAC;IACJ,CAAC;CACF"}
