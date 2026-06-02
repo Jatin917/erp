@@ -1,5 +1,6 @@
 import { HTTP_STATUS } from "../../lib/http-codes.js";
 import { sendError, sendSuccess } from "../../lib/utils.js";
+import { reportDownload } from "../../reports/download/index.js";
 import { reportEngine } from "../../reports/engine/report-engine.js";
 export const runReport = async (req, res) => {
     try {
@@ -41,6 +42,12 @@ export const runReport = async (req, res) => {
         if (pageNo !== undefined)
             request.pageNo = pageNo;
         const result = await reportEngine.run(request);
+        const wantsFileDownload = result.format !== "json" ||
+            body.download === true ||
+            String(body.download) === "true";
+        if (wantsFileDownload) {
+            return reportDownload.send(res, result, { fileName: body.fileName ?? "" });
+        }
         return sendSuccess(res, "Report generated successfully", result, HTTP_STATUS.OK);
     }
     catch (error) {
