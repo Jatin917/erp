@@ -7,12 +7,17 @@ export interface ReportRunRequest {
     format?: ReportFormat;
     branchId: string;
     sessionId?: string;
+    /** Page size (also accepted as `LIMIT` in the request body). */
+    limit?: number;
+    pageNo?: number;
 }
 export interface ReportRunMeta {
     rowCount: number;
     fields: string[];
     branchId: string;
     sessionId: string;
+    limit?: number;
+    pageNo?: number;
 }
 export interface ReportRunResponse {
     format: ReportFormat;
@@ -30,6 +35,10 @@ export interface ReportExecutionContext {
     enrollmentIds: string[];
     registryByKey: Map<string, FieldRegistry>;
 }
+export type ReportScopeContext = Omit<ReportExecutionContext, "enrollmentIds"> & {
+    limit?: number;
+    pageNo?: number;
+};
 export type ProviderKey = "student" | "attendance" | "fees" | "custom";
 export type ProviderGroupedFields = Partial<Record<ProviderKey, string[]>>;
 /** enrollmentId -> fieldKey -> value */

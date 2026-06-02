@@ -25,6 +25,8 @@ export class ReportEngine {
             sessionId,
             filters,
             registryByKey,
+            ...(request.limit != null && { limit: request.limit }),
+            ...(request.pageNo != null && { pageNo: request.pageNo }),
         }, studentFields);
         const context = {
             branchId: request.branchId,
@@ -57,6 +59,8 @@ export class ReportEngine {
             fields: fieldKeys,
             branchId: request.branchId,
             sessionId,
+            ...(request.limit != null && { limit: request.limit }),
+            ...(request.pageNo != null && { pageNo: request.pageNo }),
         });
         return response;
     }

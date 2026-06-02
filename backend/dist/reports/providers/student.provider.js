@@ -10,9 +10,17 @@ const ENROLLMENT_INCLUDE = {
 export class StudentProvider {
     key = "student";
     async resolveScope(context, fields) {
+        const where = buildEnrollmentWhere(context.branchId, context.sessionId, context.filters);
+        const orderBy = [{ rollNo: "asc" }, { createdAt: "asc" }];
         const enrollments = await prisma.enrollment.findMany({
-            where: buildEnrollmentWhere(context.branchId, context.sessionId, context.filters),
+            where,
             include: ENROLLMENT_INCLUDE,
+            orderBy,
+            ...(context.limit != null &&
+                context.pageNo != null && {
+                skip: (context.pageNo - 1) * context.limit,
+                take: context.limit,
+            }),
         });
         const enrollmentIds = enrollments.map((e) => e.id);
         const rows = {};

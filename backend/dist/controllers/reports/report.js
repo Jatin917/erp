@@ -13,6 +13,21 @@ export const runReport = async (req, res) => {
         if (!Array.isArray(body.fields) || body.fields.length === 0) {
             return sendError(res, "fields array is required", HTTP_STATUS.BAD_REQUEST);
         }
+        const rawLimit = body.limit ?? body.LIMIT;
+        const limit = rawLimit !== undefined && rawLimit !== null ? Number(rawLimit) : undefined;
+        const pageNo = body.pageNo !== undefined && body.pageNo !== null
+            ? Number(body.pageNo)
+            : undefined;
+        if (limit !== undefined || pageNo !== undefined) {
+            if (limit === undefined ||
+                pageNo === undefined ||
+                !Number.isFinite(limit) ||
+                !Number.isFinite(pageNo) ||
+                limit < 1 ||
+                pageNo < 1) {
+                return sendError(res, "limit (or LIMIT) and pageNo must be positive numbers when paginating", HTTP_STATUS.BAD_REQUEST);
+            }
+        }
         const request = {
             fields: body.fields,
             filters: body.filters ?? {},
@@ -21,6 +36,10 @@ export const runReport = async (req, res) => {
         };
         if (body.sessionId)
             request.sessionId = body.sessionId;
+        if (limit !== undefined)
+            request.limit = limit;
+        if (pageNo !== undefined)
+            request.pageNo = pageNo;
         const result = await reportEngine.run(request);
         return sendSuccess(res, "Report generated successfully", result, HTTP_STATUS.OK);
     }

@@ -1,9 +1,9 @@
 import { type FieldRegistry } from "../../../generated/prisma/index.js";
-import type { ReportExecutionContext, ProviderFetchResult } from "../types/report.types.js";
+import type { ProviderFetchResult, ReportExecutionContext, ReportScopeContext } from "../types/report.types.js";
 import type { ReportProviderWithScope, ScopeResolution } from "../types/provider.types.js";
 export declare class StudentProvider implements ReportProviderWithScope {
     readonly key: "student";
-    resolveScope(context: Omit<ReportExecutionContext, "enrollmentIds">, fields: FieldRegistry[]): Promise<ScopeResolution>;
+    resolveScope(context: ReportScopeContext, fields: FieldRegistry[]): Promise<ScopeResolution>;
     fetch(context: ReportExecutionContext, fields: FieldRegistry[]): Promise<ProviderFetchResult>;
     private resolveFieldValue;
 }
