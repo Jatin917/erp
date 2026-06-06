@@ -10,12 +10,22 @@ export class Download {
     hasFormat(format) {
         return this.formats.has(format.toLowerCase());
     }
-    send(res, report, options) {
+    toPayload(report, options) {
         const config = this.getFormatConfig(report.format);
         const body = config.serialize(report);
-        const fileName = this.buildFileName(report.format, options?.fileName, config.extension);
-        res.setHeader("Content-Type", config.mimeType);
-        res.setHeader("Content-Disposition", "attachment; filename=\"" + fileName + "\"");
+        const buffer = Buffer.isBuffer(body) ? body : Buffer.from(body, "utf-8");
+        return {
+            fileName: this.buildFileName(report.format, options?.fileName, config.extension),
+            mimeType: config.mimeType,
+            fileContent: buffer.toString("base64"),
+        };
+    }
+    /** Direct file attachment (e.g. browser navigation); not for axios/fetch. */
+    send(res, report, options) {
+        const payload = this.toPayload(report, options);
+        const body = Buffer.from(payload.fileContent, "base64");
+        res.setHeader("Content-Type", payload.mimeType);
+        res.setHeader("Content-Disposition", 'attachment; filename="' + payload.fileName + '"');
         return res.status(200).send(body);
     }
     registerBuiltInFormats() {

@@ -46,7 +46,12 @@ export const runReport = async (req, res) => {
             body.download === true ||
             String(body.download) === "true";
         if (wantsFileDownload) {
-            return reportDownload.send(res, result, { fileName: body.fileName ?? "" });
+            const downloadOptions = body.fileName ? { fileName: body.fileName } : undefined;
+            if (body.downloadRaw === true || String(body.downloadRaw) === "true") {
+                return reportDownload.send(res, result, downloadOptions);
+            }
+            const file = reportDownload.toPayload(result, downloadOptions);
+            return sendSuccess(res, "Report downloaded successfully", file, HTTP_STATUS.OK);
         }
         return sendSuccess(res, "Report generated successfully", result, HTTP_STATUS.OK);
     }

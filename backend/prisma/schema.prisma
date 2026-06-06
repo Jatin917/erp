@@ -784,6 +784,7 @@ enum FieldResolverType {
 
 enum SourceModule {
   STUDENT
+  CLASS
   ENROLLMENT
   ATTENDANCE
   FEE

@@ -10,8 +10,10 @@ export interface ReportRunRequest {
     /** Page size (also accepted as `LIMIT` in the request body). */
     limit?: number;
     pageNo?: number;
-    /** When true, JSON reports are sent as a file attachment instead of API JSON. */
+    /** When true, response includes a downloadable file payload (base64). */
     download?: boolean;
+    /** When true, sends a raw file attachment instead of base64 JSON. */
+    downloadRaw?: boolean;
     /** Optional base name for downloaded files (extension is added automatically). */
     fileName?: string;
 }

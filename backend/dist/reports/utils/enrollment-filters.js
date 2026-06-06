@@ -15,7 +15,7 @@ export const buildEnrollmentWhere = (branchId, sessionId, filters) => {
         }
         if (section) {
             where.class.section = {
-                name: String(section),
+                id: String(section),
             };
         }
     }
