@@ -30,6 +30,7 @@ model User {
   markedTeacherAttendance SchoolFacultyAttendance?
   studentProfile          Student?
   schoolFaculty           SchoolFaculty?
+  documentTemplates       DocumentTemplate[]
 }
 
 model School {
@@ -503,6 +504,69 @@ model AttendanceAuditLog {
   performedBy   User     @relation(fields: [performedById], references: [id])
 }
 
+enum DocumentTemplateType {
+  ID_CARD
+  TRANSFER_CERTIFICATE
+  REPORT
+  CUSTOM
+}
+
+enum TemplateStatus {
+  DRAFT
+  CONFIGURED
+  ACTIVE
+  ARCHIVED
+}
+
+enum FieldAlignment {
+  LEFT
+  CENTER
+  RIGHT
+}
+
+model DocumentTemplate {
+  id          String               @id @default(cuid())
+  name        String
+  description String?
+  pdfUrl      String
+  type        DocumentTemplateType @default(CUSTOM)
+  status      TemplateStatus       @default(DRAFT)
+  branchId    String?
+  createdById String?
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+
+  createdBy   User?                @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  mappings    TemplateFieldMapping[]
+
+  @@index([branchId, status])
+  @@index([type])
+  @@index([createdById])
+}
+
+model TemplateFieldMapping {
+  id            String           @id @default(cuid())
+  templateId    String
+  systemFieldId String
+  pageNumber    Int              @default(1)
+  xCoordinate   Float
+  yCoordinate   Float
+  width         Float?
+  height        Float?
+  fontSize      Float?
+  alignment     FieldAlignment   @default(LEFT)
+  isRequired    Boolean          @default(false)
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  template      DocumentTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  systemField   FieldRegistry    @relation(fields: [systemFieldId], references: [id], onDelete: Restrict)
+
+  @@unique([templateId, systemFieldId])
+  @@index([templateId])
+  @@index([systemFieldId])
+}
+
 enum Role {
   SUPERADMIN
   DIRECTOR
@@ -835,6 +899,8 @@ model FieldRegistry {
 
   createdAt          DateTime          @default(now())
   updatedAt          DateTime          @updatedAt
+
+  templateFieldMappings TemplateFieldMapping[]
 
   @@index([sourceModule, isActive])
   @@index([branchId, isCustom])
