@@ -1,0 +1,9 @@
+export declare const createTemplate: (req: any, res: any) => Promise<import("express").Response<any, Record<string, any>>>;
+export declare const listTemplates: (req: any, res: any) => Promise<import("express").Response<any, Record<string, any>>>;
+export declare const getTemplate: (req: any, res: any) => Promise<import("express").Response<any, Record<string, any>>>;
+export declare const updateTemplate: (req: any, res: any) => Promise<import("express").Response<any, Record<string, any>>>;
+export declare const deleteTemplate: (req: any, res: any) => Promise<import("express").Response<any, Record<string, any>>>;
+export declare const activateTemplate: (req: any, res: any) => Promise<import("express").Response<any, Record<string, any>>>;
+export declare const archiveTemplate: (req: any, res: any) => Promise<import("express").Response<any, Record<string, any>>>;
+export declare const validateTemplate: (req: any, res: any) => Promise<import("express").Response<any, Record<string, any>>>;
+//# sourceMappingURL=template.d.ts.map

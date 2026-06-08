@@ -93,6 +93,28 @@ export declare const getUserService: (where: any, include?: any) => Promise<({
         receiptNo: string;
         referenceId: string | null;
         returnedAmt: number;
+    })[] | ({
+        type: import("../../../generated/prisma/index.js").$Enums.DocumentTemplateType;
+        name: string;
+        id: string;
+        description: string | null;
+        status: import("../../../generated/prisma/index.js").$Enums.TemplateStatus;
+        createdAt: Date;
+        branchId: string | null;
+        createdById: string | null;
+        pdfUrl: string;
+        updatedAt: Date;
+    } | {
+        type: import("../../../generated/prisma/index.js").$Enums.DocumentTemplateType;
+        name: string;
+        id: string;
+        description: string | null;
+        status: import("../../../generated/prisma/index.js").$Enums.TemplateStatus;
+        createdAt: Date;
+        branchId: string | null;
+        createdById: string | null;
+        pdfUrl: string;
+        updatedAt: Date;
     })[] | {
         name: string;
         id: string;
@@ -118,6 +140,17 @@ export declare const getUserService: (where: any, include?: any) => Promise<({
         receiptNo: string;
         referenceId: string | null;
         returnedAmt: number;
+    }[] | {
+        type: import("../../../generated/prisma/index.js").$Enums.DocumentTemplateType;
+        name: string;
+        id: string;
+        description: string | null;
+        status: import("../../../generated/prisma/index.js").$Enums.TemplateStatus;
+        createdAt: Date;
+        branchId: string | null;
+        createdById: string | null;
+        pdfUrl: string;
+        updatedAt: Date;
     }[];
     [x: number]: never;
     [x: symbol]: never;
