@@ -537,17 +537,26 @@ model DocumentTemplate {
   updatedAt   DateTime             @updatedAt
 
   createdBy   User?                @relation(fields: [createdById], references: [id], onDelete: SetNull)
-  mappings    TemplateFieldMapping[]
+  mappings    reportTemplateFieldMapping[]
 
   @@index([branchId, status])
   @@index([type])
   @@index([createdById])
 }
 
-model TemplateFieldMapping {
+model reportTemplateFieldMapping {
   id            String           @id @default(cuid())
   templateId    String
   systemFieldId String
+
+  /// The placeholder key in the PDF template (e.g. "{{student_name}}", "student_name").
+  /// This is the token the Report Engine will search for and replace in the PDF.
+  fieldKey      String
+
+  /// The human-readable label printed alongside the value in the generated document
+  /// (e.g. "Student Name:", "Roll No:"). Optional — some designs show value-only fields.
+  fieldLabel    String?
+
   pageNumber    Int              @default(1)
   xCoordinate   Float
   yCoordinate   Float
@@ -562,6 +571,9 @@ model TemplateFieldMapping {
   template      DocumentTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
   systemField   FieldRegistry    @relation(fields: [systemFieldId], references: [id], onDelete: Restrict)
 
+  /// Each placeholder key must be unique within a template
+  @@unique([templateId, fieldKey])
+  /// Each system field can only be mapped once per template
   @@unique([templateId, systemFieldId])
   @@index([templateId])
   @@index([systemFieldId])
@@ -900,7 +912,7 @@ model FieldRegistry {
   createdAt          DateTime          @default(now())
   updatedAt          DateTime          @updatedAt
 
-  templateFieldMappings TemplateFieldMapping[]
+  reportTemplateFieldMappings reportTemplateFieldMapping[]
 
   @@index([sourceModule, isActive])
   @@index([branchId, isCustom])
