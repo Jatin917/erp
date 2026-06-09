@@ -1,5 +1,4 @@
 import type { TemplateStatus } from "../../../generated/prisma/index.js";
-import type { Template } from "../abstracts/template.abstract.js";
 import type { RegisterTemplateInput, TemplateFieldMappingInput, TemplateRecord, TemplateValidationResult, UpdateTemplateFieldMappingInput } from "../types/template.types.js";
 export declare class TemplateValidationService {
     validateRegistration(input: RegisterTemplateInput): void;
@@ -9,7 +8,6 @@ export declare class TemplateValidationService {
     validateTemplateRecord(template: TemplateRecord, options?: {
         requireMappings?: boolean;
     }): Promise<TemplateValidationResult>;
-    validateTemplateInstance(template: Template): Promise<TemplateValidationResult>;
     assertMutableStatus(status: TemplateStatus): void;
 }
 export declare const templateValidationService: TemplateValidationService;

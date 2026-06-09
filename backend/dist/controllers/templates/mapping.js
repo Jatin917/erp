@@ -21,14 +21,17 @@ export const listMappings = async (req, res) => {
 export const addMapping = async (req, res) => {
     try {
         const body = req.body;
-        if (!body.systemFieldId || body.xCoordinate == null || body.yCoordinate == null) {
-            return sendError(res, "systemFieldId, xCoordinate and yCoordinate are required", HTTP_STATUS.BAD_REQUEST);
+        if (!body.systemFieldId || !body.fieldKey || body.xCoordinate == null || body.yCoordinate == null) {
+            return sendError(res, "systemFieldId, fieldKey, xCoordinate and yCoordinate are required", HTTP_STATUS.BAD_REQUEST);
         }
         const input = {
             systemFieldId: body.systemFieldId,
+            fieldKey: body.fieldKey,
             xCoordinate: Number(body.xCoordinate),
             yCoordinate: Number(body.yCoordinate),
         };
+        if (body.fieldLabel != null)
+            input.fieldLabel = body.fieldLabel;
         if (body.pageNumber != null)
             input.pageNumber = Number(body.pageNumber);
         if (body.width != null)

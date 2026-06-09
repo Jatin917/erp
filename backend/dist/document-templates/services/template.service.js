@@ -7,6 +7,8 @@ const toMapping = (row) => ({
     id: row.id,
     templateId: row.templateId,
     systemFieldId: row.systemFieldId,
+    fieldKey: row.fieldKey,
+    fieldLabel: row.fieldLabel,
     pageNumber: row.pageNumber,
     xCoordinate: row.xCoordinate,
     yCoordinate: row.yCoordinate,

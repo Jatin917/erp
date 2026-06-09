@@ -1,4 +1,4 @@
-import type { TemplateFieldMappingInput, TemplateFieldMappingRecord, TemplateRecord } from "../types/template.types.js";
+import type { RegisterTemplateInput, TemplateFieldMappingInput, TemplateFieldMappingRecord, TemplateRecord } from "../types/template.types.js";
 export declare abstract class Template {
     id: string;
     name: string;
@@ -18,4 +18,5 @@ export declare abstract class Template {
     abstract validateTemplate(): Promise<boolean>;
     toRecord(): TemplateRecord;
 }
+export type { RegisterTemplateInput };
 //# sourceMappingURL=template.abstract.d.ts.map

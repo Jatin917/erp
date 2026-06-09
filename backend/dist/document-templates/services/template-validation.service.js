@@ -27,9 +27,10 @@ export class TemplateValidationService {
             throw new Error(errors.join("; "));
     }
     validateMappingInput(mapping) {
-        if (!mapping.systemFieldId?.trim()) {
+        if (!mapping.systemFieldId?.trim())
             throw new Error("systemFieldId is required");
-        }
+        if (!mapping.fieldKey?.trim())
+            throw new Error("fieldKey is required");
         this.validateCoordinates(mapping.pageNumber ?? 1, mapping.xCoordinate, mapping.yCoordinate, mapping.width, mapping.height);
     }
     validateMappingUpdate(input) {
@@ -49,19 +50,22 @@ export class TemplateValidationService {
         if (requireMappings && template.mappings.length === 0) {
             errors.push("Active templates must have at least one mapping");
         }
-        const seenFields = new Set();
+        const seenSystemFields = new Set();
+        const seenFieldKeys = new Set();
         for (const mapping of template.mappings) {
-            if (seenFields.has(mapping.systemFieldId)) {
-                errors.push("Duplicate mapping for system field: " + mapping.systemFieldId);
+            if (seenSystemFields.has(mapping.systemFieldId)) {
+                errors.push("Duplicate system field mapping: " + mapping.systemFieldId);
             }
-            seenFields.add(mapping.systemFieldId);
+            seenSystemFields.add(mapping.systemFieldId);
+            if (seenFieldKeys.has(mapping.fieldKey)) {
+                errors.push("Duplicate fieldKey in template: " + mapping.fieldKey);
+            }
+            seenFieldKeys.add(mapping.fieldKey);
+            if (!mapping.fieldKey?.trim()) {
+                errors.push("Each mapping must have a fieldKey");
+            }
             try {
                 this.validateCoordinates(mapping.pageNumber, mapping.xCoordinate, mapping.yCoordinate, mapping.width, mapping.height);
-            }
-            catch (error) {
-                errors.push(error.message);
-            }
-            try {
                 await systemFieldRegistryService.validateFieldExists(mapping.systemFieldId);
             }
             catch (error) {
@@ -69,9 +73,6 @@ export class TemplateValidationService {
             }
         }
         return { valid: errors.length === 0, errors };
-    }
-    async validateTemplateInstance(template) {
-        return this.validateTemplateRecord(template.toRecord());
     }
     assertMutableStatus(status) {
         if (status === "ARCHIVED") {

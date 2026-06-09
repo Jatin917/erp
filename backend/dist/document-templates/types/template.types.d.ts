@@ -3,6 +3,11 @@ export interface TemplateFieldMappingRecord {
     id: string;
     templateId: string;
     systemFieldId: string;
+    /** Placeholder/token in the PDF (e.g. "student_name" or "{{student_name}}").
+     *  The Report Engine replaces this token with the actual value. */
+    fieldKey: string;
+    /** Optional label printed beside the value in the document (e.g. "Student Name:") */
+    fieldLabel: string | null;
     pageNumber: number;
     xCoordinate: number;
     yCoordinate: number;
@@ -43,7 +48,12 @@ export interface UpdateTemplateInput {
     branchId?: string;
 }
 export interface TemplateFieldMappingInput {
+    /** FieldRegistry.id — which ERP field to pull data from */
     systemFieldId: string;
+    /** The placeholder in the PDF template the engine will replace */
+    fieldKey: string;
+    /** Optional label to render next to the value in the document */
+    fieldLabel?: string;
     pageNumber?: number;
     xCoordinate: number;
     yCoordinate: number;
@@ -55,6 +65,8 @@ export interface TemplateFieldMappingInput {
 }
 export interface UpdateTemplateFieldMappingInput {
     systemFieldId?: string;
+    fieldKey?: string;
+    fieldLabel?: string;
     pageNumber?: number;
     xCoordinate?: number;
     yCoordinate?: number;
