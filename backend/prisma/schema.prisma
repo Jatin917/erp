@@ -198,6 +198,8 @@ model ClassLabel {
   classes      Class[]
   branch       Branch        @relation(fields: [branchId], references: [id])
   feeTemplates FeeTemplate[]
+
+  @@unique([branchId, name])
 }
 
 model Section {
