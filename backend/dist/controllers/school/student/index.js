@@ -95,6 +95,26 @@ function normalizeSession(session) {
     // If end is only 4 digits but not complete, we assume full
     return `${start}-${end}`;
 }
+function formatDateInput(value) {
+    if (!value)
+        return "";
+    const date = value instanceof Date ? value : new Date(value);
+    if (Number.isNaN(date.getTime()))
+        return "";
+    return date.toISOString().slice(0, 10);
+}
+function parseOptionalDate(value) {
+    if (!value)
+        return null;
+    const date = new Date(String(value));
+    return Number.isNaN(date.getTime()) ? null : date;
+}
+function toNullableString(value) {
+    if (value === undefined || value === null)
+        return null;
+    const trimmed = String(value).trim();
+    return trimmed.length ? trimmed : null;
+}
 function mapClassInput(input) {
     if (!input)
         return null;
@@ -518,45 +538,43 @@ export const bulkUploadStudents = async (req, res) => {
 };
 export const fetchStudents = async (req, res) => {
     try {
-        let { studentId, class: className, section, session, name, admissionNo, rollNo, fatherName, mobile, page, task, ...filters } = req.query;
-        if (studentId)
-            filters.id = studentId;
+        const { studentId, class: className, section, session, name, admissionNo, rollNo, fatherName, mobile, gender, category, page, task, branchId, } = req.query;
+        const containsInsensitive = (value) => ({
+            contains: String(value),
+            mode: "insensitive",
+        });
         // 🔹 Pagination
         const pageNumber = page ? parseInt(page, 10) : 1;
         const pageSize = parseInt(LIMIT, 10) || 10;
-        // 🔹 Base student filters
+        // 🔹 Base student filters (substring match on typed keywords)
         const whereClause = {
-            ...Object.fromEntries(Object.entries(filters).map(([key, value]) => [key, String(value)])),
-            ...(name && { name: { startsWith: name, mode: "insensitive" } }),
-            ...(admissionNo && {
-                admissionNo: { startsWith: admissionNo, mode: "insensitive" },
-            }),
-            ...(fatherName && {
-                fatherName: { startsWith: fatherName, mode: "insensitive" },
-            }),
-            ...(mobile && {
-                fatherMobile: { startsWith: mobile, mode: "insensitive" },
-            }),
+            ...(branchId && { branchId: String(branchId) }),
+            ...(studentId && { id: String(studentId) }),
+            ...(name && { name: containsInsensitive(name) }),
+            ...(admissionNo && { admissionNo: containsInsensitive(admissionNo) }),
+            ...(fatherName && { fatherName: containsInsensitive(fatherName) }),
+            ...(mobile && { fatherMobile: containsInsensitive(mobile) }),
+            ...(gender && { gender: containsInsensitive(gender) }),
+            ...(category && { scStObc: containsInsensitive(category) }),
         };
         // 🔹 Enrollment filters
         const enrollmentWhere = {};
         if (session) {
-            enrollmentWhere.session = { name: session }; // ✅ ensure relation exists
+            enrollmentWhere.session = { name: session };
         }
         if (className || section) {
             enrollmentWhere.class = {};
             if (className) {
-                enrollmentWhere.class.classLabel = { name: className };
+                enrollmentWhere.class.classLabel = {
+                    name: containsInsensitive(className),
+                };
             }
             if (section) {
                 enrollmentWhere.class.section = { id: section };
             }
         }
         if (rollNo) {
-            enrollmentWhere.rollNo = {
-                startsWith: rollNo,
-                mode: "insensitive",
-            };
+            enrollmentWhere.rollNo = containsInsensitive(rollNo);
         }
         // 🔹 Fetch students
         let studentsRaw;
@@ -625,7 +643,9 @@ export const fetchStudents = async (req, res) => {
                 fatherName: student.fatherName,
                 dob: student.dob,
                 gender: student.gender,
+                category: student.scStObc,
                 barcodeUrl: student.barcodeUrl,
+                photoUrl: student.photoUrl,
             };
         });
         // 🔹 Count
@@ -671,14 +691,16 @@ export const getStudentDetail = async (req, res) => {
             include: {
                 enrollments: {
                     orderBy: { createdAt: "desc" },
+                    take: 1,
                     include: {
                         class: {
                             include: {
-                                section: { select: { name: true } },
+                                section: { select: { id: true, name: true } },
+                                classLabel: { select: { id: true, name: true } },
                                 branch: { select: { id: true, name: true } },
                             },
                         },
-                        session: true,
+                        session: { select: { id: true, name: true } },
                     },
                 },
             },
@@ -689,31 +711,97 @@ export const getStudentDetail = async (req, res) => {
                 message: "Student not found",
             });
         }
-        // latest enrollment
         const latestEnrollment = student.enrollments[0];
-        console.log("student details ", latestEnrollment);
+        const classLabelName = latestEnrollment?.class?.classLabel?.name ?? null;
+        const sectionId = latestEnrollment?.class?.sectionId ??
+            latestEnrollment?.class?.section?.id ??
+            null;
+        const sectionName = latestEnrollment?.class?.section?.name ?? null;
+        const customFieldValues = await prisma.customFieldValue.findMany({
+            where: {
+                entityType: ENTITES.STUDENT,
+                entityId: student.id,
+            },
+            include: {
+                customField: { select: { id: true, name: true } },
+            },
+        });
         const result = {
             id: student.id,
+            branchId: student.branchId,
             name: student.name,
             admissionNo: student.admissionNo,
-            rollNo: latestEnrollment?.rollNo || null,
+            rollNo: latestEnrollment?.rollNo ?? null,
+            className: classLabelName,
+            classLabel: classLabelName,
+            sectionId,
+            section: sectionName,
+            session: latestEnrollment?.session?.name ?? null,
+            branch: latestEnrollment?.class?.branch ?? null,
+            studentEmail: student.studentEmail,
+            studentMobile: student.studentMobile,
             email: student.studentEmail,
-            mobile: student.fatherMobile,
-            fatherName: student.fatherName,
-            dob: student.dob,
+            mobile: student.studentMobile ?? student.fatherMobile,
             gender: student.gender,
-            category: student.category,
-            barcodeUrl: student.barcodeUrl,
-            // Class & section
-            classLabel: latestEnrollment?.class?.name || null,
-            section: latestEnrollment?.class?.section?.name || null,
-            branch: latestEnrollment?.class?.branch || null,
-            session: latestEnrollment?.session?.name || null,
-            // Fees summary
-            totalFeesPaid: student.currentYearTotalPaid + student.lastYearTotalPaid,
-            totalPayable: student.currentYearTotal + student.lastYearTotal,
+            dob: formatDateInput(student.dob),
+            category: student.scStObc,
+            scStObc: student.scStObc,
             photoUrl: student.photoUrl,
-            totalBalanceRemaining: student.currentYearTotalBalance + student.lastYearTotalBalance,
+            barcodeUrl: student.barcodeUrl,
+            fatherName: student.fatherName,
+            aadhaar: student.aadhaar,
+            birthCertificateUrl: student.birthCertificateUrl,
+            abcId: student.abcId,
+            sssmId: student.sssmId,
+            familySssmId: student.familySssmId,
+            minority: student.minority,
+            bpl: student.bpl,
+            scStObcCertificateUrl: student.scStObcCertificateUrl,
+            bplCertificateUrl: student.bplCertificateUrl,
+            specialChild: student.specialChild ?? false,
+            allergies: student.allergies,
+            citizenship: student.citizenship,
+            visaNo: student.visaNo,
+            visaType: student.visaType,
+            visaValidity: formatDateInput(student.visaValidity),
+            previousSchoolName: student.previousSchoolName,
+            previousClassPassed: student.previousClassPassed,
+            previousClassMarks: student.previousClassMarks,
+            previousClassYear: student.previousClassYear,
+            previousBoard: student.previousBoard,
+            migrationCertificateUrl: student.migrationCertificateUrl,
+            tcNo: student.tcNo,
+            permanentAddress: student.permanentAddress,
+            temporaryAddress: student.temporaryAddress,
+            fatherOccupation: student.fatherOccupation,
+            fatherEmail: student.fatherEmail,
+            fatherMobile: student.fatherMobile,
+            fatherAadhaar: student.fatherAadhaar,
+            fatherIdUrl: student.fatherIdUrl,
+            fatherPan: student.fatherPan,
+            fatherPassport: student.fatherPassport,
+            fatherCitizenship: student.fatherCitizenship,
+            fatherVisaNo: student.fatherVisaNo,
+            fatherVisaType: student.fatherVisaType,
+            fatherVisaValidity: formatDateInput(student.fatherVisaValidity),
+            motherName: student.motherName,
+            motherOccupation: student.motherOccupation,
+            motherEmail: student.motherEmail,
+            motherMobile: student.motherMobile,
+            motherAadhaar: student.motherAadhaar,
+            motherIdUrl: student.motherIdUrl,
+            motherPan: student.motherPan,
+            motherPassport: student.motherPassport,
+            motherCitizenship: student.motherCitizenship,
+            motherVisaNo: student.motherVisaNo,
+            motherVisaType: student.motherVisaType,
+            motherVisaValidity: formatDateInput(student.motherVisaValidity),
+            resultStatus: student.resultStatus,
+            customFields: customFieldValues.map((entry) => ({
+                id: entry.customField.id,
+                name: entry.customField.name,
+                value: entry.value,
+            })),
         };
         return res.status(HTTP_STATUS.OK).json({
             success: true,
@@ -726,6 +814,207 @@ export const getStudentDetail = async (req, res) => {
             success: false,
             message: "Failed to fetch student details",
         });
+    }
+};
+export const updateStudent = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { className, class: classFromFrontend, branchId, rollNo, dob, ...data } = req.body;
+        const photo = req.file;
+        const resolvedClassName = className || classFromFrontend;
+        if (!id) {
+            return sendError(res, "Student ID is required", HTTP_STATUS.BAD_REQUEST);
+        }
+        if (!branchId || !resolvedClassName) {
+            return sendError(res, "branchId and className required", HTTP_STATUS.BAD_REQUEST);
+        }
+        if (!data.name) {
+            return sendError(res, "Student name is required", HTTP_STATUS.BAD_REQUEST);
+        }
+        if (!data.sectionId) {
+            return sendError(res, "Section is required", HTTP_STATUS.BAD_REQUEST);
+        }
+        if (!data.fatherName || !data.fatherMobile) {
+            return sendError(res, "Father details required", HTTP_STATUS.BAD_REQUEST);
+        }
+        if (!data.motherName || !data.motherMobile) {
+            return sendError(res, "Mother details required", HTTP_STATUS.BAD_REQUEST);
+        }
+        const existing = await prisma.student.findUnique({
+            where: { id },
+            include: {
+                branch: true,
+                enrollments: {
+                    orderBy: { createdAt: "desc" },
+                    take: 1,
+                },
+            },
+        });
+        if (!existing) {
+            return sendError(res, "Student not found", HTTP_STATUS.NOT_FOUND);
+        }
+        const classLabel = await prisma.classLabel.findFirst({
+            where: { branchId, name: resolvedClassName },
+        });
+        if (!classLabel) {
+            return sendError(res, "ClassName don't exist", HTTP_STATUS.CONFLICT);
+        }
+        const studentEmail = data.studentEmail || data.email || null;
+        const studentMobile = data.studentMobile || data.mobile || data.phone || null;
+        const student = await prisma.$transaction(async (tx) => {
+            const updatedStudent = await tx.student.update({
+                where: { id },
+                data: {
+                    name: String(data.name),
+                    admissionNo: toNullableString(data.admissionNo),
+                    gender: toNullableString(data.gender),
+                    dob: parseOptionalDate(dob),
+                    aadhaar: toNullableString(data.aadhaar),
+                    birthCertificateUrl: toNullableString(data.birthCertificateUrl),
+                    abcId: toNullableString(data.abcId),
+                    sssmId: toNullableString(data.sssmId),
+                    familySssmId: toNullableString(data.familySssmId),
+                    minority: toNullableString(data.minority),
+                    scStObc: toNullableString(data.scStObc),
+                    bpl: toNullableString(data.bpl),
+                    scStObcCertificateUrl: toNullableString(data.scStObcCertificateUrl),
+                    bplCertificateUrl: toNullableString(data.bplCertificateUrl),
+                    specialChild: data.specialChild === undefined
+                        ? undefined
+                        : data.specialChild === true ||
+                            data.specialChild === "true",
+                    allergies: toNullableString(data.allergies),
+                    studentEmail: toNullableString(studentEmail),
+                    studentMobile: toNullableString(studentMobile),
+                    citizenship: toNullableString(data.citizenship),
+                    visaNo: toNullableString(data.visaNo),
+                    visaType: toNullableString(data.visaType),
+                    visaValidity: parseOptionalDate(data.visaValidity),
+                    fatherName: toNullableString(data.fatherName),
+                    fatherOccupation: toNullableString(data.fatherOccupation),
+                    fatherEmail: toNullableString(data.fatherEmail),
+                    fatherMobile: toNullableString(data.fatherMobile),
+                    fatherAadhaar: toNullableString(data.fatherAadhaar),
+                    fatherIdUrl: toNullableString(data.fatherIdUrl),
+                    fatherPan: toNullableString(data.fatherPan),
+                    fatherPassport: toNullableString(data.fatherPassport),
+                    fatherCitizenship: toNullableString(data.fatherCitizenship),
+                    fatherVisaNo: toNullableString(data.fatherVisaNo),
+                    fatherVisaType: toNullableString(data.fatherVisaType),
+                    fatherVisaValidity: parseOptionalDate(data.fatherVisaValidity),
+                    motherName: toNullableString(data.motherName),
+                    motherOccupation: toNullableString(data.motherOccupation),
+                    motherEmail: toNullableString(data.motherEmail),
+                    motherMobile: toNullableString(data.motherMobile),
+                    motherAadhaar: toNullableString(data.motherAadhaar),
+                    motherIdUrl: toNullableString(data.motherIdUrl),
+                    motherPan: toNullableString(data.motherPan),
+                    motherPassport: toNullableString(data.motherPassport),
+                    motherCitizenship: toNullableString(data.motherCitizenship),
+                    motherVisaNo: toNullableString(data.motherVisaNo),
+                    motherVisaType: toNullableString(data.motherVisaType),
+                    motherVisaValidity: parseOptionalDate(data.motherVisaValidity),
+                    previousSchoolName: toNullableString(data.previousSchoolName),
+                    previousClassPassed: toNullableString(data.previousClassPassed),
+                    previousClassMarks: toNullableString(data.previousClassMarks),
+                    previousClassYear: toNullableString(data.previousClassYear),
+                    previousBoard: toNullableString(data.previousBoard),
+                    migrationCertificateUrl: toNullableString(data.migrationCertificateUrl),
+                    tcNo: toNullableString(data.tcNo),
+                    permanentAddress: toNullableString(data.permanentAddress),
+                    temporaryAddress: toNullableString(data.temporaryAddress),
+                    resultStatus: toNullableString(data.resultStatus),
+                },
+                include: {
+                    branch: true,
+                },
+            });
+            const parsedCustomFields = typeof data.customFields === "string" && data.customFields.trim().length
+                ? JSON.parse(data.customFields)
+                : Array.isArray(data.customFields)
+                    ? data.customFields
+                    : [];
+            await tx.customFieldValue.deleteMany({
+                where: {
+                    entityType: ENTITES.STUDENT,
+                    entityId: id,
+                },
+            });
+            for (const field of parsedCustomFields) {
+                if (!field?.name || field.value === undefined || field.value === "") {
+                    continue;
+                }
+                const customField = await getCustomFieldService({
+                    name: field.name,
+                    branchId,
+                }, {});
+                if (!customField)
+                    continue;
+                await createCustomFieldValue({
+                    customFieldId: customField.id,
+                    entityType: ENTITES.STUDENT,
+                    entityId: id,
+                    value: String(field.value),
+                }, tx);
+            }
+            let cls = await tx.class.findFirst({
+                where: {
+                    classLabelId: classLabel.id,
+                    sectionId: data.sectionId,
+                    branchId,
+                },
+            });
+            if (!cls) {
+                cls = await tx.class.create({
+                    data: {
+                        classLabelId: classLabel.id,
+                        sectionId: data.sectionId,
+                        branchId,
+                    },
+                });
+            }
+            const latestEnrollment = existing.enrollments[0];
+            if (latestEnrollment) {
+                await tx.enrollment.update({
+                    where: { id: latestEnrollment.id },
+                    data: {
+                        classId: cls.id,
+                        rollNo: rollNo ? String(rollNo) : latestEnrollment.rollNo,
+                    },
+                });
+            }
+            else {
+                await createEnrollment(tx, classLabel.id, branchId, id, data.sectionId, rollNo ? String(rollNo) : null);
+            }
+            return updatedStudent;
+        });
+        let photoUrl = student.photoUrl;
+        if (photo) {
+            try {
+                const uploadDir = getStudentDir(student.branch.schoolId, student.branchId, student.admissionNo);
+                await fs.promises.mkdir(uploadDir, { recursive: true });
+                const destPath = path.join(uploadDir, `${student.id}-profile.png`);
+                await fs.renameSync(photo.path, destPath);
+                photoUrl = path.join("..", "..", "..", "..", "uploads", student.branch.schoolId, student.branchId, student.admissionNo, `${student.id}-profile.png`);
+            }
+            catch (err) {
+                console.error("Error saving student photo:", err);
+                return sendError(res, "Photo upload failed", HTTP_STATUS.INTERNAL_SERVER_ERROR);
+            }
+        }
+        if (photoUrl !== student.photoUrl) {
+            await prisma.student.update({
+                where: { id },
+                data: { photoUrl },
+            });
+        }
+        return sendSuccess(res, "Student updated successfully", {
+            studentId: id,
+        });
+    }
+    catch (error) {
+        console.error(error);
+        return sendError(res, error.message, HTTP_STATUS.INTERNAL_SERVER_ERROR);
     }
 };
 export const downloadSampleSheetForBulkUpload = (req, res) => {

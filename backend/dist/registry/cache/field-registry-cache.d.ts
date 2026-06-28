@@ -5,6 +5,7 @@ export declare const loadFieldRegistryCache: () => Promise<Map<string, {
     branchId: string | null;
     schoolId: string | null;
     label: string;
+    updatedAt: Date;
     fieldKey: string;
     sourceModule: import("../../../generated/prisma/index.js").$Enums.SourceModule;
     sourceTable: string;
@@ -27,7 +28,6 @@ export declare const loadFieldRegistryCache: () => Promise<Map<string, {
     requiredPermission: import("../../../generated/prisma/index.js").$Enums.Permission | null;
     schemaVersion: number;
     seededFrom: string | null;
-    updatedAt: Date;
 }>>;
 export declare const invalidateFieldRegistryCache: () => Promise<void>;
 export declare const getFieldRegistryCache: () => Map<string, {
@@ -37,6 +37,7 @@ export declare const getFieldRegistryCache: () => Map<string, {
     branchId: string | null;
     schoolId: string | null;
     label: string;
+    updatedAt: Date;
     fieldKey: string;
     sourceModule: import("../../../generated/prisma/index.js").$Enums.SourceModule;
     sourceTable: string;
@@ -59,6 +60,5 @@ export declare const getFieldRegistryCache: () => Map<string, {
     requiredPermission: import("../../../generated/prisma/index.js").$Enums.Permission | null;
     schemaVersion: number;
     seededFrom: string | null;
-    updatedAt: Date;
 }>;
 //# sourceMappingURL=field-registry-cache.d.ts.map

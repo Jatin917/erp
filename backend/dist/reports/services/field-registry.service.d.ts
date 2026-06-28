@@ -2,6 +2,7 @@ import type { FieldRegistry } from "../../../generated/prisma/index.js";
 export declare class FieldRegistryService {
     ensureLoaded(): Promise<void>;
     getByKey(fieldKey: string): FieldRegistry | undefined;
+    getById(id: string): FieldRegistry | undefined;
     getByKeys(fieldKeys: string[]): {
         resolved: FieldRegistry[];
         missing: string[];

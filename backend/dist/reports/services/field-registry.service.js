@@ -8,6 +8,13 @@ export class FieldRegistryService {
     getByKey(fieldKey) {
         return getFieldRegistryCache().get(fieldKey);
     }
+    getById(id) {
+        for (const field of getFieldRegistryCache().values()) {
+            if (field.id === id)
+                return field;
+        }
+        return undefined;
+    }
     getByKeys(fieldKeys) {
         const resolved = [];
         const missing = [];

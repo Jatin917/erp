@@ -25,7 +25,7 @@ branchRouter.get("/get-customField", isPermitted, getCustomFields);
 branchRouter.post("/create-subject", isPermitted, createSubject);
 branchRouter.get("/get-subjects", isPermitted, getSubjects);
 branchRouter.delete("/delete-subject", isPermitted, deleteSubject);
-branchRouter.put("/update-subject", isPermitted, updateSubject);
+branchRouter.patch("/update-subject", isPermitted, updateSubject);
 branchRouter.post("/create-faculty", isPermitted, createFaculty);
 branchRouter.get("/get-faculty", isPermitted, getFaculty);
 branchRouter.patch("/update-faculty", isPermitted, updateFaculty);

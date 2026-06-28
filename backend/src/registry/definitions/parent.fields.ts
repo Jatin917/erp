@@ -1,0 +1,70 @@
+import {
+  FieldCategory,
+  FieldResolverType,
+  RegistryDataType,
+  SourceModule,
+} from "../../../generated/prisma/index.js";
+import type { FieldDefinition } from "../types/field-definition.js";
+
+export const parentFields: FieldDefinition[] = [
+  {
+    fieldKey: "parent_type",
+    label: "Parent Type",
+    sourceModule: SourceModule.PARENT,
+    sourceTable: "Parent",
+    sourceColumn: "type",
+    fieldCategory: FieldCategory.RAW,
+    dataType: RegistryDataType.STRING,
+    resolverType: FieldResolverType.COLUMN,
+    groupKey: "parent",
+    displayOrder: 10,
+  },
+  {
+    fieldKey: "parent_user_name",
+    label: "Parent User Name",
+    sourceModule: SourceModule.PARENT,
+    sourceTable: "Parent",
+    fieldCategory: FieldCategory.RAW,
+    dataType: RegistryDataType.STRING,
+    resolverType: FieldResolverType.RELATION,
+    resolverConfig: {
+      path: ["user", "name"],
+      baseEntity: "Parent",
+      scopeKey: "parentId",
+    },
+    groupKey: "parent",
+    displayOrder: 20,
+  },
+  {
+    fieldKey: "parent_user_email",
+    label: "Parent Email",
+    sourceModule: SourceModule.PARENT,
+    sourceTable: "Parent",
+    fieldCategory: FieldCategory.RAW,
+    dataType: RegistryDataType.STRING,
+    resolverType: FieldResolverType.RELATION,
+    resolverConfig: {
+      path: ["user", "email"],
+      baseEntity: "Parent",
+      scopeKey: "parentId",
+    },
+    groupKey: "parent",
+    displayOrder: 30,
+  },
+  {
+    fieldKey: "parent_user_phone",
+    label: "Parent Phone",
+    sourceModule: SourceModule.PARENT,
+    sourceTable: "Parent",
+    fieldCategory: FieldCategory.RAW,
+    dataType: RegistryDataType.STRING,
+    resolverType: FieldResolverType.RELATION,
+    resolverConfig: {
+      path: ["user", "phone"],
+      baseEntity: "Parent",
+      scopeKey: "parentId",
+    },
+    groupKey: "parent",
+    displayOrder: 40,
+  },
+];

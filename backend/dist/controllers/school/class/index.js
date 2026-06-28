@@ -312,27 +312,48 @@ export const getClassNames = async (req, res) => {
 export const createClassName = async (req, res) => {
     try {
         const { name, branchId } = req.body;
-        if (!branchId) {
+        if (!name?.trim() || !branchId) {
             return res.status(HTTP_STATUS.BAD_REQUEST).json({
                 success: false,
-                message: "classLabelId and branchId are required",
+                message: "name and branchId are required",
+                data: null,
+            });
+        }
+        const trimmedName = name.trim();
+        const existing = await prisma.classLabel.findFirst({
+            where: {
+                branchId,
+                name: { equals: trimmedName, mode: "insensitive" },
+            },
+        });
+        if (existing) {
+            return res.status(HTTP_STATUS.CONFLICT).json({
+                success: false,
+                message: `Class label "${trimmedName}" already exists for this branch`,
                 data: null,
             });
         }
         const newClass = await prisma.classLabel.create({
             data: {
-                name,
+                name: trimmedName,
                 branch: { connect: { id: branchId } },
-            }
+            },
         });
         return res.status(HTTP_STATUS.CREATED).json({
             success: true,
-            message: "Class created successfully",
+            message: "Class label created successfully",
             data: { classNames: newClass.name },
         });
     }
     catch (error) {
-        console.error("Error creating class:", error);
+        if (error?.code === "P2002") {
+            return res.status(HTTP_STATUS.CONFLICT).json({
+                success: false,
+                message: "Class label with this name already exists for this branch",
+                data: null,
+            });
+        }
+        console.error("Error creating class label:", error);
         return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
             success: false,
             message: "Internal server error",
@@ -343,13 +364,22 @@ export const createClassName = async (req, res) => {
 export const createSubject = async (req, res) => {
     try {
         const { classId, name } = req.body;
-        if (!classId || !name) {
+        if (!classId || !name?.trim()) {
             return sendError(res, "classId and name are required", HTTP_STATUS.BAD_REQUEST);
         }
-        // ✅ Create subject linked to the class
+        const trimmedName = name.trim();
+        const existing = await prisma.subject.findFirst({
+            where: {
+                classId,
+                name: { equals: trimmedName, mode: "insensitive" },
+            },
+        });
+        if (existing) {
+            return sendError(res, `Subject "${trimmedName}" already exists for this class`, HTTP_STATUS.CONFLICT);
+        }
         const subject = await prisma.subject.create({
             data: {
-                name,
+                name: trimmedName,
                 class: {
                     connect: { id: classId },
                 },
@@ -358,6 +388,9 @@ export const createSubject = async (req, res) => {
         return sendSuccess(res, "Subject created successfully", subject, HTTP_STATUS.CREATED);
     }
     catch (error) {
+        if (error?.code === "P2002") {
+            return sendError(res, "Subject with this name already exists for this class", HTTP_STATUS.CONFLICT);
+        }
         return sendError(res, error.message, HTTP_STATUS.INTERNAL_SERVER_ERROR);
     }
 };
@@ -383,34 +416,61 @@ export const getSubjects = async (req, res) => {
 };
 export const updateSubject = async (req, res) => {
     try {
-        const { subjectId } = req.params;
+        const subjectId = req.body?.id || req.query?.id || req.params?.subjectId;
         const { name } = req.body;
-        if (!subjectId || !name) {
-            return sendError(res, "subjectId and name are required", HTTP_STATUS.BAD_REQUEST);
+        if (!subjectId || !name?.trim()) {
+            return sendError(res, "id and name are required", HTTP_STATUS.BAD_REQUEST);
+        }
+        const trimmedName = name.trim();
+        const current = await prisma.subject.findUnique({
+            where: { id: String(subjectId) },
+            select: { classId: true },
+        });
+        if (!current) {
+            return sendError(res, "Subject not found", HTTP_STATUS.NOT_FOUND);
+        }
+        const duplicate = await prisma.subject.findFirst({
+            where: {
+                classId: current.classId,
+                name: { equals: trimmedName, mode: "insensitive" },
+                id: { not: String(subjectId) },
+            },
+        });
+        if (duplicate) {
+            return sendError(res, `Subject "${trimmedName}" already exists for this class`, HTTP_STATUS.CONFLICT);
         }
         const subject = await prisma.subject.update({
-            where: { id: subjectId },
-            data: { name },
+            where: { id: String(subjectId) },
+            data: { name: trimmedName },
         });
         return sendSuccess(res, "Subject updated successfully", subject);
     }
     catch (error) {
+        if (error?.code === "P2002") {
+            return sendError(res, "Subject with this name already exists for this class", HTTP_STATUS.CONFLICT);
+        }
         return sendError(res, error.message, HTTP_STATUS.INTERNAL_SERVER_ERROR);
     }
 };
 export const deleteSubject = async (req, res) => {
     try {
-        const { subjectId } = req.params;
+        const subjectId = req.query?.id || req.body?.id || req.params?.subjectId;
         if (!subjectId) {
-            return sendError(res, "subjectId is required", HTTP_STATUS.BAD_REQUEST);
+            return sendError(res, "id is required", HTTP_STATUS.BAD_REQUEST);
         }
-        const subjects = await prisma.subject.delete({
-            where: { id: subjectId },
-            include: { lectures: true }
+        const subject = await prisma.subject.findUnique({
+            where: { id: String(subjectId) },
+            include: { lectures: { select: { id: true } } },
         });
-        if (subjects.lectures.length > 0) {
-            return sendError(res, "Cannot Delete Subject having already created lectures", HTTP_STATUS.CONFLICT);
+        if (!subject) {
+            return sendError(res, "Subject not found", HTTP_STATUS.NOT_FOUND);
         }
+        if (subject.lectures.length > 0) {
+            return sendError(res, "Cannot delete subject that has lectures assigned", HTTP_STATUS.CONFLICT);
+        }
+        await prisma.subject.delete({
+            where: { id: String(subjectId) },
+        });
         return sendSuccess(res, "Subject deleted successfully");
     }
     catch (error) {

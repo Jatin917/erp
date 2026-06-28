@@ -8,6 +8,7 @@ export declare const getActiveRegistryFields: (filters?: {
     branchId: string | null;
     schoolId: string | null;
     label: string;
+    updatedAt: Date;
     fieldKey: string;
     sourceModule: import("../../../generated/prisma/index.js").$Enums.SourceModule;
     sourceTable: string;
@@ -30,7 +31,6 @@ export declare const getActiveRegistryFields: (filters?: {
     requiredPermission: import("../../../generated/prisma/index.js").$Enums.Permission | null;
     schemaVersion: number;
     seededFrom: string | null;
-    updatedAt: Date;
 }[]>;
 export declare const getActiveRegistryFieldsFromDb: () => Promise<{
     id: string;
@@ -39,6 +39,7 @@ export declare const getActiveRegistryFieldsFromDb: () => Promise<{
     branchId: string | null;
     schoolId: string | null;
     label: string;
+    updatedAt: Date;
     fieldKey: string;
     sourceModule: import("../../../generated/prisma/index.js").$Enums.SourceModule;
     sourceTable: string;
@@ -61,6 +62,5 @@ export declare const getActiveRegistryFieldsFromDb: () => Promise<{
     requiredPermission: import("../../../generated/prisma/index.js").$Enums.Permission | null;
     schemaVersion: number;
     seededFrom: string | null;
-    updatedAt: Date;
 }[]>;
 //# sourceMappingURL=field-registry.service.d.ts.map
