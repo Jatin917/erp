@@ -1,10 +1,10 @@
 import { HTTP_STATUS } from "../../../lib/http-codes.js";
 import { JWT_SECRET, prisma, SUPERADMIN_EMAIL, SUPERADMIN_PASSWORD } from "@src/server.js";
 import bcrypt from 'bcrypt';
-import { roleDefaults } from '../../../lib/permission.js';
+import { getDefaultPermissionsForRole } from "@src/lib/apply-role-permissions.js";
 import { OTP_TYPE, Permission } from '@src/lib/types.js';
 import jwt from 'jsonwebtoken';
-import { Permission as PrismaPermission } from "../../../../generated/prisma/index.js";
+import { Role as PrismaRole } from "../../../../generated/prisma/index.js";
 import { TOKEN_TTL } from "@src/lib/contants.js";
 import { userInfo } from "os";
 import { isEmailVerified } from "@src/services/otp.js";
@@ -32,8 +32,7 @@ export const registerUser = async (req, res) => {
             password = "default";
         }
         const hashedPassword = await bcrypt.hash(password, 10);
-        const rolePermissions = roleDefaults[role] || [];
-        const rolePermissionsEnum = rolePermissions.map((perm) => PrismaPermission[perm]);
+        const rolePermissionsEnum = getDefaultPermissionsForRole(role);
         const roles = [role];
         const user = await prisma.user.create({
             data: {

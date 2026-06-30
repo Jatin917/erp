@@ -116,7 +116,7 @@ export const roleDefaults = {
         ...permissions.notifications,
     ],
     DIRECTOR: [
-        ...permissions.school,
+        ...permissions.school.filter((p) => p !== $Enums.Permission.DELETE_SCHOOL),
         ...permissions.branch,
         ...permissions.class,
         ...permissions.student,

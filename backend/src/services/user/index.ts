@@ -1,6 +1,7 @@
 import type { Prisma } from "@prisma/client/extension";
-import { defaultPassword, prisma } from "@src/server.js"
-import bcrypt from "bcrypt"
+import { defaultPassword, prisma } from "@src/server.js";
+import bcrypt from "bcrypt";
+import { applyRolePermissions, mergeRolePermissions } from "@src/lib/apply-role-permissions.js";
 import type { Role } from "../../../generated/prisma/index.js";
 
 
@@ -37,7 +38,7 @@ export async function findOrCreateUser(
     where: { OR: [{ email }, { phone }] },
   });
 
-  // 2️⃣ If exists → update role list if not already added
+  // 2️⃣ If exists → update role list if not already added, merge role permissions
   if (user) {
     if (!user.role.includes(role)) {
       user = await db.user.update({
@@ -45,10 +46,11 @@ export async function findOrCreateUser(
         data: { role: { push: role } },
       });
     }
+    await applyRolePermissions(db, user.id, role);
     return user;
   }
 
-  // 3️⃣ If not found → create new user
+  // 3️⃣ If not found → create new user with default permissions for role
   const hashedPwd = await bcrypt.hash(defaultPassword, 10);
 
   return db.user.create({
@@ -60,6 +62,7 @@ export async function findOrCreateUser(
       role: [role],
       isEmailVerified: false,
       isPhoneVerified: false,
+      permissions: { set: mergeRolePermissions([], role) },
     },
   });
 }

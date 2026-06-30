@@ -60,4 +60,40 @@ export const permitPermission = async (req, res) => {
             .json({ success: false, message: "Internal server error" });
     }
 };
+export const getUserPermissions = async (req, res) => {
+    try {
+        const { userId } = req.params;
+        if (!userId) {
+            return res
+                .status(HTTP_STATUS.BAD_REQUEST)
+                .json({ success: false, message: "User ID is required" });
+        }
+        const user = await prisma.user.findUnique({
+            where: { id: userId },
+            select: {
+                id: true,
+                name: true,
+                email: true,
+                permissions: true,
+                role: true,
+            },
+        });
+        if (!user) {
+            return res
+                .status(HTTP_STATUS.NOT_FOUND)
+                .json({ success: false, message: "User not found" });
+        }
+        return res.json({
+            success: true,
+            message: "User permissions fetched",
+            data: { user },
+        });
+    }
+    catch (error) {
+        console.error("Error fetching user permissions:", error);
+        return res
+            .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
+            .json({ success: false, message: "Internal server error" });
+    }
+};
 //# sourceMappingURL=index.js.map

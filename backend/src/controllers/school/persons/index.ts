@@ -1,10 +1,10 @@
 import { HTTP_STATUS } from "../../../lib/http-codes.js";
 import { JWT_SECRET, prisma, SUPERADMIN_EMAIL, SUPERADMIN_PASSWORD } from "@src/server.js";
 import bcrypt from 'bcrypt';
-import {roleDefaults} from '../../../lib/permission.js';
+import { getDefaultPermissionsForRole } from "@src/lib/apply-role-permissions.js";
 import {OTP_TYPE, Permission, type PAYLOAD_TOKEN_TYPE, type PermissionType} from '@src/lib/types.js'
 import jwt from 'jsonwebtoken'
-import { Permission as PrismaPermission } from "../../../../generated/prisma/index.js";
+import { Role as PrismaRole } from "../../../../generated/prisma/index.js";
 type RoleKey =
   | 'SUPERADMIN'
   | 'DIRECTOR'
@@ -59,10 +59,7 @@ export const registerUser = async (
 
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        const rolePermissions = roleDefaults[role] || [];
-        const rolePermissionsEnum = rolePermissions.map(
-          (perm) => PrismaPermission[perm as keyof typeof PrismaPermission]
-        );
+        const rolePermissionsEnum = getDefaultPermissionsForRole(role as PrismaRole);
         
         const roles = [role];
 

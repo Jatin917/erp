@@ -14,6 +14,7 @@ import { createCustomFieldService, getBranchesService, getBranchService, getCust
 import { getUserService } from "@src/services/user/index.js";
 import { createSchoolDays } from "@src/services/attendance/index.js";
 import { syncCustomFieldsToRegistry } from "@src/registry/seed/sync-custom-fields.js";
+import { applyRolePermissions, mergeRolePermissions } from "@src/lib/apply-role-permissions.js";
 
 // Updated createBranch to accept tx for transactions
 const createBranch = async (tx: Omit<PrismaClient<Prisma.PrismaClientOptions, never, DefaultArgs>, "$connect" | "$disconnect" | "$on" | "$transaction" | "$use" | "$extends">, address: any, principalId: any, name: any, schoolId: string, softwareCharge:string) => {
@@ -39,18 +40,22 @@ const existingUser = await tx.user.findUnique({
     where: { email: userData.email },
 });
 if (existingUser) {
-    // Ensure the role is set
     if (!existingUser.role.includes(role)) {
       await tx.user.update({
           where: { email: userData.email },
-          data: { role: { push: role }, phone:userData.contact }, // Prisma array field push
+          data: { role: { push: role }, phone:userData.contact },
+      });
+    } else if (userData.contact) {
+      await tx.user.update({
+          where: { email: userData.email },
+          data: { phone: userData.contact },
       });
     }
+    await applyRolePermissions(tx, existingUser.id, role);
     return existingUser.id;
 } else {
-    // Check verification before creation
-    const success = await isEmailVerified(userData.email, OTP_TYPE.VERIFY_OTP);
-    if (success) {
+    const verified = await isEmailVerified(userData.email, OTP_TYPE.VERIFY_OTP);
+    if (!verified) {
         throw new Error(`${role} email is not verified. Please verify first.`);
     }
 
@@ -60,11 +65,12 @@ if (existingUser) {
     data: {
         name: userData.name,
         email: userData.email,
-        password: hashedPassword, // If no password, maybe generate a temp one
+        password: hashedPassword,
         role: roles,
         isEmailVerified: true,
         isPhoneVerified: false,
-        phone:userData.contact
+        phone:userData.contact,
+        permissions: { set: mergeRolePermissions([], role) },
     },
     });
     return newUser.id;
@@ -99,6 +105,39 @@ export const createSchool = async (req: any, res: any) => {
     await prisma.$transaction(async (tx) => {
       // 1️⃣ Create or find director
       const directorId = await findOrCreateUser("DIRECTOR", director, tx);
+
+      // Block duplicate: same director + school name + principal
+      const principalEmails = principals
+        .map((p: { email?: string }) => p.email?.trim().toLowerCase())
+        .filter(Boolean) as string[];
+
+      const existingSchool = await tx.school.findFirst({
+        where: {
+          name: { equals: finalSchoolName.trim(), mode: "insensitive" },
+          createdById: directorId,
+        },
+        include: {
+          branches: {
+            include: {
+              principal: { select: { email: true } },
+            },
+          },
+        },
+      });
+
+      if (existingSchool && principalEmails.length > 0) {
+        const existingPrincipalEmails = new Set(
+          existingSchool.branches
+            .map((b) => b.principal?.email?.trim().toLowerCase())
+            .filter(Boolean),
+        );
+        const duplicatePrincipal = principalEmails.find((email) => existingPrincipalEmails.has(email));
+        if (duplicatePrincipal) {
+          throw new Error(
+            `A school named "${finalSchoolName}" with this director and principal already exists.`,
+          );
+        }
+      }
 
       // 2️⃣ Create school
       const school = await tx.school.create({

@@ -12,6 +12,7 @@ import { createCustomFieldService, getBranchesService, getBranchService, getCust
 import { getUserService } from "@src/services/user/index.js";
 import { createSchoolDays } from "@src/services/attendance/index.js";
 import { syncCustomFieldsToRegistry } from "@src/registry/seed/sync-custom-fields.js";
+import { applyRolePermissions, mergeRolePermissions } from "@src/lib/apply-role-permissions.js";
 // Updated createBranch to accept tx for transactions
 const createBranch = async (tx, address, principalId, name, schoolId, softwareCharge) => {
     try {
@@ -37,19 +38,24 @@ const findOrCreateUser = async (role, userData, tx) => {
         where: { email: userData.email },
     });
     if (existingUser) {
-        // Ensure the role is set
         if (!existingUser.role.includes(role)) {
             await tx.user.update({
                 where: { email: userData.email },
-                data: { role: { push: role }, phone: userData.contact }, // Prisma array field push
+                data: { role: { push: role }, phone: userData.contact },
             });
         }
+        else if (userData.contact) {
+            await tx.user.update({
+                where: { email: userData.email },
+                data: { phone: userData.contact },
+            });
+        }
+        await applyRolePermissions(tx, existingUser.id, role);
         return existingUser.id;
     }
     else {
-        // Check verification before creation
-        const success = await isEmailVerified(userData.email, OTP_TYPE.VERIFY_OTP);
-        if (success) {
+        const verified = await isEmailVerified(userData.email, OTP_TYPE.VERIFY_OTP);
+        if (!verified) {
             throw new Error(`${role} email is not verified. Please verify first.`);
         }
         const roles = [role];
@@ -58,11 +64,12 @@ const findOrCreateUser = async (role, userData, tx) => {
             data: {
                 name: userData.name,
                 email: userData.email,
-                password: hashedPassword, // If no password, maybe generate a temp one
+                password: hashedPassword,
                 role: roles,
                 isEmailVerified: true,
                 isPhoneVerified: false,
-                phone: userData.contact
+                phone: userData.contact,
+                permissions: { set: mergeRolePermissions([], role) },
             },
         });
         return newUser.id;
