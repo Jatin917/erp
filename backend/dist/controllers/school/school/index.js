@@ -5,13 +5,13 @@ import { defaultPassword, prisma } from "../../../server.js";
 import path from "path";
 import bcrypt from 'bcrypt';
 import fs from "fs";
-import { OTP_TYPE } from "../../../lib/types.js";
-import { isEmailVerified } from "../../../services/otp.js";
-import { sendError, sendSuccess } from "../../../lib/utils.js";
-import { createCustomFieldService, getBranchesService, getBranchService, getCustomFieldsService } from "../../../services/school/index.js";
-import { getUserService } from "../../../services/user/index.js";
-import { createSchoolDays } from "../../../services/attendance/index.js";
-import { syncCustomFieldsToRegistry } from "../../../registry/seed/sync-custom-fields.js";
+import { OTP_TYPE } from "@src/lib/types.js";
+import { isEmailVerified } from "@src/services/otp.js";
+import { sendError, sendSuccess } from "@src/lib/utils.js";
+import { createCustomFieldService, getBranchesService, getBranchService, getCustomFieldsService } from "@src/services/school/index.js";
+import { getUserService } from "@src/services/user/index.js";
+import { createSchoolDays } from "@src/services/attendance/index.js";
+import { syncCustomFieldsToRegistry } from "@src/registry/seed/sync-custom-fields.js";
 // Updated createBranch to accept tx for transactions
 const createBranch = async (tx, address, principalId, name, schoolId, softwareCharge) => {
     try {

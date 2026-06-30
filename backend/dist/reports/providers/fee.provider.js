@@ -1,5 +1,5 @@
 import { FieldCategory, PaymentStatus, } from "../../../generated/prisma/index.js";
-import { prisma } from "../../server.js";
+import { prisma } from "@src/server.js";
 export class FeeProvider {
     key = "fees";
     async fetch(context, fields) {

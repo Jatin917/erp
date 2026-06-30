@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { prismaClient } from "../../lib/prisma-client.js";
+import { prismaClient } from "@src/lib/prisma-client.js";
 import { seedFieldRegistry } from "./seed-field-registry.js";
 import { syncCustomFieldsToRegistry } from "./sync-custom-fields.js";
 const run = async () => {

@@ -1,8 +1,8 @@
 import { Worker } from 'bullmq';
 import { Redis } from 'ioredis';
 import dotenv from 'dotenv';
-import { prisma } from '../../../server.js';
-import { sendMail } from '../../../services/utils/mailer.js';
+import { prisma } from '@src/server.js';
+import { sendMail } from '@src/services/utils/mailer.js';
 dotenv.config();
 const connection = new Redis(process.env.REDIS_URL, {
     maxRetriesPerRequest: null,

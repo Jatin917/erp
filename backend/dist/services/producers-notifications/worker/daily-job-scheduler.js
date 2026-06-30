@@ -2,7 +2,7 @@ import { Worker } from 'bullmq';
 import { Redis } from 'ioredis';
 import dotenv from 'dotenv';
 dotenv.config();
-import { getLecturesForToday } from '../../../services/school/index.js';
+import { getLecturesForToday } from '@src/services/school/index.js';
 import { LectureStatus } from '../../../../generated/prisma/index.js';
 import { teacherAttendanceQueue } from '../queues/queue.js';
 function getDelayFromTimeString(timeString, minutesBefore = 10) {

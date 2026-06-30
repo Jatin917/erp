@@ -1,6 +1,6 @@
-import { HTTP_STATUS } from "../../lib/http-codes.js";
-import { sendError, sendSuccess } from "../../lib/utils.js";
-import { templateEngine } from "../../document-templates/engine/template-engine.js";
+import { HTTP_STATUS } from "@src/lib/http-codes.js";
+import { sendError, sendSuccess } from "@src/lib/utils.js";
+import { templateEngine } from "@src/document-templates/engine/template-engine.js";
 const badRequest = (message) => message.includes("required") ||
     message.includes("not found") ||
     message.includes("Unknown") ||

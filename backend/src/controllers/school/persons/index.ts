@@ -40,6 +40,13 @@ export const registerUser = async (
             return res.status(HTTP_STATUS.NO_CONTENT).json({ success: false, message: "Please provide required fields" });
         }
 
+        if (role === "SUPERADMIN") {
+            return res.status(HTTP_STATUS.FORBIDDEN).json({
+                success: false,
+                message: "SUPERADMIN accounts cannot be created via this endpoint",
+            });
+        }
+
         const success = await isEmailVerified(email, OTP_TYPE.VERIFY_OTP);
         if(!success){
           return res.status(HTTP_STATUS.UNAUTHORIZED).json({message:"Please Try Again"});

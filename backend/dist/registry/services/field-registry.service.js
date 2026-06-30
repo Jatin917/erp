@@ -1,4 +1,4 @@
-import { prismaClient } from "../../lib/prisma-client.js";
+import { prismaClient } from "@src/lib/prisma-client.js";
 import { getFieldRegistryCache, loadFieldRegistryCache } from "../cache/field-registry-cache.js";
 export const getActiveRegistryFields = async (filters) => {
     const cache = getFieldRegistryCache();

@@ -1,4 +1,4 @@
-import { prisma } from "../../server.js";
+import { prisma } from "@src/server.js";
 import { fieldRegistryService } from "../services/field-registry.service.js";
 import { fieldGroupingService } from "../services/field-grouping.service.js";
 import { aggregatorService } from "../services/aggregator.service.js";

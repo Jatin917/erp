@@ -3,12 +3,11 @@ export declare const getActiveRegistryFields: (filters?: {
     groupKey?: string;
 }) => Promise<{
     id: string;
-    description: string | null;
-    createdAt: Date;
     branchId: string | null;
-    schoolId: string | null;
+    createdAt: Date;
+    description: string | null;
     label: string;
-    updatedAt: Date;
+    schoolId: string | null;
     fieldKey: string;
     sourceModule: import("../../../generated/prisma/index.js").$Enums.SourceModule;
     sourceTable: string;
@@ -31,15 +30,15 @@ export declare const getActiveRegistryFields: (filters?: {
     requiredPermission: import("../../../generated/prisma/index.js").$Enums.Permission | null;
     schemaVersion: number;
     seededFrom: string | null;
+    updatedAt: Date;
 }[]>;
 export declare const getActiveRegistryFieldsFromDb: () => Promise<{
     id: string;
-    description: string | null;
-    createdAt: Date;
     branchId: string | null;
-    schoolId: string | null;
+    createdAt: Date;
+    description: string | null;
     label: string;
-    updatedAt: Date;
+    schoolId: string | null;
     fieldKey: string;
     sourceModule: import("../../../generated/prisma/index.js").$Enums.SourceModule;
     sourceTable: string;
@@ -62,5 +61,6 @@ export declare const getActiveRegistryFieldsFromDb: () => Promise<{
     requiredPermission: import("../../../generated/prisma/index.js").$Enums.Permission | null;
     schemaVersion: number;
     seededFrom: string | null;
+    updatedAt: Date;
 }[]>;
 //# sourceMappingURL=field-registry.service.d.ts.map

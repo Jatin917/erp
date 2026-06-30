@@ -1,5 +1,5 @@
 import { FieldResolverType } from "../../../generated/prisma/index.js";
-import { prisma } from "../../server.js";
+import { prisma } from "@src/server.js";
 export class CustomProvider {
     key = "custom";
     async fetch(context, fields) {

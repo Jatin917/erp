@@ -1,4 +1,4 @@
-import { defaultPassword, prisma } from "../../server.js";
+import { defaultPassword, prisma } from "@src/server.js";
 import bcrypt from "bcrypt";
 export const getUserService = async (where, include) => {
     const user = await prisma.user.findFirst({

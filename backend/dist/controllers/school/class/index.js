@@ -2,11 +2,11 @@ import { error } from "console";
 import { HTTP_STATUS } from "../../../lib/http-codes.js";
 import { defaultPassword, prisma } from "../../../server.js";
 import { connect } from "http2";
-import { sendError, sendSuccess } from "../../../lib/utils.js";
-import { isEmailVerified } from "../../../services/otp.js";
-import { OTP_TYPE } from "../../../lib/types.js";
-import { findOrCreateUser } from "../../../services/user/index.js";
-import { sendWelcomeEmail } from "../../../services/producers-notifications/producers/producer.email.js";
+import { sendError, sendSuccess } from "@src/lib/utils.js";
+import { isEmailVerified } from "@src/services/otp.js";
+import { OTP_TYPE } from "@src/lib/types.js";
+import { findOrCreateUser } from "@src/services/user/index.js";
+import { sendWelcomeEmail } from "@src/services/producers-notifications/producers/producer.email.js";
 export const getAllClass = async (req, res) => {
     try {
         const { branchId, name } = req.query;

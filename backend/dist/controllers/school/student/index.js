@@ -10,9 +10,9 @@ import { ClassEnum, ENTITES, } from "../../../../generated/prisma/index.js";
 import { Prisma } from "@prisma/client/extension";
 import { fileURLToPath } from "url";
 import { connect } from "http2";
-import { sendError, sendSuccess } from "../../../lib/utils.js";
-import { createCustomFieldValue, getCustomFieldService } from "../../../services/school/index.js";
-import { findOrCreateUser } from "../../../services/user/index.js";
+import { sendError, sendSuccess } from "@src/lib/utils.js";
+import { createCustomFieldValue, getCustomFieldService } from "@src/services/school/index.js";
+import { findOrCreateUser } from "@src/services/user/index.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 function getStudentDir(sid, bid, admissionNo) {

@@ -2,7 +2,7 @@
 import nodemailer from 'nodemailer';
 import dotenv from 'dotenv';
 import { RedisClient } from './redis.js';
-import { OTP_TYPE } from '../lib/types.js';
+import { OTP_TYPE } from '@src/lib/types.js';
 // store OTP with TTL (e.g. 5 minutes)
 // store OTP
 export async function storeOtp(email, otp, type) {

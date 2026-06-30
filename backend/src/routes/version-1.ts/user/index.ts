@@ -7,9 +7,9 @@ import {
 	sendOtpEmailVerifyController,
 } from "@src/controllers/auth/otp.js";
 import { changePassword, login, registerUser, userExist } from "@src/controllers/school/persons/index.js";
-import { permitPermission } from "@src/controllers/user/index.js";
+import { getUserPermissions, permitPermission } from "@src/controllers/user/index.js";
 import { TokenCheck } from "@src/middlewares/auth/token.js";
-import { requirePermission } from "@src/middlewares/permission/index.js";
+import { requireAnyPermission, requirePermission } from "@src/middlewares/permission/index.js";
 
 export const userRouter = Router();
 
@@ -23,7 +23,13 @@ userRouter.post("/verify-verify-otp", TokenCheck, emailVerificationVerifyControl
 userRouter.post(
 	"/assign-permission",
 	TokenCheck,
-	requirePermission(Permission.ALL),
+	requireAnyPermission(Permission.ALL, Permission.ASSIGN_PERMISSION),
 	permitPermission,
+);
+userRouter.get(
+	"/user-permissions/:userId",
+	TokenCheck,
+	requireAnyPermission(Permission.ALL, Permission.ASSIGN_PERMISSION),
+	getUserPermissions,
 );
 userRouter.get("/exists", TokenCheck, userExist);

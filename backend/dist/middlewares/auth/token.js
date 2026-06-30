@@ -1,5 +1,5 @@
-import { HTTP_STATUS } from "../../lib/http-codes.js";
-import { JWT_SECRET, prisma } from "../../server.js";
+import { HTTP_STATUS } from "@src/lib/http-codes.js";
+import { JWT_SECRET, prisma } from "@src/server.js";
 import jwt from "jsonwebtoken";
 export const TokenCheck = async (req, res, next) => {
     try {

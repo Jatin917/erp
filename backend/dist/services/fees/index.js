@@ -1,4 +1,4 @@
-import { prisma } from "../../server.js";
+import { prisma } from "@src/server.js";
 export async function processFeePayment(tx, feePaymentId, amount, mode, referenceId, remarks, createdById) {
     const feePayment = await tx.feePayment.findUnique({
         where: { id: feePaymentId },

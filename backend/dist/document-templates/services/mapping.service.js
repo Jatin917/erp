@@ -1,4 +1,4 @@
-import { prisma } from "../../server.js";
+import { prisma } from "@src/server.js";
 import { systemFieldRegistryService } from "./system-field-registry.service.js";
 import { templateService } from "./template.service.js";
 import { templateValidationService } from "./template-validation.service.js";
