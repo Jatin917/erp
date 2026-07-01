@@ -5,7 +5,9 @@ import { connect } from "http2";
 import { sendError, sendSuccess } from "@src/lib/utils.js";
 import { isEmailVerified } from "@src/services/otp.js";
 import { OTP_TYPE } from "@src/lib/types.js";
+import { mergeRolePermissions } from "@src/lib/apply-role-permissions.js";
 import { findOrCreateUser } from "@src/services/user/index.js";
+import type { Role } from "../../../../generated/prisma/index.js";
 import { sendWelcomeEmail } from "@src/services/producers-notifications/producers/producer.email.js";
 
 export const getAllClass = async (req: any, res: any) => {
@@ -651,23 +653,34 @@ if (role) {
   }
 }
 
-export const updateFaculty= async (req:any, res:any) =>{
+export const updateFaculty = async (req: any, res: any) => {
   try {
-    const {id, roles} = req.body;
-    if(!id || !roles){
-      return sendError(res, "Please provide Required Fields", HTTP_STATUS.BAD_REQUEST)
+    const { id, roles } = req.body;
+    if (!id || !Array.isArray(roles)) {
+      return sendError(res, "Please provide Required Fields", HTTP_STATUS.BAD_REQUEST);
     }
+
+    const roleList = roles as Role[];
+    let permissions: ReturnType<typeof mergeRolePermissions> = [];
+    for (const role of roleList) {
+      permissions = mergeRolePermissions(permissions, role);
+    }
+
     const faculty = await prisma.user.update({
       where: { id },
       data: {
-        role: {
-          push: roles  // roles can be ["TEACHER"] or ["ADMIN","STUDENT"]
-        }
-      }
+        role: { set: roleList },
+        permissions: { set: permissions },
+      },
     });
-    
-    return sendSuccess(res, "Updated", {faculty:{userid:faculty.id, roles:faculty.role}}, HTTP_STATUS.CREATED);
-  } catch (error:any) {
+
+    return sendSuccess(
+      res,
+      "Updated",
+      { faculty: { userid: faculty.id, roles: faculty.role } },
+      HTTP_STATUS.OK,
+    );
+  } catch (error: any) {
     return sendError(res, error.message, HTTP_STATUS.INTERNAL_SERVER_ERROR);
   }
-}
+};
