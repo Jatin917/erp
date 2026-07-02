@@ -6,9 +6,27 @@ import { sendError, sendSuccess } from "@src/lib/utils.js";
 import { isEmailVerified } from "@src/services/otp.js";
 import { OTP_TYPE } from "@src/lib/types.js";
 import { mergeRolePermissions } from "@src/lib/apply-role-permissions.js";
+import { validateRoleAssignment } from "@src/lib/role-grant.js";
 import { findOrCreateUser } from "@src/services/user/index.js";
-import type { Role } from "../../../../generated/prisma/index.js";
+import type { Permission, Role } from "../../../../generated/prisma/index.js";
 import { sendWelcomeEmail } from "@src/services/producers-notifications/producers/producer.email.js";
+
+function rejectRoleAssignment(res: any, grantorPermissions: Permission[] | undefined, roles: Role[]) {
+  if (!Array.isArray(grantorPermissions)) {
+    return sendError(res, "Not permitted for this task", HTTP_STATUS.FORBIDDEN);
+  }
+
+  const validation = validateRoleAssignment({
+    grantorPermissions,
+    rolesToAssign: roles,
+  });
+
+  if (!validation.ok) {
+    return sendError(res, validation.message, validation.status);
+  }
+
+  return null;
+}
 
 export const getAllClass = async (req: any, res: any) => {
   try {
@@ -598,8 +616,15 @@ export const createFaculty = async (req: any, res: any) => {
     if (!name || !email || !roles || !branchId) {
       return sendError(res, "name, email, and role are required", HTTP_STATUS.BAD_REQUEST);
     }
+
+    const roleList = roles as Role[];
+    const roleDenied = rejectRoleAssignment(res, req.user?.permissions, roleList);
+    if (roleDenied) {
+      return roleDenied;
+    }
+
     const success = await isEmailVerified(email, OTP_TYPE.VERIFY_OTP);
-    if (success) {
+    if (!success) {
       return sendError(res, "email is not verified", HTTP_STATUS.BAD_REQUEST);
     }
     let user;
@@ -661,6 +686,11 @@ export const updateFaculty = async (req: any, res: any) => {
     }
 
     const roleList = roles as Role[];
+    const roleDenied = rejectRoleAssignment(res, req.user?.permissions, roleList);
+    if (roleDenied) {
+      return roleDenied;
+    }
+
     let permissions: ReturnType<typeof mergeRolePermissions> = [];
     for (const role of roleList) {
       permissions = mergeRolePermissions(permissions, role);

@@ -1,6 +1,6 @@
 import { $Enums, type Role } from "../../generated/prisma/index.js";
 
-type PermissionKeys = 'school' | 'branch' | 'class' | 'student' | 'parent' | 'discounts' | 'feeHead' | 'feeTemplate' | 'feeDoc' | 'feePayment' | 'feeTransaction' | 'session' | 'reports' | 'documents' | 'notifications';
+type PermissionKeys = 'school' | 'branch' | 'class' | 'student' | 'parent' | 'faculty' | 'discounts' | 'feeHead' | 'feeTemplate' | 'feeDoc' | 'feePayment' | 'feeTransaction' | 'session' | 'reports' | 'documents' | 'notifications';
 type PermissionsType = { [K in PermissionKeys]: $Enums.Permission[] };
 export const permissions: PermissionsType = {
   school: [
@@ -36,6 +36,12 @@ export const permissions: PermissionsType = {
     $Enums.Permission.VIEW_PARENT,
     $Enums.Permission.EDIT_PARENT,
     $Enums.Permission.DELETE_PARENT,
+  ],
+  faculty: [
+    $Enums.Permission.CREATE_FACULTY,
+    $Enums.Permission.VIEW_FACULTY,
+    $Enums.Permission.EDIT_FACULTY,
+    $Enums.Permission.DELETE_FACULTY,
   ],
   discounts: [
     $Enums.Permission.CREATE_DISCOUNT_POLICY,
@@ -108,6 +114,7 @@ export const roleDefaults = {
     ...permissions.class,
     ...permissions.student,
     ...permissions.parent,
+    ...permissions.faculty,
     ...permissions.discounts,
     ...permissions.feeHead,
     ...permissions.feeTemplate,
@@ -125,6 +132,7 @@ export const roleDefaults = {
     ...permissions.class,
     ...permissions.student,
     ...permissions.parent,
+    ...permissions.faculty,
     ...permissions.discounts,
     ...permissions.feeHead,
     ...permissions.feeTemplate,
@@ -141,6 +149,7 @@ export const roleDefaults = {
     ...permissions.class,
     ...permissions.student,
     ...permissions.parent,
+    ...permissions.faculty,
     ...permissions.discounts,
     ...permissions.feeDoc,
     ...permissions.feePayment,
@@ -182,6 +191,7 @@ export const roleDefaults = {
     ...permissions.class,
     ...permissions.student,
     ...permissions.parent,
+    ...permissions.faculty,
     ...permissions.feeDoc,
     ...permissions.feePayment,
     ...permissions.feeTransaction,
