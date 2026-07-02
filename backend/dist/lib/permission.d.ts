@@ -1,5 +1,5 @@
 import { $Enums } from "../../generated/prisma/index.js";
-type PermissionKeys = 'school' | 'branch' | 'class' | 'student' | 'parent' | 'discounts' | 'feeHead' | 'feeTemplate' | 'feeDoc' | 'feePayment' | 'feeTransaction' | 'session' | 'reports' | 'documents' | 'notifications';
+type PermissionKeys = 'school' | 'branch' | 'class' | 'student' | 'parent' | 'faculty' | 'discounts' | 'feeHead' | 'feeTemplate' | 'feeDoc' | 'feePayment' | 'feeTransaction' | 'session' | 'reports' | 'documents' | 'notifications';
 type PermissionsType = {
     [K in PermissionKeys]: $Enums.Permission[];
 };

@@ -91,6 +91,32 @@ export const createSchool = async (req, res) => {
         await prisma.$transaction(async (tx) => {
             // 1️⃣ Create or find director
             const directorId = await findOrCreateUser("DIRECTOR", director, tx);
+            // Block duplicate: same director + school name + principal
+            const principalEmails = principals
+                .map((p) => p.email?.trim().toLowerCase())
+                .filter(Boolean);
+            const existingSchool = await tx.school.findFirst({
+                where: {
+                    name: { equals: finalSchoolName.trim(), mode: "insensitive" },
+                    createdById: directorId,
+                },
+                include: {
+                    branches: {
+                        include: {
+                            principal: { select: { email: true } },
+                        },
+                    },
+                },
+            });
+            if (existingSchool && principalEmails.length > 0) {
+                const existingPrincipalEmails = new Set(existingSchool.branches
+                    .map((b) => b.principal?.email?.trim().toLowerCase())
+                    .filter(Boolean));
+                const duplicatePrincipal = principalEmails.find((email) => existingPrincipalEmails.has(email));
+                if (duplicatePrincipal) {
+                    throw new Error(`A school named "${finalSchoolName}" with this director and principal already exists.`);
+                }
+            }
             // 2️⃣ Create school
             const school = await tx.school.create({
                 data: { name: finalSchoolName, createdById: directorId },

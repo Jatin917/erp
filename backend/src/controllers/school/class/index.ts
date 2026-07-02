@@ -5,7 +5,7 @@ import { connect } from "http2";
 import { sendError, sendSuccess } from "@src/lib/utils.js";
 import { isEmailVerified } from "@src/services/otp.js";
 import { OTP_TYPE } from "@src/lib/types.js";
-import { mergeRolePermissions } from "@src/lib/apply-role-permissions.js";
+import { getPermissionsForRoles } from "@src/lib/apply-role-permissions.js";
 import { validateRoleAssignment } from "@src/lib/role-grant.js";
 import { findOrCreateUser } from "@src/services/user/index.js";
 import type { Permission, Role } from "../../../../generated/prisma/index.js";
@@ -628,20 +628,47 @@ export const createFaculty = async (req: any, res: any) => {
       return sendError(res, "email is not verified", HTTP_STATUS.BAD_REQUEST);
     }
     let user;
-    for (const role of roles) {
+    for (const role of roleList) {
       user = await findOrCreateUser({ name, email, phone: contact, role });
 
-      if(!user){
+      if (!user) {
         return sendError(res, "User creation failed", HTTP_STATUS.CONFLICT);
       }
     }
 
-    const faculty = await prisma.schoolFaculty.create({data:{name, branchId, userid:user.id}});
-    if(!faculty){
+    const existingFaculty = await prisma.schoolFaculty.findFirst({
+      where: { userid: user!.id, branchId },
+    });
+    if (existingFaculty) {
+      return sendError(res, "Faculty already exists for this branch", HTTP_STATUS.CONFLICT);
+    }
+
+    const faculty = await prisma.schoolFaculty.create({
+      data: { name, branchId, userid: user!.id },
+    });
+    if (!faculty) {
       return sendError(res, "Error creating faculty", HTTP_STATUS.BAD_REQUEST);
     }
-    await sendWelcomeEmail({name:user.name, email:user.email, password:defaultPassword, roles:user.role});
-    return sendSuccess(res, "User created successfully",{}, HTTP_STATUS.CREATED);
+    await sendWelcomeEmail({
+      name: user!.name,
+      email: user!.email,
+      password: defaultPassword,
+      roles: user!.role,
+    });
+    return sendSuccess(
+      res,
+      "User created successfully",
+      {
+        faculty: {
+          id: faculty.id,
+          userid: user!.id,
+          name: faculty.name,
+          email: user!.email,
+          roles: user!.role,
+        },
+      },
+      HTTP_STATUS.CREATED,
+    );
   } catch (error: any) {
     return sendError(res, error.message, HTTP_STATUS.INTERNAL_SERVER_ERROR);
   }
@@ -691,10 +718,7 @@ export const updateFaculty = async (req: any, res: any) => {
       return roleDenied;
     }
 
-    let permissions: ReturnType<typeof mergeRolePermissions> = [];
-    for (const role of roleList) {
-      permissions = mergeRolePermissions(permissions, role);
-    }
+    const permissions = getPermissionsForRoles(roleList);
 
     const faculty = await prisma.user.update({
       where: { id },

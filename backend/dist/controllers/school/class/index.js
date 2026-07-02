@@ -5,8 +5,23 @@ import { connect } from "http2";
 import { sendError, sendSuccess } from "@src/lib/utils.js";
 import { isEmailVerified } from "@src/services/otp.js";
 import { OTP_TYPE } from "@src/lib/types.js";
+import { getPermissionsForRoles } from "@src/lib/apply-role-permissions.js";
+import { validateRoleAssignment } from "@src/lib/role-grant.js";
 import { findOrCreateUser } from "@src/services/user/index.js";
 import { sendWelcomeEmail } from "@src/services/producers-notifications/producers/producer.email.js";
+function rejectRoleAssignment(res, grantorPermissions, roles) {
+    if (!Array.isArray(grantorPermissions)) {
+        return sendError(res, "Not permitted for this task", HTTP_STATUS.FORBIDDEN);
+    }
+    const validation = validateRoleAssignment({
+        grantorPermissions,
+        rolesToAssign: roles,
+    });
+    if (!validation.ok) {
+        return sendError(res, validation.message, validation.status);
+    }
+    return null;
+}
 export const getAllClass = async (req, res) => {
     try {
         const { branchId, name } = req.query;
@@ -483,23 +498,49 @@ export const createFaculty = async (req, res) => {
         if (!name || !email || !roles || !branchId) {
             return sendError(res, "name, email, and role are required", HTTP_STATUS.BAD_REQUEST);
         }
+        const roleList = roles;
+        const roleDenied = rejectRoleAssignment(res, req.user?.permissions, roleList);
+        if (roleDenied) {
+            return roleDenied;
+        }
         const success = await isEmailVerified(email, OTP_TYPE.VERIFY_OTP);
-        if (success) {
+        if (!success) {
             return sendError(res, "email is not verified", HTTP_STATUS.BAD_REQUEST);
         }
         let user;
-        for (const role of roles) {
+        for (const role of roleList) {
             user = await findOrCreateUser({ name, email, phone: contact, role });
             if (!user) {
                 return sendError(res, "User creation failed", HTTP_STATUS.CONFLICT);
             }
         }
-        const faculty = await prisma.schoolFaculty.create({ data: { name, branchId, userid: user.id } });
+        const existingFaculty = await prisma.schoolFaculty.findFirst({
+            where: { userid: user.id, branchId },
+        });
+        if (existingFaculty) {
+            return sendError(res, "Faculty already exists for this branch", HTTP_STATUS.CONFLICT);
+        }
+        const faculty = await prisma.schoolFaculty.create({
+            data: { name, branchId, userid: user.id },
+        });
         if (!faculty) {
             return sendError(res, "Error creating faculty", HTTP_STATUS.BAD_REQUEST);
         }
-        await sendWelcomeEmail({ name: user.name, email: user.email, password: defaultPassword, roles: user.role });
-        return sendSuccess(res, "User created successfully", {}, HTTP_STATUS.CREATED);
+        await sendWelcomeEmail({
+            name: user.name,
+            email: user.email,
+            password: defaultPassword,
+            roles: user.role,
+        });
+        return sendSuccess(res, "User created successfully", {
+            faculty: {
+                id: faculty.id,
+                userid: user.id,
+                name: faculty.name,
+                email: user.email,
+                roles: user.role,
+            },
+        }, HTTP_STATUS.CREATED);
     }
     catch (error) {
         return sendError(res, error.message, HTTP_STATUS.INTERNAL_SERVER_ERROR);
@@ -538,18 +579,23 @@ export const getFaculty = async (req, res) => {
 export const updateFaculty = async (req, res) => {
     try {
         const { id, roles } = req.body;
-        if (!id || !roles) {
+        if (!id || !Array.isArray(roles)) {
             return sendError(res, "Please provide Required Fields", HTTP_STATUS.BAD_REQUEST);
         }
+        const roleList = roles;
+        const roleDenied = rejectRoleAssignment(res, req.user?.permissions, roleList);
+        if (roleDenied) {
+            return roleDenied;
+        }
+        const permissions = getPermissionsForRoles(roleList);
         const faculty = await prisma.user.update({
             where: { id },
             data: {
-                role: {
-                    push: roles // roles can be ["TEACHER"] or ["ADMIN","STUDENT"]
-                }
-            }
+                role: { set: roleList },
+                permissions: { set: permissions },
+            },
         });
-        return sendSuccess(res, "Updated", { faculty: { userid: faculty.id, roles: faculty.role } }, HTTP_STATUS.CREATED);
+        return sendSuccess(res, "Updated", { faculty: { userid: faculty.id, roles: faculty.role } }, HTTP_STATUS.OK);
     }
     catch (error) {
         return sendError(res, error.message, HTTP_STATUS.INTERNAL_SERVER_ERROR);

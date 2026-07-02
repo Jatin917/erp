@@ -163,6 +163,7 @@ export const roleDefaults = {
     ...permissions.class,
     ...permissions.student,
     ...permissions.parent,
+    $Enums.Permission.VIEW_BRANCH,
     $Enums.Permission.VIEW_REPORTS,
     $Enums.Permission.VIEW_NOTIFICATIONS,
   ],

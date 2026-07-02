@@ -27,9 +27,9 @@ branchRouter.post("/create-subject", requirePermission(Permission.CREATE_CLASS),
 branchRouter.get("/get-subjects", requirePermission(Permission.VIEW_CLASS), getSubjects);
 branchRouter.delete("/delete-subject", requirePermission(Permission.DELETE_CLASS), deleteSubject);
 branchRouter.patch("/update-subject", requirePermission(Permission.EDIT_CLASS), updateSubject);
-branchRouter.post("/create-faculty", requirePermission(Permission.EDIT_BRANCH), createFaculty);
-branchRouter.get("/get-faculty", requirePermission(Permission.VIEW_BRANCH), getFaculty);
-branchRouter.patch("/update-faculty", requirePermission(Permission.EDIT_BRANCH), updateFaculty);
+branchRouter.post("/create-faculty", requirePermission(Permission.CREATE_FACULTY), createFaculty);
+branchRouter.get("/get-faculty", requirePermission(Permission.VIEW_FACULTY), getFaculty);
+branchRouter.patch("/update-faculty", requirePermission(Permission.EDIT_FACULTY), updateFaculty);
 branchRouter.post("/generate-lecture", requirePermission(Permission.EDIT_CLASS), upsertLectureFromDate);
 branchRouter.get("/get-timetable", requirePermission(Permission.VIEW_CLASS), getTimeTable);
 export { branchRouter };

@@ -21,6 +21,14 @@ export function mergeRolePermissions(
 	return [...new Set([...existingPermissions, ...defaults])];
 }
 
+export function getPermissionsForRoles(roles: Role[]): Permission[] {
+	let permissions: Permission[] = [];
+	for (const role of roles) {
+		permissions = mergeRolePermissions(permissions, role);
+	}
+	return permissions;
+}
+
 export async function applyRolePermissions(
 	db: DbClient,
 	userId: string,
