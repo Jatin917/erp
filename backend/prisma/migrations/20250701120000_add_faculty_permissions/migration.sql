@@ -1,5 +1,1 @@
--- AlterEnum
-ALTER TYPE "public"."Permission" ADD VALUE 'CREATE_FACULTY';
-ALTER TYPE "public"."Permission" ADD VALUE 'VIEW_FACULTY';
-ALTER TYPE "public"."Permission" ADD VALUE 'EDIT_FACULTY';
-ALTER TYPE "public"."Permission" ADD VALUE 'DELETE_FACULTY';
+-- Moved to 20251014150914_assign_faculty_section_subject_permissions (Permission enum is created in 20250812171347_permissions)

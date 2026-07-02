@@ -400,6 +400,17 @@ export const getBranches = async (req: any, res: any) => {
         logo:branch.logoUrl
       }));
     }
+
+    // return branches for different faculty roles
+    if (roles.includes(rolesAre.TEACHER)) {
+      const foundBranches = await getBranchesService({ teacherId: user.id });
+      schools = foundBranches.map((branch) => ({
+        name: `${branch.name} ${branch.address}`,
+        id: branch.id,
+        logo: branch.logoUrl,
+        softwareCharge: branch.softwareCharge,
+      }));
+    }
     return res.status(HTTP_STATUS.OK).json({
       success: true,
       message: "Found All Branches",
