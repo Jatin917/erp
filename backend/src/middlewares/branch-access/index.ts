@@ -42,7 +42,7 @@ export async function resolveAccessibleBranchIds(user: RequestUser): Promise<Acc
 	}
 
 	const faculty = await prisma.schoolFaculty.findUnique({
-		where: { userid: user.id },
+		where: { userId: user.id },
 		select: { branchId: true },
 	});
 	if (faculty?.branchId) {

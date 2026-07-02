@@ -57,7 +57,7 @@ model Branch {
   classLabels       ClassLabel[]
   customFields      CustomField[]
   discountsPolicies DiscountPolicy[]
-  teachers          SchoolFaculty[]
+  faculties         SchoolFaculty[]
   sections          Section[]
   students          Student[]
 }
@@ -413,8 +413,8 @@ model LateFee {
 
 model SchoolFaculty {
   id          String                    @id @default(uuid())
-  userid      String                    @unique @default("1d04d74e-2e18-4d9e-a1c2-6c65e9d65d42")
-  user        User                      @relation(fields: [userid], references: [id])
+  userId      String                    @unique
+  user        User                      @relation(fields: [userId], references: [id])
   name        String
   branchId    String
   createdAt   DateTime                  @default(now())
@@ -519,14 +519,6 @@ enum Role {
   STUDENT
   FATHER
   MOTHER
-}
-
-enum SchoolFacultyRole {
-  TEACHER
-  LIBRARIAN
-  RECEPTIONIST
-  ACCOUNTANT
-  SCHOOL_ADMIN
 }
 
 enum PaymentMode {

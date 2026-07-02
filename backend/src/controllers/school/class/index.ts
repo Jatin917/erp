@@ -636,15 +636,22 @@ export const createFaculty = async (req: any, res: any) => {
       }
     }
 
-    const existingFaculty = await prisma.schoolFaculty.findFirst({
-      where: { userid: user!.id, branchId },
+    const existingFaculty = await prisma.schoolFaculty.findUnique({
+      where: { userId: user!.id },
     });
     if (existingFaculty) {
+      if (existingFaculty.branchId !== branchId) {
+        return sendError(
+          res,
+          "User is already assigned as faculty to another branch",
+          HTTP_STATUS.CONFLICT,
+        );
+      }
       return sendError(res, "Faculty already exists for this branch", HTTP_STATUS.CONFLICT);
     }
 
     const faculty = await prisma.schoolFaculty.create({
-      data: { name, branchId, userid: user!.id },
+      data: { name, branchId, userId: user!.id },
     });
     if (!faculty) {
       return sendError(res, "Error creating faculty", HTTP_STATUS.BAD_REQUEST);
@@ -661,7 +668,7 @@ export const createFaculty = async (req: any, res: any) => {
       {
         faculty: {
           id: faculty.id,
-          userid: user!.id,
+          userId: user!.id,
           name: faculty.name,
           email: user!.email,
           roles: user!.role,
@@ -696,7 +703,7 @@ if (role) {
         email:f.user.email,
         id: f.id,
         roles: f.user.role,
-        userid: f.userid
+        userId: f.userId
       };
     });
     return sendSuccess(res, "faculty founded", {faculty:formattedFaculty});
@@ -731,7 +738,7 @@ export const updateFaculty = async (req: any, res: any) => {
     return sendSuccess(
       res,
       "Updated",
-      { faculty: { userid: faculty.id, roles: faculty.role } },
+      { faculty: { userId: faculty.id, roles: faculty.role } },
       HTTP_STATUS.OK,
     );
   } catch (error: any) {
