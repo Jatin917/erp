@@ -57,6 +57,21 @@ export async function resolveAccessibleBranchIds(user: RequestUser): Promise<Acc
 		branchIds.add(student.branchId);
 	}
 
+	const parent = await prisma.parent.findFirst({
+		where: { userId: user.id },
+		select: {
+			fatherOf: { select: { branchId: true } },
+			motherOf: { select: { branchId: true } },
+		},
+	});
+	if (parent) {
+		for (const child of [...parent.fatherOf, ...parent.motherOf]) {
+			if (child.branchId) {
+				branchIds.add(child.branchId);
+			}
+		}
+	}
+
 	return Array.from(branchIds);
 }
 

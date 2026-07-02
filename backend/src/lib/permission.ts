@@ -127,6 +127,9 @@ export const permissions: PermissionsType = {
   ],
 };
 
+/** Minimum permission to list/select a branch (e.g. get-branches). */
+const viewBranchAccess = [$Enums.Permission.VIEW_BRANCH] as const;
+
 const academicRoles = [
   ...permissions.class,
   ...permissions.section,
@@ -192,12 +195,14 @@ export const roleDefaults = {
     ...academicRoles,
     ...permissions.student,
     ...permissions.parent,
-    $Enums.Permission.VIEW_BRANCH,
+    ...viewBranchAccess,
     $Enums.Permission.VIEW_REPORTS,
     $Enums.Permission.VIEW_NOTIFICATIONS,
   ],
   LIBRARIAN: [
     ...permissions.student,
+    ...permissions.customField,
+    ...viewBranchAccess,
     $Enums.Permission.VIEW_DOCUMENT,
     $Enums.Permission.UPLOAD_DOCUMENT,
     $Enums.Permission.VIEW_REPORTS,
@@ -206,6 +211,7 @@ export const roleDefaults = {
   RECEPTIONIST: [
     ...permissions.student,
     ...permissions.parent,
+    ...viewBranchAccess,
     $Enums.Permission.VIEW_REPORTS,
     $Enums.Permission.VIEW_NOTIFICATIONS,
   ],
@@ -213,6 +219,7 @@ export const roleDefaults = {
     ...permissions.feeDoc,
     ...permissions.feePayment,
     ...permissions.feeTransaction,
+    ...viewBranchAccess,
     $Enums.Permission.VIEW_REPORTS,
     $Enums.Permission.VIEW_NOTIFICATIONS,
   ],
@@ -231,14 +238,17 @@ export const roleDefaults = {
     $Enums.Permission.VIEW_NOTIFICATIONS,
   ],
   STUDENT: [
+    ...viewBranchAccess,
     $Enums.Permission.VIEW_NOTIFICATIONS,
     $Enums.Permission.VIEW_DOCUMENT,
   ],
   FATHER: [
+    ...viewBranchAccess,
     $Enums.Permission.VIEW_NOTIFICATIONS,
     $Enums.Permission.VIEW_DOCUMENT,
   ],
   MOTHER: [
+    ...viewBranchAccess,
     $Enums.Permission.VIEW_NOTIFICATIONS,
     $Enums.Permission.VIEW_DOCUMENT,
   ],

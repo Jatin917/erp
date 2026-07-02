@@ -16,6 +16,27 @@ import { createSchoolDays } from "@src/services/attendance/index.js";
 import { syncCustomFieldsToRegistry } from "@src/registry/seed/sync-custom-fields.js";
 import { applyRolePermissions, mergeRolePermissions } from "@src/lib/apply-role-permissions.js";
 
+const SCHOOL_FACULTY_ROLES: rolesAre[] = [
+  rolesAre.TEACHER,
+  rolesAre.LIBRARIAN,
+  rolesAre.RECEPTIONIST,
+  rolesAre.ACCOUNTANT,
+  rolesAre.SCHOOL_ADMIN,
+];
+
+const formatBranchOption = (branch: {
+  name: string;
+  address: string;
+  id: string;
+  logoUrl: string | null;
+  softwareCharge?: number;
+}) => ({
+  name: `${branch.name} ${branch.address}`,
+  id: branch.id,
+  logo: branch.logoUrl,
+  ...(branch.softwareCharge !== undefined ? { softwareCharge: branch.softwareCharge } : {}),
+});
+
 // Updated createBranch to accept tx for transactions
 const createBranch = async (tx: Omit<PrismaClient<Prisma.PrismaClientOptions, never, DefaultArgs>, "$connect" | "$disconnect" | "$on" | "$transaction" | "$use" | "$extends">, address: any, principalId: any, name: any, schoolId: string, softwareCharge:string) => {
     try {
@@ -360,11 +381,7 @@ export const getBranches = async (req: any, res: any) => {
     // SUPERADMIN: return all branches
     if (roles.includes(rolesAre.SUPERADMIN)) {
       const branches = await getBranchesService({},{academicSession:true});
-      schools = branches.map(branch => ({
-        name: `${branch.name} ${branch.address}`, 
-        id: branch.id, 
-        logo:branch.logoUrl
-      }));
+      schools = branches.map((branch) => formatBranchOption(branch));
       return res.status(HTTP_STATUS.OK).json({
         success: true,
         message: "Found All Branches",
@@ -381,11 +398,7 @@ export const getBranches = async (req: any, res: any) => {
       foundSchools.forEach((school:any) => {
         if (school.branches?.length) {
           school.branches.forEach((branch:any) => {
-            schools.push({
-              name: `${branch.name} ${branch.address}`,
-              id: branch.id,
-              logo:branch.logoUrl
-            });
+            schools.push(formatBranchOption(branch));
           });
         }
       });
@@ -394,22 +407,19 @@ export const getBranches = async (req: any, res: any) => {
     // PRINCIPAL: get branches directly assigned
     if (roles.includes(rolesAre.PRINCIPAL)) {
       const foundBranches = await getBranchesService({ principalId: user.id });
-      schools = foundBranches.map((branch) => ({
-        name: `${branch.name} ${branch.address}`,
-        id: branch.id,
-        logo:branch.logoUrl
-      }));
+      schools = foundBranches.map((branch) => formatBranchOption(branch));
     }
 
-    // return branches for different faculty roles
-    if (roles.includes(rolesAre.TEACHER)) {
-      const foundBranches = await getBranchesService({ teacherId: user.id });
-      schools = foundBranches.map((branch) => ({
-        name: `${branch.name} ${branch.address}`,
-        id: branch.id,
-        logo: branch.logoUrl,
-        softwareCharge: branch.softwareCharge,
-      }));
+    const hasSchoolFacultyRole = roles.some((role) => SCHOOL_FACULTY_ROLES.includes(role));
+    if (hasSchoolFacultyRole && schools.length === 0) {
+      const faculty = await prisma.schoolFaculty.findUnique({
+        where: { userId: user.id },
+        include: { branch: true },
+      });
+
+      if (faculty?.branch) {
+        schools = [formatBranchOption(faculty.branch)];
+      }
     }
     return res.status(HTTP_STATUS.OK).json({
       success: true,
