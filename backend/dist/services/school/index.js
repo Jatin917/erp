@@ -1,6 +1,6 @@
-import { HTTP_STATUS } from "@src/lib/http-codes.js";
-import { sendError } from "@src/lib/utils.js";
-import { prisma } from "@src/server.js";
+import { HTTP_STATUS } from "../../lib/http-codes.js";
+import { sendError } from "../../lib/utils.js";
+import { prisma } from "../../server.js";
 export const getBranchService = async (where, include) => {
     const branch = await prisma.branch.findUnique({ where, include });
     return branch;

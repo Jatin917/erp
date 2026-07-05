@@ -1,8 +1,7 @@
 import { Worker } from 'bullmq';
-import { Redis } from 'ioredis';
 import dotenv from 'dotenv';
 dotenv.config();
-import { getLecturesForToday } from '@src/services/school/index.js';
+import { getLecturesForToday } from '../../../services/school/index.js';
 import { LectureStatus } from '../../../../generated/prisma/index.js';
 import { teacherAttendanceQueue } from '../queues/queue.js';
 function getDelayFromTimeString(timeString, minutesBefore = 10) {
@@ -21,12 +20,6 @@ function getDelayFromTimeString(timeString, minutesBefore = 10) {
     const delay = Math.max(lectureStart.getTime() - Date.now() - minutesBefore * 60 * 1000, 0);
     return delay;
 }
-const connection = new Redis(process.env.REDIS_URL, {
-    maxRetriesPerRequest: null,
-});
-connection.on('connect', () => console.log('✅ Connected to Redis'));
-connection.on('ready', () => console.log('💚 Redis ready for commands'));
-connection.on('error', (err) => console.error('❌ Redis error', err));
 new Worker('daily-scheduler-queue', async (job) => {
     console.log('🌅 Running daily scheduler job at', new Date().toLocaleString());
     const lectures = await getLecturesForToday();
@@ -70,5 +63,5 @@ new Worker('daily-scheduler-queue', async (job) => {
     }
     console.log(`📊 Summary: ${scheduledCount} scheduled lectures found, ${addedCount} successfully added to queue`);
     console.log('✅ All today\'s reminders enqueued.');
-}, { connection });
+}, { connection: { url: process.env.REDIS_URL, maxRetriesPerRequest: null } });
 //# sourceMappingURL=daily-job-scheduler.js.map

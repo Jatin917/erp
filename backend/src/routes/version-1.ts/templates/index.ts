@@ -22,7 +22,7 @@ import {
 } from "@src/controllers/templates/template.js";
 import { requirePermission } from "@src/middlewares/permission/index.js";
 
-export const templatesRouter = Router();
+export const templatesRouter: Router = Router();
 
 templatesRouter.get(
 	"/system-fields",

@@ -1,5 +1,5 @@
-import { prismaClient } from "@src/lib/prisma-client.js";
-import { RedisClient } from "@src/services/redis.js";
+import { prismaClient } from "../../lib/prisma-client.js";
+import { RedisClient } from "../../services/redis.js";
 let fieldMap = new Map();
 const CACHE_KEY = "field-registry:active:v1";
 export const loadFieldRegistryCache = async () => {

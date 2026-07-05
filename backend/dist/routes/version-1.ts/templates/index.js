@@ -1,9 +1,9 @@
 import { Router } from "express";
 import { Permission } from "../../../../generated/prisma/index.js";
-import { addMapping, listMappings, removeMapping, updateMapping, } from "@src/controllers/templates/mapping.js";
-import { listSystemFields, listSystemFieldsByEntity, } from "@src/controllers/templates/system-fields.js";
-import { activateTemplate, archiveTemplate, createTemplate, deleteTemplate, getTemplate, listTemplates, updateTemplate, validateTemplate, } from "@src/controllers/templates/template.js";
-import { requirePermission } from "@src/middlewares/permission/index.js";
+import { addMapping, listMappings, removeMapping, updateMapping, } from "../../../controllers/templates/mapping.js";
+import { listSystemFields, listSystemFieldsByEntity, } from "../../../controllers/templates/system-fields.js";
+import { activateTemplate, archiveTemplate, createTemplate, deleteTemplate, getTemplate, listTemplates, updateTemplate, validateTemplate, } from "../../../controllers/templates/template.js";
+import { requirePermission } from "../../../middlewares/permission/index.js";
 export const templatesRouter = Router();
 templatesRouter.get("/system-fields", requirePermission(Permission.VIEW_REPORTS), listSystemFields);
 templatesRouter.get("/system-fields/:entityType", requirePermission(Permission.VIEW_REPORTS), listSystemFieldsByEntity);

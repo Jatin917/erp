@@ -1,7 +1,7 @@
-import { HTTP_STATUS } from "@src/lib/http-codes.js";
-import { sendError, sendSuccess } from "@src/lib/utils.js";
-import { reportDownload } from "@src/reports/download/index.js";
-import { reportEngine } from "@src/reports/engine/report-engine.js";
+import { HTTP_STATUS } from "../../lib/http-codes.js";
+import { sendError, sendSuccess } from "../../lib/utils.js";
+import { reportDownload } from "../../reports/download/index.js";
+import { reportEngine } from "../../reports/engine/report-engine.js";
 export const runReport = async (req, res) => {
     try {
         const body = req.body;

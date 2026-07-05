@@ -1,5 +1,5 @@
 import { FieldCategory, FieldResolverType, RegistryDataType, SourceModule, customFieldType } from "../../../generated/prisma/index.js";
-import { prismaClient } from "@src/lib/prisma-client.js";
+import { prismaClient } from "../../lib/prisma-client.js";
 const mapEntityToSourceModule = (entityType) => entityType === "STUDENT" ? SourceModule.STUDENT : entityType === "PARENT" ? SourceModule.PARENT : SourceModule.SYSTEM;
 const mapCustomFieldTypeToRegistryType = (type) => {
     if (type === "NUMBER" || type === "CURRENCY" || type === "PERCENTAGE")

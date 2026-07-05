@@ -1,6 +1,6 @@
-import { HTTP_STATUS } from "@src/lib/http-codes.js";
-import { sendError, sendSuccess } from "@src/lib/utils.js";
-import { fieldRegistryService } from "@src/reports/services/field-registry.service.js";
+import { HTTP_STATUS } from "../../lib/http-codes.js";
+import { sendError, sendSuccess } from "../../lib/utils.js";
+import { fieldRegistryService } from "../../reports/services/field-registry.service.js";
 export const getReportFields = async (req, res) => {
     try {
         const sourceModule = req.query.sourceModule;

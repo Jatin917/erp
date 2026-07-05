@@ -1,7 +1,7 @@
-import { prisma } from "@src/server.js";
+import { prisma } from "../../../server.js";
 import { AttendanceMethod, AttendanceStatus, AttendanceType, LectureStatus, Weekday, } from "../../../../generated/prisma/index.js";
-import { sendSuccess, sendError } from "@src/lib/utils.js";
-import { HTTP_STATUS } from "@src/lib/http-codes.js";
+import { sendSuccess, sendError } from "../../../lib/utils.js";
+import { HTTP_STATUS } from "../../../lib/http-codes.js";
 /* ============================================================
    SCHOOL DAYS
 ============================================================ */

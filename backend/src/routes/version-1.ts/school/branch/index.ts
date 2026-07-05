@@ -30,7 +30,7 @@ import {
 } from "@src/controllers/school/school/index.js";
 import { requirePermission } from "@src/middlewares/permission/index.js";
 
-const branchRouter = Router();
+const branchRouter: Router = Router();
 
 // @ts-ignore
 const upload = multer({ dest: "uploads/" });

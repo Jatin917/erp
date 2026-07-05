@@ -1,4 +1,4 @@
-import { prisma } from "@src/server.js";
+import { prisma } from "../../server.js";
 import { SchoolDayType } from "../../../generated/prisma/index.js";
 export const createSchoolDays = async ({ tx, sessionId, startDate, endDate, workingDays }) => {
     try {

@@ -1,1 +1,1 @@
-{"version":3,"file":"attendanceModuleRouter.d.ts","sourceRoot":"","sources":["../../../../src/routes/version-1.ts/attendanceModuleRouter/attendanceModuleRouter.ts"],"names":[],"mappings":"AAKA,eAAO,MAAM,sBAAsB,4CAAW,CAAC"}
+{"version":3,"file":"attendanceModuleRouter.d.ts","sourceRoot":"","sources":["../../../../src/routes/version-1.ts/attendanceModuleRouter/attendanceModuleRouter.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,MAAM,EAAE,MAAM,SAAS,CAAC;AAKjC,eAAO,MAAM,sBAAsB,EAAE,MAAiB,CAAC"}

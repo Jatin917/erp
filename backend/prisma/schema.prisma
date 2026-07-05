@@ -853,6 +853,60 @@ model FieldRegistry {
   @@index([groupKey])
 }
 
+enum DocumentTemplateType {
+  CUSTOM
+  REPORT
+  CERTIFICATE
+  TRANSFER_CERTIFICATE
+}
 
+enum TemplateStatus {
+  DRAFT
+  CONFIGURED
+  ACTIVE
+  ARCHIVED
+}
 
+enum FieldAlignment {
+  LEFT
+  CENTER
+  RIGHT
+}
+
+model DocumentTemplate {
+  id          String               @id @default(uuid())
+  name        String
+  description String?
+  pdfUrl      String
+  type        DocumentTemplateType @default(CUSTOM)
+  status      TemplateStatus       @default(DRAFT)
+  branchId    String?
+  createdById String?
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+
+  mappings ReportTemplateFieldMapping[]
+}
+
+model ReportTemplateFieldMapping {
+  id            String         @id @default(uuid())
+  templateId    String
+  systemFieldId String
+  fieldKey      String
+  fieldLabel    String?
+  pageNumber    Int            @default(1)
+  xCoordinate   Float
+  yCoordinate   Float
+  width         Float?
+  height        Float?
+  fontSize      Float?
+  alignment     FieldAlignment @default(LEFT)
+  isRequired    Boolean        @default(false)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  template DocumentTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@index([templateId])
+}
 

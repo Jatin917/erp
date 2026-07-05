@@ -1,2 +1,3 @@
-export declare const schoolRouter: import("express-serve-static-core").Router;
+import { Router } from "express";
+export declare const schoolRouter: Router;
 //# sourceMappingURL=index.d.ts.map

@@ -1,14 +1,9 @@
 import { Worker } from 'bullmq';
-import { Redis } from 'ioredis';
 import dotenv from 'dotenv';
 import { prisma } from '@src/server.js';
 import { sendMail } from '@src/services/utils/mailer.js';
 dotenv.config();
 
-
-const connection = new Redis(process.env.REDIS_URL!, {
-  maxRetriesPerRequest: null,
-});
 
 new Worker(
   'teacher-attendance-queue',
@@ -36,5 +31,5 @@ new Worker(
 
     console.log(`✅ Reminder sent to ${teacher.user.email} for lecture ${lectureId}`);
   },
-  { connection }
+  { connection: { url: process.env.REDIS_URL!, maxRetriesPerRequest: null } }
 );

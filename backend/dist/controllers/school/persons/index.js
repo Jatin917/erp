@@ -1,14 +1,14 @@
 import { HTTP_STATUS } from "../../../lib/http-codes.js";
-import { JWT_SECRET, prisma, SUPERADMIN_EMAIL, SUPERADMIN_PASSWORD } from "@src/server.js";
+import { JWT_SECRET, prisma, SUPERADMIN_EMAIL, SUPERADMIN_PASSWORD } from "../../../server.js";
 import bcrypt from 'bcrypt';
-import { getDefaultPermissionsForRole } from "@src/lib/apply-role-permissions.js";
-import { OTP_TYPE, Permission } from '@src/lib/types.js';
+import { getDefaultPermissionsForRole } from "../../../lib/apply-role-permissions.js";
+import { OTP_TYPE, Permission } from '../../../lib/types.js';
 import jwt from 'jsonwebtoken';
 import { Role as PrismaRole } from "../../../../generated/prisma/index.js";
-import { TOKEN_TTL } from "@src/lib/contants.js";
+import { TOKEN_TTL } from "../../../lib/contants.js";
 import { userInfo } from "os";
-import { isEmailVerified } from "@src/services/otp.js";
-import { sendError } from "@src/lib/utils.js";
+import { isEmailVerified } from "../../../services/otp.js";
+import { sendError } from "../../../lib/utils.js";
 export const registerUser = async (req, res) => {
     try {
         // Ensure req.body is parsed and is an object

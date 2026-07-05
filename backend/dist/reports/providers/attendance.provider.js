@@ -1,5 +1,5 @@
 import { AttendanceStatus, FieldCategory, } from "../../../generated/prisma/index.js";
-import { prisma } from "@src/server.js";
+import { prisma } from "../../server.js";
 export class AttendanceProvider {
     key = "attendance";
     async fetch(context, fields) {

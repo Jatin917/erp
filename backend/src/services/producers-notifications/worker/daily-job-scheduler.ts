@@ -1,5 +1,4 @@
 import { Worker } from 'bullmq';
-import {Redis} from 'ioredis';
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -27,15 +26,6 @@ function getDelayFromTimeString(timeString: string, minutesBefore = 10): number 
   const delay = Math.max(lectureStart.getTime() - Date.now() - minutesBefore * 60 * 1000, 0);
   return delay;
 }
-
-const connection = new Redis(process.env.REDIS_URL!, {
-  maxRetriesPerRequest: null,
-});
-
-connection.on('connect', () => console.log('✅ Connected to Redis'));
-connection.on('ready', () => console.log('💚 Redis ready for commands'));
-connection.on('error', (err) => console.error('❌ Redis error', err));
-
 
 new Worker(
   'daily-scheduler-queue',
@@ -92,5 +82,5 @@ new Worker(
 
     console.log('✅ All today\'s reminders enqueued.', );
   },
-  { connection }
+  { connection: { url: process.env.REDIS_URL!, maxRetriesPerRequest: null } }
 );

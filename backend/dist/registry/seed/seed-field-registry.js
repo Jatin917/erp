@@ -1,4 +1,4 @@
-import { prismaClient } from "@src/lib/prisma-client.js";
+import { prismaClient } from "../../lib/prisma-client.js";
 import { allFieldDefinitions } from "../definitions/index.js";
 export const seedFieldRegistry = async () => {
     for (const field of allFieldDefinitions) {

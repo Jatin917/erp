@@ -5,14 +5,27 @@ import { defaultPassword, prisma } from "../../../server.js";
 import path from "path";
 import bcrypt from 'bcrypt';
 import fs from "fs";
-import { OTP_TYPE } from "@src/lib/types.js";
-import { isEmailVerified } from "@src/services/otp.js";
-import { sendError, sendSuccess } from "@src/lib/utils.js";
-import { createCustomFieldService, getBranchesService, getBranchService, getCustomFieldsService } from "@src/services/school/index.js";
-import { getUserService } from "@src/services/user/index.js";
-import { createSchoolDays } from "@src/services/attendance/index.js";
-import { syncCustomFieldsToRegistry } from "@src/registry/seed/sync-custom-fields.js";
-import { applyRolePermissions, mergeRolePermissions } from "@src/lib/apply-role-permissions.js";
+import { OTP_TYPE } from "../../../lib/types.js";
+import { isEmailVerified } from "../../../services/otp.js";
+import { sendError, sendSuccess } from "../../../lib/utils.js";
+import { createCustomFieldService, getBranchesService, getBranchService, getCustomFieldsService } from "../../../services/school/index.js";
+import { getUserService } from "../../../services/user/index.js";
+import { createSchoolDays } from "../../../services/attendance/index.js";
+import { syncCustomFieldsToRegistry } from "../../../registry/seed/sync-custom-fields.js";
+import { applyRolePermissions, mergeRolePermissions } from "../../../lib/apply-role-permissions.js";
+const SCHOOL_FACULTY_ROLES = [
+    rolesAre.TEACHER,
+    rolesAre.LIBRARIAN,
+    rolesAre.RECEPTIONIST,
+    rolesAre.ACCOUNTANT,
+    rolesAre.SCHOOL_ADMIN,
+];
+const formatBranchOption = (branch) => ({
+    name: `${branch.name} ${branch.address}`,
+    id: branch.id,
+    logo: branch.logoUrl,
+    ...(branch.softwareCharge !== undefined ? { softwareCharge: branch.softwareCharge } : {}),
+});
 // Updated createBranch to accept tx for transactions
 const createBranch = async (tx, address, principalId, name, schoolId, softwareCharge) => {
     try {
@@ -303,11 +316,7 @@ export const getBranches = async (req, res) => {
         // SUPERADMIN: return all branches
         if (roles.includes(rolesAre.SUPERADMIN)) {
             const branches = await getBranchesService({}, { academicSession: true });
-            schools = branches.map(branch => ({
-                name: `${branch.name} ${branch.address}`,
-                id: branch.id,
-                logo: branch.logoUrl
-            }));
+            schools = branches.map((branch) => formatBranchOption(branch));
             return res.status(HTTP_STATUS.OK).json({
                 success: true,
                 message: "Found All Branches",
@@ -321,11 +330,7 @@ export const getBranches = async (req, res) => {
             foundSchools.forEach((school) => {
                 if (school.branches?.length) {
                     school.branches.forEach((branch) => {
-                        schools.push({
-                            name: `${branch.name} ${branch.address}`,
-                            id: branch.id,
-                            logo: branch.logoUrl
-                        });
+                        schools.push(formatBranchOption(branch));
                     });
                 }
             });
@@ -333,11 +338,17 @@ export const getBranches = async (req, res) => {
         // PRINCIPAL: get branches directly assigned
         if (roles.includes(rolesAre.PRINCIPAL)) {
             const foundBranches = await getBranchesService({ principalId: user.id });
-            schools = foundBranches.map((branch) => ({
-                name: `${branch.name} ${branch.address}`,
-                id: branch.id,
-                logo: branch.logoUrl
-            }));
+            schools = foundBranches.map((branch) => formatBranchOption(branch));
+        }
+        const hasSchoolFacultyRole = roles.some((role) => SCHOOL_FACULTY_ROLES.includes(role));
+        if (hasSchoolFacultyRole && schools.length === 0) {
+            const faculty = await prisma.schoolFaculty.findUnique({
+                where: { userId: user.id },
+                include: { branch: true },
+            });
+            if (faculty?.branch) {
+                schools = [formatBranchOption(faculty.branch)];
+            }
         }
         return res.status(HTTP_STATUS.OK).json({
             success: true,

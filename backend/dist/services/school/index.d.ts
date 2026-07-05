@@ -98,13 +98,13 @@ export declare const getBranchService: (where: any, include?: any) => Promise<({
         name: string;
         branchId: string;
         createdAt: Date;
-        userid: string;
+        userId: string;
     } | {
         id: string;
         name: string;
         branchId: string;
         createdAt: Date;
-        userid: string;
+        userId: string;
     })[] | ({
         result: import("../../../generated/prisma/runtime/library.js").JsonValue | null;
         id: string;
@@ -291,7 +291,7 @@ export declare const getBranchService: (where: any, include?: any) => Promise<({
         name: string;
         branchId: string;
         createdAt: Date;
-        userid: string;
+        userId: string;
     }[] | {
         result: import("../../../generated/prisma/runtime/library.js").JsonValue | null;
         id: string;
@@ -481,13 +481,13 @@ export declare const getBranchesService: (where?: any, include?: any) => Promise
         name: string;
         branchId: string;
         createdAt: Date;
-        userid: string;
+        userId: string;
     } | {
         id: string;
         name: string;
         branchId: string;
         createdAt: Date;
-        userid: string;
+        userId: string;
     })[] | ({
         result: import("../../../generated/prisma/runtime/library.js").JsonValue | null;
         id: string;
@@ -674,7 +674,7 @@ export declare const getBranchesService: (where?: any, include?: any) => Promise
         name: string;
         branchId: string;
         createdAt: Date;
-        userid: string;
+        userId: string;
     }[] | {
         result: import("../../../generated/prisma/runtime/library.js").JsonValue | null;
         id: string;

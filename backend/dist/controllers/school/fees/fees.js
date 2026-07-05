@@ -7,11 +7,11 @@ import { Prisma } from "@prisma/client/extension";
 import path, { dirname } from "path";
 import ejs from 'ejs';
 import { fileURLToPath } from "url";
-import { sendError, sendSuccess } from "@src/lib/utils.js";
-import { MONTHS, numsSuffix } from "@src/lib/contants.js";
-import { processFeePayment } from "@src/services/fees/index.js";
-import { getEnrollment } from "@src/services/student/index.js";
-import { getBranchService } from "@src/services/school/index.js";
+import { sendError, sendSuccess } from "../../../lib/utils.js";
+import { MONTHS, numsSuffix } from "../../../lib/contants.js";
+import { processFeePayment } from "../../../services/fees/index.js";
+import { getEnrollment } from "../../../services/student/index.js";
+import { getBranchService } from "../../../services/school/index.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const updatePayments = async (tx, feeDocId, amount, paymentType, payments) => {
@@ -465,7 +465,7 @@ export const feeRecieptForTransaction = async (req, res) => {
         });
         const page = await browser.newPage();
         // ✅ Set content and wait for images
-        await page.setContent(html, { waitUntil: "networkidle0" });
+        await page.setContent(html, { waitUntil: "load" });
         const pdfBuffer = await page.pdf({
             format: "A4",
             landscape: true,

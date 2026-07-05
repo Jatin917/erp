@@ -1,4 +1,4 @@
-import { OTP_TYPE } from '@src/lib/types.js';
+import { OTP_TYPE } from '../lib/types.js';
 export declare function storeOtp(email: string, otp: number, type: OTP_TYPE): Promise<void>;
 export declare function verifyOtp(email: string, otp: number, type: OTP_TYPE): Promise<boolean>;
 export declare function isEmailVerified(email: string, type: OTP_TYPE): Promise<string | false>;

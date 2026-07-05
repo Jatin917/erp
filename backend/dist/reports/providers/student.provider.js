@@ -1,5 +1,5 @@
 import { FieldCategory, FieldResolverType, } from "../../../generated/prisma/index.js";
-import { prisma } from "@src/server.js";
+import { prisma } from "../../server.js";
 import { buildEnrollmentWhere } from "../utils/enrollment-filters.js";
 import { getValueByPath, serializeFieldValue } from "../utils/path-resolver.js";
 const ENROLLMENT_INCLUDE = {

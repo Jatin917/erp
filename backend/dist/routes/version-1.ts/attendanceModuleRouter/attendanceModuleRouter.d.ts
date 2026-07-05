@@ -1,2 +1,3 @@
-export declare const attendanceModuleRouter: import("express-serve-static-core").Router;
+import { Router } from "express";
+export declare const attendanceModuleRouter: Router;
 //# sourceMappingURL=attendanceModuleRouter.d.ts.map

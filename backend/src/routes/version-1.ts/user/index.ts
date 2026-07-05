@@ -11,7 +11,7 @@ import { getUserPermissions, permitPermission } from "@src/controllers/user/inde
 import { TokenCheck } from "@src/middlewares/auth/token.js";
 import { requireAnyPermission, requirePermission } from "@src/middlewares/permission/index.js";
 
-export const userRouter = Router();
+export const userRouter: Router = Router();
 
 userRouter.post("/register-user", TokenCheck, requirePermission(Permission.ALL), registerUser);
 userRouter.post("/login", login);

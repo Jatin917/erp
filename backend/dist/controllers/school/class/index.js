@@ -2,13 +2,13 @@ import { error } from "console";
 import { HTTP_STATUS } from "../../../lib/http-codes.js";
 import { defaultPassword, prisma } from "../../../server.js";
 import { connect } from "http2";
-import { sendError, sendSuccess } from "@src/lib/utils.js";
-import { isEmailVerified } from "@src/services/otp.js";
-import { OTP_TYPE } from "@src/lib/types.js";
-import { getPermissionsForRoles } from "@src/lib/apply-role-permissions.js";
-import { validateRoleAssignment } from "@src/lib/role-grant.js";
-import { findOrCreateUser } from "@src/services/user/index.js";
-import { sendWelcomeEmail } from "@src/services/producers-notifications/producers/producer.email.js";
+import { sendError, sendSuccess } from "../../../lib/utils.js";
+import { isEmailVerified } from "../../../services/otp.js";
+import { OTP_TYPE } from "../../../lib/types.js";
+import { getPermissionsForRoles } from "../../../lib/apply-role-permissions.js";
+import { validateRoleAssignment } from "../../../lib/role-grant.js";
+import { findOrCreateUser } from "../../../services/user/index.js";
+import { sendWelcomeEmail } from "../../../services/producers-notifications/producers/producer.email.js";
 function rejectRoleAssignment(res, grantorPermissions, roles) {
     if (!Array.isArray(grantorPermissions)) {
         return sendError(res, "Not permitted for this task", HTTP_STATUS.FORBIDDEN);
@@ -514,14 +514,17 @@ export const createFaculty = async (req, res) => {
                 return sendError(res, "User creation failed", HTTP_STATUS.CONFLICT);
             }
         }
-        const existingFaculty = await prisma.schoolFaculty.findFirst({
-            where: { userid: user.id, branchId },
+        const existingFaculty = await prisma.schoolFaculty.findUnique({
+            where: { userId: user.id },
         });
         if (existingFaculty) {
+            if (existingFaculty.branchId !== branchId) {
+                return sendError(res, "User is already assigned as faculty to another branch", HTTP_STATUS.CONFLICT);
+            }
             return sendError(res, "Faculty already exists for this branch", HTTP_STATUS.CONFLICT);
         }
         const faculty = await prisma.schoolFaculty.create({
-            data: { name, branchId, userid: user.id },
+            data: { name, branchId, userId: user.id },
         });
         if (!faculty) {
             return sendError(res, "Error creating faculty", HTTP_STATUS.BAD_REQUEST);
@@ -535,7 +538,7 @@ export const createFaculty = async (req, res) => {
         return sendSuccess(res, "User created successfully", {
             faculty: {
                 id: faculty.id,
-                userid: user.id,
+                userId: user.id,
                 name: faculty.name,
                 email: user.email,
                 roles: user.role,
@@ -567,7 +570,7 @@ export const getFaculty = async (req, res) => {
                 email: f.user.email,
                 id: f.id,
                 roles: f.user.role,
-                userid: f.userid
+                userId: f.userId
             };
         });
         return sendSuccess(res, "faculty founded", { faculty: formattedFaculty });
@@ -595,7 +598,7 @@ export const updateFaculty = async (req, res) => {
                 permissions: { set: permissions },
             },
         });
-        return sendSuccess(res, "Updated", { faculty: { userid: faculty.id, roles: faculty.role } }, HTTP_STATUS.OK);
+        return sendSuccess(res, "Updated", { faculty: { userId: faculty.id, roles: faculty.role } }, HTTP_STATUS.OK);
     }
     catch (error) {
         return sendError(res, error.message, HTTP_STATUS.INTERNAL_SERVER_ERROR);

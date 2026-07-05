@@ -35,7 +35,7 @@ import {
 	updateLateFee,
 } from "../discounts/index.js";
 
-export const feeModuleRouter = Router();
+export const feeModuleRouter: Router = Router();
 
 const upload = multer({ dest: "uploads/" });
 

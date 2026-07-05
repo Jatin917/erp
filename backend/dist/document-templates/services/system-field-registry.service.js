@@ -1,4 +1,4 @@
-import { fieldRegistryService } from "@src/reports/services/field-registry.service.js";
+import { fieldRegistryService } from "../../reports/services/field-registry.service.js";
 const ENTITY_ALIASES = {
     student: "STUDENT",
     enrollment: "ENROLLMENT",

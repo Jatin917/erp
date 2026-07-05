@@ -559,7 +559,7 @@ export const feeRecieptForTransaction = async (req: any, res: any) => {
     const page = await browser.newPage();
 
     // ✅ Set content and wait for images
-    await page.setContent(html, { waitUntil: "networkidle0" });
+    await page.setContent(html, { waitUntil: "load" });
 
     const pdfBuffer = await page.pdf({
       format: "A4",

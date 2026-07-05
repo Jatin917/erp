@@ -1,4 +1,4 @@
-import { getFieldRegistryCache, loadFieldRegistryCache, } from "@src/registry/cache/field-registry-cache.js";
+import { getFieldRegistryCache, loadFieldRegistryCache, } from "../../registry/cache/field-registry-cache.js";
 export class FieldRegistryService {
     async ensureLoaded() {
         if (getFieldRegistryCache().size === 0) {

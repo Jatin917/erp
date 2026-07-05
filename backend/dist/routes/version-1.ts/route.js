@@ -1,9 +1,9 @@
-import Router from 'express';
+import { Router } from 'express';
 import { schoolRouter } from './school/index.js';
 import { userRouter } from './user/index.js';
 import { studentRouter } from './studentRouter/studentRouter.js';
-import { TokenCheck } from '@src/middlewares/auth/token.js';
-import { requireBranchAccess } from '@src/middlewares/branch-access/index.js';
+import { TokenCheck } from '../../middlewares/auth/token.js';
+import { requireBranchAccess } from '../../middlewares/branch-access/index.js';
 import { feeModuleRouter } from './feeModuleRouter/feeModuleRouter.js';
 import { attendanceModuleRouter } from './attendanceModuleRouter/attendanceModuleRouter.js';
 import { reportsRouter } from './reports/index.js';

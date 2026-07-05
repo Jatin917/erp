@@ -1,8 +1,8 @@
 import { Router } from "express";
 import multer from "multer";
 import { Permission } from "../../../../generated/prisma/index.js";
-import { createFeeHead, createFeeTemplate, createTransaction, deleteFeeHead, deleteFeeTemplate, feeRecieptForTransaction, generateFeeDocs, generateFeeDocsForStudents, getFeeTemplates, getStudentFeeDocs, getUnpaidFeePaymentAmount, listFeeHeads, payForFeePayment, payForMultipleFeePayments, removeDiscountFromFeeDoc, revertPaymentForFeePayment, updateFeeHead, updateFeeTemplate, } from "@src/controllers/school/fees/fees.js";
-import { requirePermission } from "@src/middlewares/permission/index.js";
+import { createFeeHead, createFeeTemplate, createTransaction, deleteFeeHead, deleteFeeTemplate, feeRecieptForTransaction, generateFeeDocs, generateFeeDocsForStudents, getFeeTemplates, getStudentFeeDocs, getUnpaidFeePaymentAmount, listFeeHeads, payForFeePayment, payForMultipleFeePayments, removeDiscountFromFeeDoc, revertPaymentForFeePayment, updateFeeHead, updateFeeTemplate, } from "../../../controllers/school/fees/fees.js";
+import { requirePermission } from "../../../middlewares/permission/index.js";
 import { applyDiscount, createDiscountPolicy, createLateFee, deleteAppliedDiscount, deleteDiscountPolicy, deleteLateFee, getDiscountsById, listDiscountPolicies, updateDiscountPolicy, updateLateFee, } from "../discounts/index.js";
 export const feeModuleRouter = Router();
 const upload = multer({ dest: "uploads/" });

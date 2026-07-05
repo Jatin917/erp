@@ -1,4 +1,4 @@
-import Router from 'express'
+import { Router } from 'express'
 import { schoolRouter } from './school/index.js';
 import { userRouter } from './user/index.js';
 import { studentRouter } from './studentRouter/studentRouter.js';
@@ -9,7 +9,7 @@ import { attendanceModuleRouter } from './attendanceModuleRouter/attendanceModul
 import { reportsRouter } from './reports/index.js';
 import { templatesRouter } from './templates/index.js';
 
-export const router_v1 = Router();
+export const router_v1: Router = Router();
 router_v1.use("/school", TokenCheck, requireBranchAccess, schoolRouter);
 router_v1.use("/auth", userRouter);
 router_v1.use("/student", TokenCheck, requireBranchAccess, studentRouter);

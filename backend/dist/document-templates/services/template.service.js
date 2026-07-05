@@ -1,4 +1,4 @@
-import { prisma } from "@src/server.js";
+import { prisma } from "../../server.js";
 import { templateValidationService } from "./template-validation.service.js";
 const mappingInclude = {
     mappings: { orderBy: { createdAt: "asc" } },

@@ -11,7 +11,7 @@ import {
 } from "../../../controllers/school/student/index.js";
 import { requirePermission } from "../../../middlewares/permission/index.js";
 
-export const studentRouter = Router();
+export const studentRouter: Router = Router();
 const upload = multer({ dest: "uploads/" });
 
 studentRouter.post(

@@ -1,6 +1,6 @@
-import { HTTP_STATUS } from "@src/lib/http-codes.js";
-import { sendError, sendSuccess } from "@src/lib/utils.js";
-import { templateEngine } from "@src/document-templates/engine/template-engine.js";
+import { HTTP_STATUS } from "../../lib/http-codes.js";
+import { sendError, sendSuccess } from "../../lib/utils.js";
+import { templateEngine } from "../../document-templates/engine/template-engine.js";
 export const listSystemFields = async (req, res) => {
     try {
         const fields = await templateEngine.searchSystemFields({

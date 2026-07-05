@@ -1,1 +1,1 @@
-{"version":3,"file":"index.d.ts","sourceRoot":"","sources":["../../../../../src/routes/version-1.ts/school/branch/index.ts"],"names":[],"mappings":"AAgCA,QAAA,MAAM,YAAY,4CAAW,CAAC;AAqC9B,OAAO,EAAE,YAAY,EAAE,CAAC"}
+{"version":3,"file":"index.d.ts","sourceRoot":"","sources":["../../../../../src/routes/version-1.ts/school/branch/index.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,MAAM,EAAE,MAAM,SAAS,CAAC;AAgCjC,QAAA,MAAM,YAAY,EAAE,MAAiB,CAAC;AAqCtC,OAAO,EAAE,YAAY,EAAE,CAAC"}

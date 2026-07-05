@@ -1,5 +1,5 @@
 import { $Enums } from "../../generated/prisma/index.js";
-type PermissionKeys = 'school' | 'branch' | 'class' | 'student' | 'parent' | 'faculty' | 'discounts' | 'feeHead' | 'feeTemplate' | 'feeDoc' | 'feePayment' | 'feeTransaction' | 'session' | 'reports' | 'documents' | 'notifications';
+type PermissionKeys = 'school' | 'branch' | 'class' | 'section' | 'subject' | 'student' | 'parent' | 'faculty' | 'discounts' | 'feeHead' | 'feeTemplate' | 'feeDoc' | 'feePayment' | 'feeTransaction' | 'session' | 'reports' | 'documents' | 'notifications' | 'customField';
 type PermissionsType = {
     [K in PermissionKeys]: $Enums.Permission[];
 };
@@ -13,9 +13,9 @@ export declare const roleDefaults: {
     RECEPTIONIST: $Enums.Permission[];
     ACCOUNTANT: $Enums.Permission[];
     SCHOOL_ADMIN: $Enums.Permission[];
-    STUDENT: ("VIEW_NOTIFICATIONS" | "VIEW_DOCUMENT")[];
-    FATHER: ("VIEW_NOTIFICATIONS" | "VIEW_DOCUMENT")[];
-    MOTHER: ("VIEW_NOTIFICATIONS" | "VIEW_DOCUMENT")[];
+    STUDENT: ("VIEW_BRANCH" | "VIEW_NOTIFICATIONS" | "VIEW_DOCUMENT")[];
+    FATHER: ("VIEW_BRANCH" | "VIEW_NOTIFICATIONS" | "VIEW_DOCUMENT")[];
+    MOTHER: ("VIEW_BRANCH" | "VIEW_NOTIFICATIONS" | "VIEW_DOCUMENT")[];
 };
 export {};
 //# sourceMappingURL=permission.d.ts.map

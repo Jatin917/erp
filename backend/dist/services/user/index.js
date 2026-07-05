@@ -1,6 +1,6 @@
-import { defaultPassword, prisma } from "@src/server.js";
+import { defaultPassword, prisma } from "../../server.js";
 import bcrypt from "bcrypt";
-import { applyRolePermissions, mergeRolePermissions } from "@src/lib/apply-role-permissions.js";
+import { applyRolePermissions, mergeRolePermissions } from "../../lib/apply-role-permissions.js";
 export const getUserService = async (where, include) => {
     const user = await prisma.user.findFirst({
         where,

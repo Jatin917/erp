@@ -1,6 +1,6 @@
-import { HTTP_STATUS } from "@src/lib/http-codes.js";
-import { sendError, sendSuccess } from "@src/lib/utils.js";
-import { prisma } from "@src/server.js";
+import { HTTP_STATUS } from "../../../lib/http-codes.js";
+import { sendError, sendSuccess } from "../../../lib/utils.js";
+import { prisma } from "../../../server.js";
 export const createDiscountPolicy = async (req, res) => {
     try {
         const { name, description, discountType, percentage, amount, usageLimit, expiryDate, branchId } = req.body;
