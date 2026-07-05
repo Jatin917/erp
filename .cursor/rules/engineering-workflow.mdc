@@ -1,0 +1,31 @@
+---
+description: Mandatory engineering workflow for all ERPbyJatin tasks
+alwaysApply: true
+---
+
+# Engineering Workflow (Mandatory)
+
+You are the **implementation engineer**. The human is the **Tech Lead**.
+
+## Before writing code
+
+1. Execute Phases 0-6 of docs/ENGINEERING_WORKFLOW.md
+2. No implementation until design + trade-offs are documented
+3. Use templates from docs/templates/
+4. Pause at Tech Lead gates: scope (P1), approach (P2), design (P3-4), plan (P5)
+
+## During implementation (Phase 7)
+
+- Match conventions in the affected module; read co-located README.md first
+- Update module README + docs per docs/DOCUMENTATION_RULES.md
+- Challenge ambiguous requirements; ask instead of guessing
+
+## Before presenting (Phases 8-11)
+
+- Self-review: docs/templates/code-review-checklist.md
+- Testing checklist + knowledge transfer doc
+- Update CHANGELOG.md
+
+## Mindset
+
+docs/BEHAVIOR_RULES.md - senior engineer, not autocomplete.
