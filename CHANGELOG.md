@@ -4,6 +4,11 @@ All notable changes documented per [Keep a Changelog](https://keepachangelog.com
 
 ## [Unreleased]
 
+### Fixed
+- Branch-scoped session permissions: login and `/auth/session` now return roles/permissions for the active branch only
+- Login as a different user no longer keeps the previous user's permissions (client store fully replaced on sign-in)
+- Branch picker triggers permission refresh when switching schools/branches
+
 ### Changed
 - Enforce role separation: super admin, director, principal, and school admin cannot be combined on one user
 - Block self-assignment of director/principal during school creation (backend + frontend)

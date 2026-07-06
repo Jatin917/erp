@@ -26,6 +26,11 @@ import {
 	resolveAccessibleBranchIds,
 	userCanAccessBranch,
 } from "@src/middlewares/branch-access/index.js";
+import {
+	resolveEffectivePermissions,
+	resolveEffectiveRoles,
+	resolveSessionBranchId,
+} from "@src/lib/apply-role-permissions.js";
 
 export const registerUser = async (
   req: Request<
@@ -139,7 +144,13 @@ export const changePassword = async (req:any, res:any) => {
         return res.status(400).json({ message: "Please enter required fields" });
       }
   
-      let user = await prisma.user.findFirst({ where: { email },include:{principalAssignment:true} });
+      let user = await prisma.user.findFirst({
+        where: { email },
+        include: {
+          principalAssignment: true,
+          schoolFaculty: { select: { branchId: true } },
+        },
+      });
       console.log("email ", email, password, SUPERADMIN_EMAIL, SUPERADMIN_PASSWORD);
       // First user creation (SuperAdmin bootstrap)
       const userCount = await prisma.user.count();
@@ -160,7 +171,10 @@ export const changePassword = async (req:any, res:any) => {
               isEmailVerified: true,
               isPhoneVerified: false,
             },
-            include:{principalAssignment:true}
+            include: {
+              principalAssignment: true,
+              schoolFaculty: { select: { branchId: true } },
+            },
           });
         } else {
           return res.status(403).json({
@@ -185,17 +199,35 @@ export const changePassword = async (req:any, res:any) => {
         expiresIn: TOKEN_TTL,
       });
 
-      // Remove duplicate property assignments and avoid overwriting with spread
       let branchId = null;
-      if(user && user.principalAssignment){
-        branchId=user.principalAssignment.id;
+      if (user && user.principalAssignment) {
+        branchId = user.principalAssignment.id;
+      } else if (user?.schoolFaculty?.branchId) {
+        branchId = user.schoolFaculty.branchId;
       }
+
+      const sessionBranchId = resolveSessionBranchId(branchId, user!);
+      const sessionUser = {
+        role: user!.role,
+        permissions: user!.permissions,
+        principalAssignment: user!.principalAssignment,
+        schoolFaculty: user!.schoolFaculty,
+      };
+
       return res.status(200).json({
         success: true,
         message: "Logged in successfully",
-        data:{accessToken:token,
-        user:{name:user.name,
-        email:user.email, permissions:user.permissions, roles:user.role, branchId}}
+        data: {
+          accessToken: token,
+          user: {
+            id: user!.id,
+            name: user!.name,
+            email: user!.email,
+            permissions: resolveEffectivePermissions(sessionUser, sessionBranchId),
+            roles: resolveEffectiveRoles(sessionUser, sessionBranchId),
+            branchId: sessionBranchId,
+          },
+        },
       });
     } catch (error) {
       console.error(error);
@@ -236,6 +268,7 @@ export const getSession = async (req: any, res: any) => {
         permissions: true,
         role: true,
         principalAssignment: { select: { id: true } },
+        schoolFaculty: { select: { branchId: true } },
       },
     });
 
@@ -245,8 +278,13 @@ export const getSession = async (req: any, res: any) => {
         .json({ success: false, message: "User not found" });
     }
 
-    const resolvedBranchId =
-      branchId ?? user.principalAssignment?.id ?? null;
+    const resolvedBranchId = resolveSessionBranchId(branchId, user);
+    const sessionUser = {
+      role: user.role,
+      permissions: user.permissions,
+      principalAssignment: user.principalAssignment,
+      schoolFaculty: user.schoolFaculty,
+    };
 
     return res.status(HTTP_STATUS.OK).json({
       success: true,
@@ -256,8 +294,8 @@ export const getSession = async (req: any, res: any) => {
           id: user.id,
           name: user.name,
           email: user.email,
-          permissions: user.permissions,
-          roles: user.role,
+          permissions: resolveEffectivePermissions(sessionUser, resolvedBranchId),
+          roles: resolveEffectiveRoles(sessionUser, resolvedBranchId),
           branchId: resolvedBranchId,
         },
       },
