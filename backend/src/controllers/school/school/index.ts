@@ -15,6 +15,12 @@ import { getUserService } from "@src/services/user/index.js";
 import { createSchoolDays } from "@src/services/attendance/index.js";
 import { syncCustomFieldsToRegistry } from "@src/registry/seed/sync-custom-fields.js";
 import { applyRolePermissions, mergeRolePermissions } from "@src/lib/apply-role-permissions.js";
+import {
+	normalizeEmail,
+	validateDistinctDirectorAndPrincipals,
+	validateNoSelfAssignment,
+	validateUserEligibleForSchoolRole,
+} from "@src/lib/role-grant.js";
 
 const SCHOOL_FACULTY_ROLES: rolesAre[] = [
   rolesAre.TEACHER,
@@ -59,8 +65,18 @@ const createBranch = async (tx: Omit<PrismaClient<Prisma.PrismaClientOptions, ne
 const findOrCreateUser = async (role: rolesAre, userData: { email: string; name: string; contact:string }, tx: Omit<PrismaClient<Prisma.PrismaClientOptions, never, DefaultArgs>, "$connect" | "$disconnect" | "$on" | "$transaction" | "$use" | "$extends">) => {
 const existingUser = await tx.user.findUnique({
     where: { email: userData.email },
+    include: { schoolFaculty: { select: { id: true } } },
 });
 if (existingUser) {
+    const eligibilityError = validateUserEligibleForSchoolRole(
+      existingUser.role,
+      role,
+      Boolean(existingUser.schoolFaculty),
+    );
+    if (eligibilityError) {
+      throw new Error(eligibilityError.message);
+    }
+
     if (!existingUser.role.includes(role)) {
       await tx.user.update({
           where: { email: userData.email },
@@ -120,6 +136,71 @@ export const createSchool = async (req: any, res: any) => {
       return res.status(400).json({ success: false, message: "Required fields missing" });
     }
 
+    const directorEmail = director.email?.trim();
+    const principalEmails = principals
+      .map((p: { email?: string }) => p.email?.trim())
+      .filter(Boolean) as string[];
+
+    if (!directorEmail || principalEmails.length !== principals.length) {
+      return res.status(400).json({ success: false, message: "Director and principal emails are required" });
+    }
+
+    const selfAssignmentError = validateNoSelfAssignment(req.user?.email, [
+      directorEmail,
+      ...principalEmails,
+    ]);
+    if (selfAssignmentError) {
+      return res.status(400).json({ success: false, message: selfAssignmentError.message });
+    }
+
+    const roleSeparationError = validateDistinctDirectorAndPrincipals(
+      directorEmail,
+      principalEmails,
+    );
+    if (roleSeparationError) {
+      return res.status(400).json({ success: false, message: roleSeparationError.message });
+    }
+
+    const existingUsers = await prisma.user.findMany({
+      where: {
+        OR: [directorEmail, ...principalEmails].map((email) => ({
+          email: { equals: email, mode: "insensitive" as const },
+        })),
+      },
+      include: { schoolFaculty: { select: { id: true } } },
+    });
+
+    const directorUser = existingUsers.find(
+      (user) => normalizeEmail(user.email) === normalizeEmail(directorEmail),
+    );
+    if (directorUser) {
+      const directorEligibility = validateUserEligibleForSchoolRole(
+        directorUser.role,
+        rolesAre.DIRECTOR,
+        Boolean(directorUser.schoolFaculty),
+      );
+      if (directorEligibility) {
+        return res.status(400).json({ success: false, message: directorEligibility.message });
+      }
+    }
+
+    for (const principalEmail of principalEmails) {
+      const principalUser = existingUsers.find(
+        (user) => normalizeEmail(user.email) === normalizeEmail(principalEmail),
+      );
+      if (!principalUser) {
+        continue;
+      }
+      const principalEligibility = validateUserEligibleForSchoolRole(
+        principalUser.role,
+        rolesAre.PRINCIPAL,
+        Boolean(principalUser.schoolFaculty),
+      );
+      if (principalEligibility) {
+        return res.status(400).json({ success: false, message: principalEligibility.message });
+      }
+    }
+
     let schoolId = "";
     const branchIds: string[] = [];
 
@@ -128,9 +209,7 @@ export const createSchool = async (req: any, res: any) => {
       const directorId = await findOrCreateUser("DIRECTOR", director, tx);
 
       // Block duplicate: same director + school name + principal
-      const principalEmails = principals
-        .map((p: { email?: string }) => p.email?.trim().toLowerCase())
-        .filter(Boolean) as string[];
+      const normalizedPrincipalEmails = principalEmails.map((email) => normalizeEmail(email));
 
       const existingSchool = await tx.school.findFirst({
         where: {
@@ -146,13 +225,13 @@ export const createSchool = async (req: any, res: any) => {
         },
       });
 
-      if (existingSchool && principalEmails.length > 0) {
+      if (existingSchool && normalizedPrincipalEmails.length > 0) {
         const existingPrincipalEmails = new Set(
           existingSchool.branches
             .map((b) => b.principal?.email?.trim().toLowerCase())
             .filter(Boolean),
         );
-        const duplicatePrincipal = principalEmails.find((email) => existingPrincipalEmails.has(email));
+        const duplicatePrincipal = normalizedPrincipalEmails.find((email) => existingPrincipalEmails.has(email));
         if (duplicatePrincipal) {
           throw new Error(
             `A school named "${finalSchoolName}" with this director and principal already exists.`,

@@ -6,7 +6,7 @@ import { sendError, sendSuccess } from "@src/lib/utils.js";
 import { isEmailVerified } from "@src/services/otp.js";
 import { OTP_TYPE } from "@src/lib/types.js";
 import { getPermissionsForRoles } from "@src/lib/apply-role-permissions.js";
-import { validateRoleAssignment } from "@src/lib/role-grant.js";
+import { validateRoleAssignment, validateUserEligibleForSchoolRole } from "@src/lib/role-grant.js";
 import { findOrCreateUser } from "@src/services/user/index.js";
 import type { Permission, Role } from "../../../../generated/prisma/index.js";
 import { sendWelcomeEmail } from "@src/services/producers-notifications/producers/producer.email.js";
@@ -627,6 +627,24 @@ export const createFaculty = async (req: any, res: any) => {
     if (!success) {
       return sendError(res, "email is not verified", HTTP_STATUS.BAD_REQUEST);
     }
+
+    const existingUser = await prisma.user.findUnique({
+      where: { email },
+      include: { schoolFaculty: { select: { id: true } } },
+    });
+    if (existingUser) {
+      for (const role of roleList) {
+        const eligibilityError = validateUserEligibleForSchoolRole(
+          existingUser.role,
+          role,
+          Boolean(existingUser.schoolFaculty),
+        );
+        if (eligibilityError) {
+          return sendError(res, eligibilityError.message, HTTP_STATUS.BAD_REQUEST);
+        }
+      }
+    }
+
     let user;
     for (const role of roleList) {
       user = await findOrCreateUser({ name, email, phone: contact, role });

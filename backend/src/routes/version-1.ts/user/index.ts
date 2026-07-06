@@ -6,7 +6,7 @@ import {
 	sendOtpEmailSignController,
 	sendOtpEmailVerifyController,
 } from "@src/controllers/auth/otp.js";
-import { changePassword, login, registerUser, userExist } from "@src/controllers/school/persons/index.js";
+import { changePassword, getSession, login, registerUser, userExist } from "@src/controllers/school/persons/index.js";
 import { getUserPermissions, permitPermission } from "@src/controllers/user/index.js";
 import { TokenCheck } from "@src/middlewares/auth/token.js";
 import { requireAnyPermission, requirePermission } from "@src/middlewares/permission/index.js";
@@ -15,6 +15,7 @@ export const userRouter: Router = Router();
 
 userRouter.post("/register-user", TokenCheck, requirePermission(Permission.ALL), registerUser);
 userRouter.post("/login", login);
+userRouter.get("/session", TokenCheck, getSession);
 userRouter.patch("/change-password", TokenCheck, changePassword);
 userRouter.post("/signin-send-otp", sendOtpEmailSignController);
 userRouter.post("/signin-verify-otp", emailVerificationSignController);

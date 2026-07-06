@@ -2,6 +2,7 @@ import type { Prisma } from "@prisma/client/extension";
 import { defaultPassword, prisma } from "@src/server.js";
 import bcrypt from "bcrypt";
 import { applyRolePermissions, mergeRolePermissions } from "@src/lib/apply-role-permissions.js";
+import { validateUserEligibleForSchoolRole } from "@src/lib/role-grant.js";
 import type { Role } from "../../../generated/prisma/index.js";
 
 
@@ -36,10 +37,20 @@ export async function findOrCreateUser(
   // 1️⃣ Check if user exists
   let user = await db.user.findFirst({
     where: { OR: [{ email }, { phone }] },
+    include: { schoolFaculty: { select: { id: true } } },
   });
 
   // 2️⃣ If exists → update role list if not already added, merge role permissions
   if (user) {
+    const eligibilityError = validateUserEligibleForSchoolRole(
+      user.role,
+      role,
+      Boolean(user.schoolFaculty),
+    );
+    if (eligibilityError) {
+      throw new Error(eligibilityError.message);
+    }
+
     if (!user.role.includes(role)) {
       user = await db.user.update({
         where: { id: user.id },

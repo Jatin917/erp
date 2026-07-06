@@ -4,8 +4,11 @@ All notable changes documented per [Keep a Changelog](https://keepachangelog.com
 
 ## [Unreleased]
 
-### Added
-- docs/ engineering documentation structure
+### Changed
+- Enforce role separation: super admin, director, principal, and school admin cannot be combined on one user
+- Block self-assignment of director/principal during school creation (backend + frontend)
+- Remove "Assign Myself" option from school creation UI for director and principal
+
 - 16 document templates under docs/templates/
 - Engineering workflow (Phases 0-11), review policy, behavior rules
 - ADR-0001: Adopt engineering workflow

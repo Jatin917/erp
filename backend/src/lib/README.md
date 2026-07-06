@@ -5,7 +5,7 @@ Shared utilities, permission definitions, role grants, and HTTP helpers used acr
 
 ## Responsibilities
 - **permission.ts** - Maps domain keys to Permission enum arrays
-- **role-grant.ts** / **permission-grant.ts** - Role-to-permission assignment logic
+- **role-grant.ts** / **permission-grant.ts** - Role-to-permission assignment and org-role separation rules
 - **apply-role-permissions.ts** - Apply grants to users
 - **http-codes.ts** - HTTP_STATUS constants
 - **utils.ts** - sendError and shared helpers

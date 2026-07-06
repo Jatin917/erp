@@ -20,9 +20,12 @@ type RoleKey =
 
 import type { Request, Response } from "express";
 import { TOKEN_TTL } from "@src/lib/contants.js";
-import { userInfo } from "os";
 import { isEmailVerified } from "@src/services/otp.js";
 import { sendError } from "@src/lib/utils.js";
+import {
+	resolveAccessibleBranchIds,
+	userCanAccessBranch,
+} from "@src/middlewares/branch-access/index.js";
 
 export const registerUser = async (
   req: Request<
@@ -40,10 +43,10 @@ export const registerUser = async (
             return res.status(HTTP_STATUS.NO_CONTENT).json({ success: false, message: "Please provide required fields" });
         }
 
-        if (role === "SUPERADMIN") {
+        if (role === "SUPERADMIN" || role === "DIRECTOR" || role === "PRINCIPAL") {
             return res.status(HTTP_STATUS.FORBIDDEN).json({
                 success: false,
-                message: "SUPERADMIN accounts cannot be created via this endpoint",
+                message: `${role} accounts cannot be created via this endpoint`,
             });
         }
 
@@ -201,6 +204,71 @@ export const changePassword = async (req:any, res:any) => {
         .json({ success: false, message: "Something went wrong" });
       }
     };
+
+export const getSession = async (req: any, res: any) => {
+  try {
+    const authUser = req.user;
+    if (!authUser?.id) {
+      return res
+        .status(HTTP_STATUS.UNAUTHORIZED)
+        .json({ success: false, message: "Unauthorized" });
+    }
+
+    const branchId =
+      typeof req.query?.branchId === "string" ? req.query.branchId : null;
+
+    if (branchId) {
+      const accessible = await resolveAccessibleBranchIds(authUser);
+      if (!userCanAccessBranch(accessible, branchId)) {
+        return res.status(HTTP_STATUS.FORBIDDEN).json({
+          success: false,
+          message: "You do not have access to this branch",
+        });
+      }
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: authUser.id },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        permissions: true,
+        role: true,
+        principalAssignment: { select: { id: true } },
+      },
+    });
+
+    if (!user) {
+      return res
+        .status(HTTP_STATUS.NOT_FOUND)
+        .json({ success: false, message: "User not found" });
+    }
+
+    const resolvedBranchId =
+      branchId ?? user.principalAssignment?.id ?? null;
+
+    return res.status(HTTP_STATUS.OK).json({
+      success: true,
+      message: "Session refreshed",
+      data: {
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          permissions: user.permissions,
+          roles: user.role,
+          branchId: resolvedBranchId,
+        },
+      },
+    });
+  } catch (error) {
+    console.error(error);
+    return res
+      .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
+      .json({ success: false, message: "Something went wrong" });
+  }
+};
     
     export const userExist = async (req:any, res:any) =>{
       try {
