@@ -17,18 +17,11 @@ import { syncCustomFieldsToRegistry } from "@src/registry/seed/sync-custom-field
 import { applyRolePermissions, mergeRolePermissions } from "@src/lib/apply-role-permissions.js";
 import {
 	normalizeEmail,
+	SCHOOL_FACULTY_ROLES,
 	validateDistinctDirectorAndPrincipals,
 	validateNoSelfAssignment,
 	validateUserEligibleForSchoolRole,
 } from "@src/lib/role-grant.js";
-
-const SCHOOL_FACULTY_ROLES: rolesAre[] = [
-  rolesAre.TEACHER,
-  rolesAre.LIBRARIAN,
-  rolesAre.RECEPTIONIST,
-  rolesAre.ACCOUNTANT,
-  rolesAre.SCHOOL_ADMIN,
-];
 
 const formatBranchOption = (branch: {
   name: string;
@@ -65,13 +58,20 @@ const createBranch = async (tx: Omit<PrismaClient<Prisma.PrismaClientOptions, ne
 const findOrCreateUser = async (role: rolesAre, userData: { email: string; name: string; contact:string }, tx: Omit<PrismaClient<Prisma.PrismaClientOptions, never, DefaultArgs>, "$connect" | "$disconnect" | "$on" | "$transaction" | "$use" | "$extends">) => {
 const existingUser = await tx.user.findUnique({
     where: { email: userData.email },
-    include: { schoolFaculty: { select: { id: true } } },
+    include: {
+      schoolFaculty: { select: { branchId: true } },
+      principalAssignment: { select: { id: true } },
+    },
 });
 if (existingUser) {
     const eligibilityError = validateUserEligibleForSchoolRole(
       existingUser.role,
       role,
-      Boolean(existingUser.schoolFaculty),
+      {
+        hasSchoolFaculty: Boolean(existingUser.schoolFaculty),
+        facultyBranchId: existingUser.schoolFaculty?.branchId ?? null,
+        principalBranchId: existingUser.principalAssignment?.id ?? null,
+      },
     );
     if (eligibilityError) {
       throw new Error(eligibilityError.message);
@@ -167,7 +167,10 @@ export const createSchool = async (req: any, res: any) => {
           email: { equals: email, mode: "insensitive" as const },
         })),
       },
-      include: { schoolFaculty: { select: { id: true } } },
+      include: {
+        schoolFaculty: { select: { branchId: true } },
+        principalAssignment: { select: { id: true } },
+      },
     });
 
     const directorUser = existingUsers.find(
@@ -177,7 +180,11 @@ export const createSchool = async (req: any, res: any) => {
       const directorEligibility = validateUserEligibleForSchoolRole(
         directorUser.role,
         rolesAre.DIRECTOR,
-        Boolean(directorUser.schoolFaculty),
+        {
+          hasSchoolFaculty: Boolean(directorUser.schoolFaculty),
+          facultyBranchId: directorUser.schoolFaculty?.branchId ?? null,
+          principalBranchId: directorUser.principalAssignment?.id ?? null,
+        },
       );
       if (directorEligibility) {
         return res.status(400).json({ success: false, message: directorEligibility.message });
@@ -194,7 +201,11 @@ export const createSchool = async (req: any, res: any) => {
       const principalEligibility = validateUserEligibleForSchoolRole(
         principalUser.role,
         rolesAre.PRINCIPAL,
-        Boolean(principalUser.schoolFaculty),
+        {
+          hasSchoolFaculty: Boolean(principalUser.schoolFaculty),
+          facultyBranchId: principalUser.schoolFaculty?.branchId ?? null,
+          principalBranchId: principalUser.principalAssignment?.id ?? null,
+        },
       );
       if (principalEligibility) {
         return res.status(400).json({ success: false, message: principalEligibility.message });
@@ -489,7 +500,9 @@ export const getBranches = async (req: any, res: any) => {
       schools = foundBranches.map((branch) => formatBranchOption(branch));
     }
 
-    const hasSchoolFacultyRole = roles.some((role) => SCHOOL_FACULTY_ROLES.includes(role));
+    const hasSchoolFacultyRole = roles.some((role) =>
+      (SCHOOL_FACULTY_ROLES as readonly rolesAre[]).includes(role),
+    );
     if (hasSchoolFacultyRole && schools.length === 0) {
       const faculty = await prisma.schoolFaculty.findUnique({
         where: { userId: user.id },

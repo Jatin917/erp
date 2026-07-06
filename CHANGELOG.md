@@ -8,6 +8,10 @@ All notable changes documented per [Keep a Changelog](https://keepachangelog.com
 - Enforce role separation: super admin, director, principal, and school admin cannot be combined on one user
 - Block self-assignment of director/principal during school creation (backend + frontend)
 - Remove "Assign Myself" option from school creation UI for director and principal
+- Director cannot be assigned any school faculty role or SchoolFaculty record (any branch)
+- Principal may only receive faculty roles / SchoolFaculty at their own principal branch
+- Centralize `SCHOOL_FACULTY_ROLES` and branch-scoped validation in `role-grant.ts`
+- Fix super admin error message to reflect total role lock (no additional roles allowed)
 
 - 16 document templates under docs/templates/
 - Engineering workflow (Phases 0-11), review policy, behavior rules
