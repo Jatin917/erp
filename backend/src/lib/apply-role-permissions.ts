@@ -130,6 +130,19 @@ export function resolveEffectivePermissions(
 	return [...new Set<Permission>([...rolePermissions, ...customGrants])];
 }
 
+/**
+ * Effective permissions for an API request. Uses the validated request branch
+ * when present (set by requireBranchAccess), otherwise falls back to the
+ * user's home branch (principal assignment / faculty branch).
+ */
+export function resolveRequestEffectivePermissions(
+	user: SessionUserRecord,
+	requestBranchId?: string | null,
+): Permission[] {
+	const branchId = requestBranchId ?? resolveSessionBranchId(null, user);
+	return resolveEffectivePermissions(user, branchId);
+}
+
 export function resolveEffectiveRoles(
 	user: SessionUserRecord,
 	branchId: string | null,

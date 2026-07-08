@@ -5,16 +5,29 @@ import { connect } from "http2";
 import { sendError, sendSuccess } from "@src/lib/utils.js";
 import { isEmailVerified } from "@src/services/otp.js";
 import { OTP_TYPE } from "@src/lib/types.js";
-import { getPermissionsForRoles } from "@src/lib/apply-role-permissions.js";
+import { getPermissionsForRoles, resolveRequestEffectivePermissions } from "@src/lib/apply-role-permissions.js";
 import { validateFacultyRoleList, validateRoleAssignment, type SchoolRoleAssignmentContext } from "@src/lib/role-grant.js";
 import { findOrCreateUser } from "@src/services/user/index.js";
-import type { Permission, Role } from "../../../../generated/prisma/index.js";
+import type { Role } from "../../../../generated/prisma/index.js";
 import { sendWelcomeEmail } from "@src/services/producers-notifications/producers/producer.email.js";
 
-function rejectRoleAssignment(res: any, grantorPermissions: Permission[] | undefined, roles: Role[]) {
-  if (!Array.isArray(grantorPermissions)) {
+function rejectRoleAssignment(req: any, res: any, roles: Role[]) {
+  const grantor = req.user;
+  if (!grantor || !Array.isArray(grantor.permissions)) {
     return sendError(res, "Not permitted for this task", HTTP_STATUS.FORBIDDEN);
   }
+
+  // Branch-scoped effective permissions, so a grantor cannot use permissions
+  // from another branch's role to assign roles here.
+  const grantorPermissions = resolveRequestEffectivePermissions(
+    {
+      role: grantor.role ?? [],
+      permissions: grantor.permissions,
+      principalAssignment: grantor.principalAssignment ?? null,
+      schoolFaculty: grantor.schoolFaculty ?? null,
+    },
+    req.branchId ?? null,
+  );
 
   const validation = validateRoleAssignment({
     grantorPermissions,
@@ -618,7 +631,7 @@ export const createFaculty = async (req: any, res: any) => {
     }
 
     const roleList = roles as Role[];
-    const roleDenied = rejectRoleAssignment(res, req.user?.permissions, roleList);
+    const roleDenied = rejectRoleAssignment(req, res, roleList);
     if (roleDenied) {
       return roleDenied;
     }
@@ -748,7 +761,7 @@ export const updateFaculty = async (req: any, res: any) => {
     }
 
     const roleList = roles as Role[];
-    const roleDenied = rejectRoleAssignment(res, req.user?.permissions, roleList);
+    const roleDenied = rejectRoleAssignment(req, res, roleList);
     if (roleDenied) {
       return roleDenied;
     }

@@ -1,11 +1,15 @@
 import type { NextFunction, Response } from "express";
-import { Permission } from "../../../generated/prisma/index.js";
+import { Permission, type Role } from "../../../generated/prisma/index.js";
+import { resolveRequestEffectivePermissions } from "../../lib/apply-role-permissions.js";
 import { HTTP_STATUS } from "../../lib/http-codes.js";
 
 type PermissionValue = Permission | typeof Permission.ALL;
 
 type RequestUser = {
+	role?: Role[];
 	permissions?: PermissionValue[];
+	principalAssignment?: { id: string } | null;
+	schoolFaculty?: { branchId: string } | null;
 };
 
 const userHasAnyPermission = (
@@ -16,6 +20,24 @@ const userHasAnyPermission = (
 		return true;
 	}
 	return required.some((permission) => userPermissions.includes(permission));
+};
+
+/**
+ * Permissions the user actually holds for this request, scoped to the
+ * request's branch (req.branchId, validated by requireBranchAccess) or the
+ * user's home branch. Prevents e.g. a PRINCIPAL of branch A who is also a
+ * TEACHER at branch B from using principal-level permissions at branch B.
+ */
+const getEffectivePermissions = (req: any, user: RequestUser): Permission[] => {
+	return resolveRequestEffectivePermissions(
+		{
+			role: user.role ?? [],
+			permissions: (user.permissions ?? []) as Permission[],
+			principalAssignment: user.principalAssignment ?? null,
+			schoolFaculty: user.schoolFaculty ?? null,
+		},
+		req.branchId ?? null,
+	);
 };
 
 export const requirePermission = (permission: PermissionValue) => {
@@ -30,13 +52,14 @@ export const requirePermission = (permission: PermissionValue) => {
 				});
 			}
 
-			const permissions = user.permissions;
-			if (!Array.isArray(permissions)) {
+			if (!Array.isArray(user.permissions)) {
 				return res.status(HTTP_STATUS.FORBIDDEN).json({
 					success: false,
 					message: "Permissions not set",
 				});
 			}
+
+			const permissions = getEffectivePermissions(req, user);
 
 			if (userHasAnyPermission(permissions, [permission])) {
 				return next();
@@ -68,13 +91,14 @@ export const requireAnyPermission = (...required: PermissionValue[]) => {
 				});
 			}
 
-			const permissions = user.permissions;
-			if (!Array.isArray(permissions)) {
+			if (!Array.isArray(user.permissions)) {
 				return res.status(HTTP_STATUS.FORBIDDEN).json({
 					success: false,
 					message: "Permissions not set",
 				});
 			}
+
+			const permissions = getEffectivePermissions(req, user);
 
 			if (userHasAnyPermission(permissions, required)) {
 				return next();
