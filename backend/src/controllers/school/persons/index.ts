@@ -93,14 +93,25 @@ export const registerUser = async (
 
 export const changePassword = async (req:any, res:any) => {
     try {
-      const { email, currentPassword:oldPassword, newPassword, confirmPassword } = req.body;
-  
+      const { currentPassword:oldPassword, newPassword, confirmPassword } = req.body;
+
+      // Only the authenticated user can change their own password.
+      const authUserId = req.user?.id;
+      if (!authUserId) {
+        return res
+          .status(HTTP_STATUS.UNAUTHORIZED)
+          .json({ success: false, message: "Unauthorized" });
+      }
+
+      if (!oldPassword || !newPassword) {
+        return sendError(res, "Please provide required fields", HTTP_STATUS.BAD_REQUEST);
+      }
 
       if(newPassword!==confirmPassword){
         return sendError(res, "Password Should Match", HTTP_STATUS.BAD_REQUEST);
       }
-      // Find user by email
-      const user = await prisma.user.findFirst({ where: { email } });
+
+      const user = await prisma.user.findUnique({ where: { id: authUserId } });
   
       if (!user) {
         return res
@@ -109,7 +120,7 @@ export const changePassword = async (req:any, res:any) => {
       }
   
       // Compare old password
-      const isMatch = bcrypt.compare(oldPassword, user.password);
+      const isMatch = await bcrypt.compare(oldPassword, user.password);
       if (!isMatch) {
         return res
           .status(HTTP_STATUS.UNAUTHORIZED)
