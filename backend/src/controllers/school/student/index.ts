@@ -690,6 +690,15 @@ export const fetchStudents = async (req: Request, res: Response) => {
       branchId,
     } = req.query;
 
+    // Required: without it the query would return students across all
+    // branches, bypassing branch access checks.
+    if (!branchId) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide branchId",
+      });
+    }
+
     const containsInsensitive = (value: unknown) => ({
       contains: String(value),
       mode: "insensitive" as const,

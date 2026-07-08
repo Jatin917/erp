@@ -9,17 +9,41 @@ import {
 } from "../../../../generated/prisma/index.js";
 import { sendSuccess, sendError } from "@src/lib/utils.js";
 import { HTTP_STATUS } from "@src/lib/http-codes.js";
+import {
+  resolveAccessibleBranchIds,
+  userCanAccessBranch,
+} from "@src/middlewares/branch-access/index.js";
 
 /* ============================================================
    SCHOOL DAYS
 ============================================================ */
 
-export const getSchoolDays = async (req: Request, res: Response) => {
+export const getSchoolDays = async (req: any, res: Response) => {
   try {
     const { sessionId } = req.query;
-    // console.log("session id");
+    if (!sessionId) {
+      return sendError(res, "sessionId is required", HTTP_STATUS.BAD_REQUEST);
+    }
+
+    const session = await prisma.academicSession.findUnique({
+      where: { id: String(sessionId) },
+      select: { branchId: true },
+    });
+    if (!session) {
+      return sendError(res, "Session not found", HTTP_STATUS.NOT_FOUND);
+    }
+
+    // The branch middleware cannot resolve a branch from sessionId, so
+    // enforce branch access against the session's branch here.
+    if (!req.accessibleBranchIds) {
+      req.accessibleBranchIds = await resolveAccessibleBranchIds(req.user);
+    }
+    if (!userCanAccessBranch(req.accessibleBranchIds, session.branchId)) {
+      return sendError(res, "You do not have access to this branch", HTTP_STATUS.FORBIDDEN);
+    }
+
     const days = await prisma.schoolDay.findMany({
-      where: { sessionId: sessionId as string },
+      where: { sessionId: String(sessionId) },
       orderBy: { date: "asc" },
     });
 
