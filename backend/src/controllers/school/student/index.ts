@@ -129,6 +129,16 @@ async function createEnrollment(
   });
 }
 
+async function findOrCreateParentRecord(
+  tx: Prisma.TransactionClient,
+  type: "FATHER" | "MOTHER",
+  userId: string,
+) {
+  const existing = await tx.parent.findFirst({ where: { userId, type } });
+  if (existing) return existing;
+  return tx.parent.create({ data: { type, userId } });
+}
+
 function normalizeSession(session: string): string {
   // 1. Extract years (assume formats like "2024-2025", "2024-25", "24-25")
   const parts = session.split("-");
@@ -155,8 +165,27 @@ function formatDateInput(value: Date | string | null | undefined): string {
 }
 
 function parseOptionalDate(value: unknown): Date | null {
-  if (!value) return null;
-  const date = new Date(String(value));
+  if (value === undefined || value === null || value === "") return null;
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? null : value;
+  }
+
+  // Excel serial day numbers from xlsx (e.g. 44927 ≈ 2023-01-01)
+  const asNumber =
+    typeof value === "number"
+      ? value
+      : typeof value === "string" && /^\d+(\.\d+)?$/.test(value.trim())
+        ? Number(value.trim())
+        : null;
+
+  if (asNumber !== null && Number.isFinite(asNumber) && asNumber > 20000 && asNumber < 80000) {
+    const parsed = XLSX.SSF.parse_date_code(asNumber);
+    if (parsed) {
+      return new Date(Date.UTC(parsed.y, parsed.m - 1, parsed.d));
+    }
+  }
+
+  const date = new Date(String(value).trim());
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
@@ -164,6 +193,13 @@ function toNullableString(value: unknown): string | null {
   if (value === undefined || value === null) return null;
   const trimmed = String(value).trim();
   return trimmed.length ? trimmed : null;
+}
+
+function parseOptionalBool(value: unknown): boolean {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "number") return value !== 0;
+  const normalized = String(value ?? "").trim().toLowerCase();
+  return ["true", "yes", "1", "y"].includes(normalized);
 }
 
 function mapClassInput(input: string): ClassEnum | null {
@@ -252,34 +288,36 @@ export const createStudent = async (req: any, res: any) => {
       // ---------- Student User ----------
       const studentEmail = data.studentEmail || data.email || null;
       const studentMobile = data.studentMobile || data.mobile || data.phone || null;
-      const studentUser = await findOrCreateUser({tx, role:"STUDENT", 
+      const studentUser = await findOrCreateUser({
+        tx,
+        role: "STUDENT",
         name: data.name,
         email: studentEmail,
-        contact: studentMobile,
+        phone: studentMobile,
       });
 
       // ---------- Father ----------
-      const fatherUser = await findOrCreateUser({tx, role:"FATHER", 
+      const fatherUser = await findOrCreateUser({
+        tx,
+        role: "FATHER",
         name: data.fatherName,
         email: data.fatherEmail,
-        contact: data.fatherMobile,
+        phone: data.fatherMobile,
       });
       const fatherParent = fatherUser
-        ? await tx.parent.create({
-            data: { type: "FATHER", userId: fatherUser.id },
-          })
+        ? await findOrCreateParentRecord(tx, "FATHER", fatherUser.id)
         : null;
 
       // ---------- Mother ----------
-      const motherUser = await findOrCreateUser({tx, role:"MOTHER", 
+      const motherUser = await findOrCreateUser({
+        tx,
+        role: "MOTHER",
         name: data.motherName,
         email: data.motherEmail,
-        contact: data.motherMobile,
+        phone: data.motherMobile,
       });
       const motherParent = motherUser
-        ? await tx.parent.create({
-            data: { type: "MOTHER", userId: motherUser.id },
-          })
+        ? await findOrCreateParentRecord(tx, "MOTHER", motherUser.id)
         : null;
       // ---------- Student ----------
       const student = await tx.student.create({
@@ -465,8 +503,9 @@ export const createStudent = async (req: any, res: any) => {
 };
 
 export const bulkUploadStudents = async (req: any, res: any) => {
+  const filePath = req.file?.path as string | undefined;
   try {
-    if (!req.file) {
+    if (!req.file || !filePath) {
       return res
         .status(400)
         .json({ success: false, message: "No file uploaded" });
@@ -480,194 +519,287 @@ export const bulkUploadStudents = async (req: any, res: any) => {
         HTTP_STATUS.BAD_REQUEST
       );
     }
-    const filePath = req.file.path; // multer stores file temporarily
-    const workbook = XLSX.readFile(filePath);
-    const sheetName = workbook.SheetNames[0];
-    const sheetData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
 
-    let results: any[] = [];
-    try{
-
-    for (const row of sheetData) {
-    const { rollNo, dob, ...data } = row;
-    const classLabel = await prisma.classLabel.findFirst({where:{branchId, name:resolvedClassName}});
-    if(!classLabel){
+    const classLabel = await prisma.classLabel.findFirst({
+      where: { branchId, name: resolvedClassName },
+    });
+    if (!classLabel) {
       return sendError(res, "ClassName don't exist", HTTP_STATUS.CONFLICT);
     }
     const classNameId = classLabel.id;
-    if (!data.fatherName || !data.fatherMobile) {
-      return sendError(res, "Father details required", HTTP_STATUS.BAD_REQUEST);
-    }
-    if (!data.motherName || !data.motherMobile) {
-      return sendError(res, "Mother details required", HTTP_STATUS.BAD_REQUEST);
-    }
 
-    const student = await prisma.$transaction(async (tx) => {
-      // ---------- Student User ----------
-      const studentEmail = data.studentEmail || data.email || null;
-      const studentMobile = data.studentMobile || data.mobile || data.phone || null;
-      const studentUser = await findOrCreateUser({tx, role:"STUDENT", 
-        name: data.name,
-        email: studentEmail,
-        contact: studentMobile,
-      });
+    const workbook = XLSX.readFile(filePath);
+    const sheetName = workbook.SheetNames[0];
+    // raw:false → formatted strings (avoids Int URLs / Excel serials as bare numbers)
+    const sheetData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], {
+      raw: false,
+      defval: null,
+    }) as any[];
 
-      // ---------- Father ----------
-      const fatherUser = await findOrCreateUser({tx, roel:"FATHER", 
-        name: data.fatherName,
-        email: data.fatherEmail,
-        contact: data.fatherMobile,
-      });
-      const fatherParent = fatherUser
-        ? await tx.parent.create({
-            data: { type: "FATHER", userId: fatherUser.id },
-          })
-        : null;
+    const results: Array<{
+      row: number;
+      success: boolean;
+      studentId?: string;
+      error?: string;
+    }> = [];
 
-      // ---------- Mother ----------
-      const motherUser = await findOrCreateUser({tx, role:"MOTHER", 
-        name: data.motherName,
-        email: data.motherEmail,
-        contact: data.motherMobile,
-      });
-      const motherParent = motherUser
-        ? await tx.parent.create({
-            data: { type: "MOTHER", userId: motherUser.id },
-          })
-        : null;
+    for (let i = 0; i < sheetData.length; i++) {
+      const row = sheetData[i];
+      const rowNumber = i + 2; // header is row 1
+      try {
+        const { rollNo, dob, ...raw } = row;
+        const data = {
+          name: toNullableString(raw.name),
+          studentId: toNullableString(raw.studentId),
+          admissionNo: toNullableString(raw.admissionNo),
+          gender: toNullableString(raw.gender),
+          aadhaar: toNullableString(raw.aadhaar),
+          birthCertificateUrl: toNullableString(raw.birthCertificateUrl),
+          abcId: toNullableString(raw.abcId),
+          sssmId: toNullableString(raw.sssmId),
+          familySssmId: toNullableString(raw.familySssmId),
+          minority: toNullableString(raw.minority),
+          scStObc: toNullableString(raw.scStObc),
+          bpl: toNullableString(raw.bpl),
+          scStObcCertificateUrl: toNullableString(raw.scStObcCertificateUrl),
+          bplCertificateUrl: toNullableString(raw.bplCertificateUrl),
+          specialChild: parseOptionalBool(raw.specialChild),
+          allergies: toNullableString(raw.allergies),
+          studentEmail: toNullableString(raw.studentEmail ?? raw.email),
+          studentMobile: toNullableString(
+            raw.studentMobile ?? raw.mobile ?? raw.phone,
+          ),
+          citizenship: toNullableString(raw.citizenship),
+          visaNo: toNullableString(raw.visaNo),
+          visaType: toNullableString(raw.visaType),
+          visaValidity: parseOptionalDate(raw.visaValidity),
+          fatherName: toNullableString(raw.fatherName),
+          fatherOccupation: toNullableString(raw.fatherOccupation),
+          fatherEmail: toNullableString(raw.fatherEmail),
+          fatherMobile: toNullableString(raw.fatherMobile),
+          fatherAadhaar: toNullableString(raw.fatherAadhaar),
+          fatherIdUrl: toNullableString(raw.fatherIdUrl),
+          fatherPan: toNullableString(raw.fatherPan),
+          fatherPassport: toNullableString(raw.fatherPassport),
+          fatherCitizenship: toNullableString(raw.fatherCitizenship),
+          fatherVisaNo: toNullableString(raw.fatherVisaNo),
+          fatherVisaType: toNullableString(raw.fatherVisaType),
+          fatherVisaValidity: parseOptionalDate(raw.fatherVisaValidity),
+          motherName: toNullableString(raw.motherName),
+          motherOccupation: toNullableString(raw.motherOccupation),
+          motherEmail: toNullableString(raw.motherEmail),
+          motherMobile: toNullableString(raw.motherMobile),
+          motherAadhaar: toNullableString(raw.motherAadhaar),
+          motherIdUrl: toNullableString(raw.motherIdUrl),
+          motherPan: toNullableString(raw.motherPan),
+          motherPassport: toNullableString(raw.motherPassport),
+          motherCitizenship: toNullableString(raw.motherCitizenship),
+          motherVisaNo: toNullableString(raw.motherVisaNo),
+          motherVisaType: toNullableString(raw.motherVisaType),
+          motherVisaValidity: parseOptionalDate(raw.motherVisaValidity),
+          previousSchoolName: toNullableString(raw.previousSchoolName),
+          previousClassPassed: toNullableString(raw.previousClassPassed),
+          previousClassMarks: toNullableString(raw.previousClassMarks),
+          previousClassYear: toNullableString(raw.previousClassYear),
+          previousBoard: toNullableString(raw.previousBoard),
+          migrationCertificateUrl: toNullableString(raw.migrationCertificateUrl),
+          tcNo: toNullableString(raw.tcNo),
+          permanentAddress: toNullableString(raw.permanentAddress),
+          temporaryAddress: toNullableString(raw.temporaryAddress),
+          result: toNullableString(raw.result),
+          resultStatus: toNullableString(raw.resultStatus),
+          sectionId: toNullableString(raw.sectionId),
+        };
+        const parsedDob = parseOptionalDate(dob);
+        const parsedRollNo = toNullableString(rollNo);
 
-      // ---------- Student ----------
-      const student = await tx.student.create({
-        data: {
-          // ---------- Relations ----------
-          user: studentUser
-            ? { connect: { id: String(studentUser.id) } }
-            : undefined,
-          father: fatherParent
-            ? { connect: { id: String(fatherParent.id) } }
-            : undefined,
-          mother: motherParent
-            ? { connect: { id: String(motherParent.id) } }
-            : undefined,
-          branch: { connect: { id: branchId } },
+        if (!data.name) {
+          throw new Error("Student name is required");
+        }
+        if (!data.fatherName || !data.fatherMobile) {
+          throw new Error("Father details required");
+        }
+        if (!data.motherName || !data.motherMobile) {
+          throw new Error("Mother details required");
+        }
 
-          // ---------- Basic Info ----------
-          name: String(data.name),
-          studentId: data.studentId || null,
-          admissionNo: data.admissionNo || null,
-          gender: data.gender || null,
-          dob: dob ? new Date(dob) : null,
-          aadhaar: data.aadhaar || null,
-          birthCertificateUrl: data.birthCertificateUrl || null,
-          abcId: data.abcId || null,
-          sssmId: data.sssmId || null,
-          familySssmId: data.familySssmId || null,
-          minority: data.minority || null,
-          scStObc: data.scStObc || null,
-          bpl: data.bpl || null,
-          scStObcCertificateUrl: data.scStObcCertificateUrl || null,
-          bplCertificateUrl: data.bplCertificateUrl || null,
-          specialChild: data.specialChild ? Boolean(data.specialChild) : false,
-          allergies: data.allergies || null,
-          studentEmail: studentEmail,
-          studentMobile: studentMobile,
+        const student = await prisma.$transaction(async (tx) => {
+          const studentUser = await findOrCreateUser({
+            tx,
+            role: "STUDENT",
+            name: data.name!,
+            email: data.studentEmail,
+            phone: data.studentMobile,
+          });
 
-          // ---------- Citizenship & Visa ----------
-          citizenship: data.citizenship || null,
-          visaNo: data.visaNo || null,
-          visaType: data.visaType || null,
-          visaValidity: data.visaValidity ? new Date(data.visaValidity) : null,
+          const fatherUser = await findOrCreateUser({
+            tx,
+            role: "FATHER",
+            name: data.fatherName!,
+            email: data.fatherEmail,
+            phone: data.fatherMobile,
+          });
+          const fatherParent = fatherUser
+            ? await findOrCreateParentRecord(tx, "FATHER", fatherUser.id)
+            : null;
 
-          // ---------- Father Details ----------
-          fatherName: data.fatherName || null,
-          fatherOccupation: data.fatherOccupation || null,
-          fatherEmail: data.fatherEmail || null,
-          fatherMobile: data.fatherMobile || null,
-          fatherAadhaar: data.fatherAadhaar || null,
-          fatherIdUrl: data.fatherIdUrl || null,
-          fatherPan: data.fatherPan || null,
-          fatherPassport: data.fatherPassport || null,
-          fatherCitizenship: data.fatherCitizenship || null,
-          fatherVisaNo: data.fatherVisaNo || null,
-          fatherVisaType: data.fatherVisaType || null,
-          fatherVisaValidity: data.fatherVisaValidity
-            ? new Date(data.fatherVisaValidity)
-            : null,
+          const motherUser = await findOrCreateUser({
+            tx,
+            role: "MOTHER",
+            name: data.motherName!,
+            email: data.motherEmail,
+            phone: data.motherMobile,
+          });
+          const motherParent = motherUser
+            ? await findOrCreateParentRecord(tx, "MOTHER", motherUser.id)
+            : null;
 
-          // ---------- Mother Details ----------
-          motherName: data.motherName || null,
-          motherOccupation: data.motherOccupation || null,
-          motherEmail: data.motherEmail || null,
-          motherMobile: data.motherMobile || null,
-          motherAadhaar: data.motherAadhaar || null,
-          motherIdUrl: data.motherIdUrl || null,
-          motherPan: data.motherPan || null,
-          motherPassport: data.motherPassport || null,
-          motherCitizenship: data.motherCitizenship || null,
-          motherVisaNo: data.motherVisaNo || null,
-          motherVisaType: data.motherVisaType || null,
-          motherVisaValidity: data.motherVisaValidity
-            ? new Date(data.motherVisaValidity)
-            : null,
+          const created = await tx.student.create({
+            data: {
+              user: studentUser
+                ? { connect: { id: String(studentUser.id) } }
+                : undefined,
+              father: fatherParent
+                ? { connect: { id: String(fatherParent.id) } }
+                : undefined,
+              mother: motherParent
+                ? { connect: { id: String(motherParent.id) } }
+                : undefined,
+              branch: { connect: { id: branchId } },
 
-          // ---------- Previous Education ----------
-          previousSchoolName: data.previousSchoolName || null,
-          previousClassPassed: data.previousClassPassed || null,
-          previousClassMarks: data.previousClassMarks || null,
-          previousClassYear: data.previousClassYear || null,
-          previousBoard: data.previousBoard || null,
-          migrationCertificateUrl: data.migrationCertificateUrl || null,
-          tcNo: data.tcNo || null,
+              name: data.name!,
+              studentId: data.studentId,
+              admissionNo: data.admissionNo,
+              gender: data.gender,
+              dob: parsedDob,
+              aadhaar: data.aadhaar,
+              birthCertificateUrl: data.birthCertificateUrl,
+              abcId: data.abcId,
+              sssmId: data.sssmId,
+              familySssmId: data.familySssmId,
+              minority: data.minority,
+              scStObc: data.scStObc,
+              bpl: data.bpl,
+              scStObcCertificateUrl: data.scStObcCertificateUrl,
+              bplCertificateUrl: data.bplCertificateUrl,
+              specialChild: data.specialChild,
+              allergies: data.allergies,
+              studentEmail: data.studentEmail,
+              studentMobile: data.studentMobile,
 
-          // ---------- Address ----------
-          permanentAddress: data.permanentAddress || null,
-          temporaryAddress: data.temporaryAddress || null,
+              citizenship: data.citizenship,
+              visaNo: data.visaNo,
+              visaType: data.visaType,
+              visaValidity: data.visaValidity,
 
-          // ---------- Extras ----------
-          result: data.result || null,
-          resultStatus: data.resultStatus || null,
-        },
-        include: {
-          user: true,
-          enrollments: true,
-          branch: true,
-        },
-      });
+              fatherName: data.fatherName,
+              fatherOccupation: data.fatherOccupation,
+              fatherEmail: data.fatherEmail,
+              fatherMobile: data.fatherMobile,
+              fatherAadhaar: data.fatherAadhaar,
+              fatherIdUrl: data.fatherIdUrl,
+              fatherPan: data.fatherPan,
+              fatherPassport: data.fatherPassport,
+              fatherCitizenship: data.fatherCitizenship,
+              fatherVisaNo: data.fatherVisaNo,
+              fatherVisaType: data.fatherVisaType,
+              fatherVisaValidity: data.fatherVisaValidity,
 
-      // ---------- Enrollment ----------
-      await createEnrollment(
-        tx,
-        classNameId,
-        branchId,
-        student.id,
-        data.sectionId || null,
-        rollNo || null
-      );
+              motherName: data.motherName,
+              motherOccupation: data.motherOccupation,
+              motherEmail: data.motherEmail,
+              motherMobile: data.motherMobile,
+              motherAadhaar: data.motherAadhaar,
+              motherIdUrl: data.motherIdUrl,
+              motherPan: data.motherPan,
+              motherPassport: data.motherPassport,
+              motherCitizenship: data.motherCitizenship,
+              motherVisaNo: data.motherVisaNo,
+              motherVisaType: data.motherVisaType,
+              motherVisaValidity: data.motherVisaValidity,
 
-      return student; // ✅ return student object
-    });
+              previousSchoolName: data.previousSchoolName,
+              previousClassPassed: data.previousClassPassed,
+              previousClassMarks: data.previousClassMarks,
+              previousClassYear: data.previousClassYear,
+              previousBoard: data.previousBoard,
+              migrationCertificateUrl: data.migrationCertificateUrl,
+              tcNo: data.tcNo,
 
-    // ---------- Barcode after commit ----------
-    const barcodeUrl = await generateBarcode(student);
-    await prisma.student.update({
-      where: { id: student.id },
-      data: { barcodeUrl },
-    });
-    
+              permanentAddress: data.permanentAddress,
+              temporaryAddress: data.temporaryAddress,
 
-        results.push({ studentId: student.id, success: true });
-  }
+              result: data.result,
+              resultStatus: data.resultStatus,
+            },
+            include: {
+              user: true,
+              enrollments: true,
+              branch: true,
+            },
+          });
+
+          await createEnrollment(
+            tx,
+            classNameId,
+            branchId,
+            created.id,
+            data.sectionId,
+            parsedRollNo,
+          );
+
+          return created;
+        });
+
+        try {
+          const barcodeUrl = await generateBarcode(student);
+          await prisma.student.update({
+            where: { id: student.id },
+            data: { barcodeUrl },
+          });
+        } catch (barcodeErr: any) {
+          results.push({
+            row: rowNumber,
+            success: true,
+            studentId: student.id,
+            error: `Created but barcode failed: ${barcodeErr.message}`,
+          });
+          continue;
+        }
+
+        results.push({
+          row: rowNumber,
+          success: true,
+          studentId: student.id,
+        });
       } catch (err: any) {
-        results.push({ error: err.message, success: false });
+        results.push({
+          row: rowNumber,
+          success: false,
+          error: err.message,
+        });
       }
+    }
+
+    const successCount = results.filter((r) => r.success).length;
+    const failCount = results.length - successCount;
 
     return res.status(201).json({
-      success: true,
-      message: "Bulk upload completed",
+      success: failCount === 0,
+      message: `Bulk upload completed: ${successCount} succeeded, ${failCount} failed`,
+      data: { results },
     });
   } catch (error: any) {
     console.error(error);
     return res.status(500).json({ success: false, message: error.message });
+  } finally {
+    if (filePath && fs.existsSync(filePath)) {
+      try {
+        fs.unlinkSync(filePath);
+      } catch {
+        /* ignore cleanup errors */
+      }
+    }
   }
 };
 

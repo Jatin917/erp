@@ -15,6 +15,9 @@ All notable changes documented per [Keep a Changelog](https://keepachangelog.com
 - `assign-permission` and `user-permissions/:userId` are tenant-scoped: non-ALL grantors can only view/modify users belonging to their accessible branches
 
 ### Fixed
+- `bulk-upload` students: coerce Excel cell types (`raw:false`, string fields via `toNullableString`, Excel serial dates via `parseOptionalDate`) so Int URL/date cells no longer fail Prisma create
+- `bulk-upload` students: fixed `roel` typo, pass `phone` (not `contact`) to `findOrCreateUser`, resolve class once, per-row errors instead of aborting mid-file, return `results`, reuse parent records, delete temp upload file
+- `create-student` now passes `phone` to `findOrCreateUser` and reuses existing father/mother Parent rows
 - `get-branches` for DIRECTOR no longer calls the HTTP `getSchools` controller (which caused `req.user` / `res.status` TypeErrors); it uses `getSchoolsWithBranchesService` instead
 - Frontend-mode routes added for Subject, Time Table, and Student Custom Fields (nav items previously pointed at missing routes)
 - Collect Fees path unified to `/management/fee/collect-fees` in both router modes; School Manager menu visible to users with only `CREATE_SCHOOL` in backend router mode
