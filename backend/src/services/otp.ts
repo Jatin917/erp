@@ -17,16 +17,14 @@ export async function verifyOtp(email: string, otp: number, type:OTP_TYPE) {
   const redis = await RedisClient(); // you need the client here too
   const key = `${type}:${email}`;
   const data = await redis.get(key); // ✅ correct usage
-  console.log("data of otp ", data);
   if (!data) return false; // expired or not found
 
   const { otp: storedOtp } = JSON.parse(data);
-  console.log("stored otp ", storedOtp, otp);
   if (storedOtp !== otp) return false;
 
   // mark as verified
   if(type===OTP_TYPE.VERIFY_OTP) await redis.setEx(`${type}:${email}`, 3600, JSON.stringify({ isVerified: true }));
-  await redis.del(key); // cleanup OTP
+  // await redis.del(key); // cleanup OTP
   return true;
 }
 

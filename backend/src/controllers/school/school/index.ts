@@ -14,13 +14,12 @@ import { createCustomFieldService, getBranchesService, getBranchService, getCust
 import { getUserService } from "@src/services/user/index.js";
 import { createSchoolDays } from "@src/services/attendance/index.js";
 import { syncCustomFieldsToRegistry } from "@src/registry/seed/sync-custom-fields.js";
-import { applyRolePermissions, mergeRolePermissions } from "@src/lib/apply-role-permissions.js";
+import { mergeRolePermissions } from "@src/lib/apply-role-permissions.js";
 import {
 	normalizeEmail,
 	SCHOOL_FACULTY_ROLES,
 	validateDistinctDirectorAndPrincipals,
 	validateNoSelfAssignment,
-	validateUserEligibleForSchoolRole,
 } from "@src/lib/role-grant.js";
 
 const formatBranchOption = (branch: {
@@ -54,64 +53,41 @@ const createBranch = async (tx: Omit<PrismaClient<Prisma.PrismaClientOptions, ne
         return null;
     }
 };
-// ---------- Helper function for director/principal creation ----------
-const findOrCreateUser = async (role: rolesAre, userData: { email: string; name: string; contact:string }, tx: Omit<PrismaClient<Prisma.PrismaClientOptions, never, DefaultArgs>, "$connect" | "$disconnect" | "$on" | "$transaction" | "$use" | "$extends">) => {
-const existingUser = await tx.user.findUnique({
+// ---------- Helper: director/principal must be brand-new users ----------
+const createNewLeadershipUser = async (
+  role: rolesAre,
+  userData: { email: string; name: string; contact: string },
+  tx: Omit<PrismaClient<Prisma.PrismaClientOptions, never, DefaultArgs>, "$connect" | "$disconnect" | "$on" | "$transaction" | "$use" | "$extends">,
+) => {
+  const existingUser = await tx.user.findUnique({
     where: { email: userData.email },
-    include: {
-      schoolFaculty: { select: { branchId: true } },
-      principalAssignment: { select: { id: true } },
-    },
-});
-if (existingUser) {
-    const eligibilityError = validateUserEligibleForSchoolRole(
-      existingUser.role,
-      role,
-      {
-        hasSchoolFaculty: Boolean(existingUser.schoolFaculty),
-        facultyBranchId: existingUser.schoolFaculty?.branchId ?? null,
-        principalBranchId: existingUser.principalAssignment?.id ?? null,
-      },
+    select: { id: true },
+  });
+  if (existingUser) {
+    throw new Error(
+      `${role} must be a new user. An account already exists for ${userData.email}.`,
     );
-    if (eligibilityError) {
-      throw new Error(eligibilityError.message);
-    }
+  }
 
-    if (!existingUser.role.includes(role)) {
-      await tx.user.update({
-          where: { email: userData.email },
-          data: { role: { push: role }, phone:userData.contact },
-      });
-    } else if (userData.contact) {
-      await tx.user.update({
-          where: { email: userData.email },
-          data: { phone: userData.contact },
-      });
-    }
-    await applyRolePermissions(tx, existingUser.id, role);
-    return existingUser.id;
-} else {
-    const verified = await isEmailVerified(userData.email, OTP_TYPE.VERIFY_OTP);
-    if (!verified) {
-        throw new Error(`${role} email is not verified. Please verify first.`);
-    }
+  const verified = await isEmailVerified(userData.email, OTP_TYPE.VERIFY_OTP);
+  if (!verified) {
+    throw new Error(`${role} email is not verified. Please verify first.`);
+  }
 
-    const roles = [role];
-    const hashedPassword = await bcrypt.hash(defaultPassword, 10);
-    const newUser = await tx.user.create({
+  const hashedPassword = await bcrypt.hash(defaultPassword, 10);
+  const newUser = await tx.user.create({
     data: {
-        name: userData.name,
-        email: userData.email,
-        password: hashedPassword,
-        role: roles,
-        isEmailVerified: true,
-        isPhoneVerified: false,
-        phone:userData.contact,
-        permissions: { set: mergeRolePermissions([], role) },
+      name: userData.name,
+      email: userData.email,
+      password: hashedPassword,
+      role: [role],
+      isEmailVerified: true,
+      isPhoneVerified: false,
+      phone: userData.contact,
+      permissions: { set: mergeRolePermissions([], role) },
     },
-    });
-    return newUser.id;
-}
+  });
+  return newUser.id;
 };
 
 export const createSchool = async (req: any, res: any) => {
@@ -167,57 +143,23 @@ export const createSchool = async (req: any, res: any) => {
           email: { equals: email, mode: "insensitive" as const },
         })),
       },
-      include: {
-        schoolFaculty: { select: { branchId: true } },
-        principalAssignment: { select: { id: true } },
-      },
+      select: { email: true },
     });
 
-    const directorUser = existingUsers.find(
-      (user) => normalizeEmail(user.email) === normalizeEmail(directorEmail),
-    );
-    if (directorUser) {
-      const directorEligibility = validateUserEligibleForSchoolRole(
-        directorUser.role,
-        rolesAre.DIRECTOR,
-        {
-          hasSchoolFaculty: Boolean(directorUser.schoolFaculty),
-          facultyBranchId: directorUser.schoolFaculty?.branchId ?? null,
-          principalBranchId: directorUser.principalAssignment?.id ?? null,
-        },
-      );
-      if (directorEligibility) {
-        return res.status(400).json({ success: false, message: directorEligibility.message });
-      }
-    }
-
-    for (const principalEmail of principalEmails) {
-      const principalUser = existingUsers.find(
-        (user) => normalizeEmail(user.email) === normalizeEmail(principalEmail),
-      );
-      if (!principalUser) {
-        continue;
-      }
-      const principalEligibility = validateUserEligibleForSchoolRole(
-        principalUser.role,
-        rolesAre.PRINCIPAL,
-        {
-          hasSchoolFaculty: Boolean(principalUser.schoolFaculty),
-          facultyBranchId: principalUser.schoolFaculty?.branchId ?? null,
-          principalBranchId: principalUser.principalAssignment?.id ?? null,
-        },
-      );
-      if (principalEligibility) {
-        return res.status(400).json({ success: false, message: principalEligibility.message });
-      }
+    if (existingUsers.length > 0) {
+      const emails = existingUsers.map((u) => u.email).join(", ");
+      return res.status(400).json({
+        success: false,
+        message: `Director and principal must be new users. Account already exists for: ${emails}`,
+      });
     }
 
     let schoolId = "";
     const branchIds: string[] = [];
 
     await prisma.$transaction(async (tx) => {
-      // 1️⃣ Create or find director
-      const directorId = await findOrCreateUser("DIRECTOR", director, tx);
+      // 1️⃣ Create director (new user only)
+      const directorId = await createNewLeadershipUser("DIRECTOR", director, tx);
 
       // Block duplicate: same director + school name + principal
       const normalizedPrincipalEmails = principalEmails.map((email) => normalizeEmail(email));
@@ -258,7 +200,7 @@ export const createSchool = async (req: any, res: any) => {
 
       // 3️⃣ Create branches + academic sessions
       for (const principal of principals) {
-        const principalId = await findOrCreateUser("PRINCIPAL", principal, tx);
+        const principalId = await createNewLeadershipUser("PRINCIPAL", principal, tx);
 
         const branch = await createBranch(
           tx,
