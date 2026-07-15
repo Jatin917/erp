@@ -15,6 +15,7 @@ All notable changes documented per [Keep a Changelog](https://keepachangelog.com
 - `assign-permission` and `user-permissions/:userId` are tenant-scoped: non-ALL grantors can only view/modify users belonging to their accessible branches
 
 ### Fixed
+- `get-branches` for DIRECTOR no longer calls the HTTP `getSchools` controller (which caused `req.user` / `res.status` TypeErrors); it uses `getSchoolsWithBranchesService` instead
 - Frontend-mode routes added for Subject, Time Table, and Student Custom Fields (nav items previously pointed at missing routes)
 - Collect Fees path unified to `/management/fee/collect-fees` in both router modes; School Manager menu visible to users with only `CREATE_SCHOOL` in backend router mode
 - `create-user` page now uses the canonical `RoleCode` from `types/entity.ts`; stale duplicate `RoleCode`/`PermissionConstant`/`Weekday` removed from `types/contant.ts`

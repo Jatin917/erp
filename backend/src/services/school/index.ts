@@ -68,6 +68,14 @@ export const getSchoolsService = async (where: any, include?: any) => {
   return schools;
 };
 
+/** Schools matching `where`, each including their branches. */
+export const getSchoolsWithBranchesService = async (where: any = {}) => {
+  return prisma.school.findMany({
+    where,
+    include: { branches: true },
+  });
+};
+
 export async function getLecturesForToday() {
   const today = new Date();
   const start = new Date(today.setHours(0, 0, 0, 0));

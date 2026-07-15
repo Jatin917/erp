@@ -10,7 +10,7 @@ import fs from "fs";
 import { OTP_TYPE } from "@src/lib/types.js";
 import { isEmailVerified } from "@src/services/otp.js";
 import { sendError, sendSuccess } from "@src/lib/utils.js";
-import { createCustomFieldService, getBranchesService, getBranchService, getCustomFieldsService } from "@src/services/school/index.js";
+import { createCustomFieldService, getBranchesService, getBranchService, getCustomFieldsService, getSchoolsWithBranchesService } from "@src/services/school/index.js";
 import { getUserService } from "@src/services/user/index.js";
 import { createSchoolDays } from "@src/services/attendance/index.js";
 import { syncCustomFieldsToRegistry } from "@src/registry/seed/sync-custom-fields.js";
@@ -292,8 +292,9 @@ export const createSchool = async (req: any, res: any) => {
   
 export const getSchools = async (req: any, res: any) => {
   try {
+    console.log("req.user", req.user)
     const { email } = req.user; // email of the "guy"
-
+    console.log("email is ", email)
     if (!email) {
       return res.status(400).json({
         success: false,
@@ -423,13 +424,12 @@ export const getBranches = async (req: any, res: any) => {
 
     // DIRECTOR: get schools + their branches
     if (roles.includes(rolesAre.DIRECTOR)) {
-      const foundSchools = await getSchools({ createdById: user.id }, {branches:true});
-
+      const foundSchools = await getSchoolsWithBranchesService({ createdById: user.id });
 
       // Flatten all branches from all schools and format them
-      foundSchools.forEach((school:any) => {
+      foundSchools.forEach((school) => {
         if (school.branches?.length) {
-          school.branches.forEach((branch:any) => {
+          school.branches.forEach((branch) => {
             schools.push(formatBranchOption(branch));
           });
         }
