@@ -1,2 +1,5 @@
 /slash-admin
 /frontend
+.env
+.env.local
+*.pem

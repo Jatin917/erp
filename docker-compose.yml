@@ -1,0 +1,102 @@
+# PostgreSQL 17, Redis, API, email worker, and frontend (Vite build -> nginx).
+# Stop any existing local containers on 5433/6379 first: docker stop erp redis
+
+name: kashish-erp
+
+services:
+  db:
+    image: postgres:17
+    container_name: kashish-erp-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-erp_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-erp_password}
+      POSTGRES_DB: ${POSTGRES_DB:-erp}
+    ports:
+      - "${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - erp_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: kashish-erp-redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - erp_redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: kashish-erp-backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      PORT: ${BACKEND_PORT:-3000}
+      ENV: ${ENV:-DEV}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-erp_user}:${POSTGRES_PASSWORD:-erp_password}@db:5432/${POSTGRES_DB:-erp}
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET:-KASHISH-ERP}
+      SUPER_ADMIN_EMAIL: ${SUPER_ADMIN_EMAIL:-admin@example.com}
+      SUPER_ADMIN_PASSWORD: ${SUPER_ADMIN_PASSWORD:-default}
+      DEFAULT_PASSWORD: ${DEFAULT_PASSWORD:-default}
+      PHOTO_URL: ${PHOTO_URL:-http://localhost:3000}
+      SMTP_EMAIL: ${SMTP_EMAIL:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+    ports:
+      - "${BACKEND_HOST_PORT:-3000}:3000"
+    volumes:
+      - backend_uploads:/app/uploads
+
+  worker:
+    build:
+      context: ./worker
+      dockerfile: Dockerfile
+    container_name: kashish-erp-worker
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      REDIS_URL: redis://redis:6379
+      SMTP_USER: ${SMTP_EMAIL:-}
+      SMTP_PASS: ${SMTP_PASSWORD:-}
+      PORT: ${WORKER_PORT:-4000}
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_APP_API_BASE_URL: ${VITE_APP_API_BASE_URL:-http://localhost:3000/api}
+        VITE_BACKEND_URL_STATIC: ${VITE_BACKEND_URL_STATIC:-http://localhost:3000}
+        VITE_APP_DEFAULT_ROUTE: ${VITE_APP_DEFAULT_ROUTE:-/workbench}
+        VITE_APP_PUBLIC_PATH: ${VITE_APP_PUBLIC_PATH:-/}
+        VITE_APP_ROUTER_MODE: ${VITE_APP_ROUTER_MODE:-backend}
+    container_name: kashish-erp-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "${FRONTEND_HOST_PORT:-3001}:80"
+
+volumes:
+  erp_pgdata:
+  erp_redisdata:
+  backend_uploads:

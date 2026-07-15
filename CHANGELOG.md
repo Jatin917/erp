@@ -4,6 +4,9 @@ All notable changes documented per [Keep a Changelog](https://keepachangelog.com
 
 ## [Unreleased]
 
+### Added
+- Docker Compose stack for `db`, `redis`, `backend`, `worker` (email), and `frontend`, with Dockerfiles and `.env.docker.example`
+
 ### Security
 - API permission middleware (`requirePermission`/`requireAnyPermission`) now enforces branch-scoped effective permissions (same resolution as login/session) instead of the raw global `user.permissions` column; role assignment (`create-faculty`, `update-faculty`) and permission grants use the same scoped set
 - `change-password` no longer accepts an email in the body (IDOR); it only changes the authenticated user's password, and the missing `await` on the current-password check is fixed
