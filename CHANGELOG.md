@@ -15,6 +15,10 @@ All notable changes documented per [Keep a Changelog](https://keepachangelog.com
 - `assign-permission` and `user-permissions/:userId` are tenant-scoped: non-ALL grantors can only view/modify users belonging to their accessible branches
 
 ### Fixed
+- Frontend `nginx.conf` re-encoded from UTF-16 LE to UTF-8 so nginx can start in Docker
+- Frontend Docker build: disable rollup-plugin-visualizer `open` when `CI=true` so Vite does not spawn Windows PowerShell inside the Linux image
+- Backend Docker build: copy Prisma `generated/` client from deps into build and runner stages (custom output path is outside `node_modules`)
+- Docker `Dockerfile` / `.dockerignore` (backend, worker, frontend) and `backend/docker-entrypoint.sh` re-encoded from UTF-16 LE to UTF-8 so Compose can parse them (`unknown instruction: FROM` / non-printable exclude-patterns)
 - Bulk upload UI: await the bulk-upload API promise (missing `return`), and disable file picker / class-section / import button until the response returns
 - `bulk-upload` students: coerce Excel cell types (`raw:false`, string fields via `toNullableString`, Excel serial dates via `parseOptionalDate`) so Int URL/date cells no longer fail Prisma create
 - `bulk-upload` students: fixed `roel` typo, pass `phone` (not `contact`) to `findOrCreateUser`, resolve class once, per-row errors instead of aborting mid-file, return `results`, reuse parent records, delete temp upload file
