@@ -1,0 +1,49 @@
+Metadata-Version: 2.4
+Name: ai-backend
+Version: 0.1.0
+Summary: AI orchestration service for the School ERP (read-only tools over HTTP).
+Requires-Python: >=3.12
+Description-Content-Type: text/markdown
+Requires-Dist: fastapi>=0.115.0
+Requires-Dist: uvicorn[standard]>=0.32.0
+Requires-Dist: pydantic>=2.9.0
+Requires-Dist: pydantic-settings>=2.6.0
+Requires-Dist: httpx>=0.27.0
+Requires-Dist: redis>=5.2.0
+Provides-Extra: dev
+Requires-Dist: pytest>=8.3.0; extra == "dev"
+Requires-Dist: pytest-asyncio>=0.24.0; extra == "dev"
+Requires-Dist: fakeredis[lua]>=2.26.0; extra == "dev"
+
+# AI Backend
+
+Read-only AI orchestration service for the School ERP.
+
+**Why it exists:** [ADR-0002](../docs/adr/0002-ai-backend-orchestration-service.md)  
+**Decisions:** [ai-backend-v1](../docs/decisions/ai-backend-v1.md)  
+**Run:** [docs/runbook.md](./docs/runbook.md)
+
+## Responsibilities (V1)
+
+- Chat orchestration (LangGraph — later milestones)
+- Tool selection / execution against ERP HTTP API
+- Conversation memory in Redis
+- LLM calls via OpenAI-compatible HTTP
+
+## Non-responsibilities
+
+- ERP business rules, database access, JWT minting/verification with shared secret
+
+## Layout (Clean Architecture)
+
+| Package | Role |
+|---------|------|
+| `app/` | FastAPI delivery (routes, middleware) |
+| `domain/` | Models + ports (`LLMClient`, `ErpClient`, `ConversationStore`, `Clock`) |
+| `infrastructure/` | Config, logging, **fakes** (M2); real adapters in M3+ |
+
+See [`domain/README.md`](./domain/README.md).
+
+## Current milestone
+
+**M3** — Redis `ConversationStore` (M4 ERP client already landed).

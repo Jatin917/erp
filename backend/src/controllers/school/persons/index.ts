@@ -1,10 +1,10 @@
 import { HTTP_STATUS } from "../../../lib/http-codes.js";
 import { JWT_SECRET, prisma, SUPERADMIN_EMAIL, SUPERADMIN_PASSWORD } from "@src/server.js";
-import bcrypt from 'bcrypt';
+import bcrypt from "bcrypt";
 import { getDefaultPermissionsForRole } from "@src/lib/apply-role-permissions.js";
-import {OTP_TYPE, Permission, type PAYLOAD_TOKEN_TYPE, type PermissionType} from '@src/lib/types.js'
-import jwt from 'jsonwebtoken'
-import { Role as PrismaRole } from "../../../../generated/prisma/index.js";
+import { OTP_TYPE, Permission, type PAYLOAD_TOKEN_TYPE, type PermissionType } from "@src/lib/types.js";
+import jwt from "jsonwebtoken";
+import { Permission as DbPermission, Role as PrismaRole } from "../../../../generated/prisma/index.js";
 type RoleKey =
   | 'SUPERADMIN'
   | 'DIRECTOR'
@@ -225,6 +225,21 @@ export const changePassword = async (req:any, res:any) => {
         schoolFaculty: user!.schoolFaculty,
       };
 
+      // Base effective permissions from DB (Prisma enum values)
+      const basePermissions = resolveEffectivePermissions(sessionUser, sessionBranchId) as DbPermission[];
+
+      // Map to plain strings for the frontend
+      const effectivePermissions = new Set<string>(basePermissions as unknown as string[]);
+
+      // For any DIRECTOR or PRINCIPAL, expose high-level fee permissions used by the frontend nav
+      const isDirectorOrPrincipal =
+        user!.role.includes(PrismaRole.DIRECTOR) || user!.role.includes(PrismaRole.PRINCIPAL);
+      if (isDirectorOrPrincipal) {
+        effectivePermissions.add(Permission.VIEW_FEE_SUMMARY);
+        effectivePermissions.add(Permission.RECORD_FEE_TRANSACTION);
+        effectivePermissions.add(Permission.VIEW_FEE_DOC);
+      }
+
       return res.status(200).json({
         success: true,
         message: "Logged in successfully",
@@ -234,7 +249,7 @@ export const changePassword = async (req:any, res:any) => {
             id: user!.id,
             name: user!.name,
             email: user!.email,
-            permissions: resolveEffectivePermissions(sessionUser, sessionBranchId),
+            permissions: Array.from(effectivePermissions),
             roles: resolveEffectiveRoles(sessionUser, sessionBranchId),
             branchId: sessionBranchId,
           },
@@ -297,6 +312,17 @@ export const getSession = async (req: any, res: any) => {
       schoolFaculty: user.schoolFaculty,
     };
 
+    const basePermissions = resolveEffectivePermissions(sessionUser, resolvedBranchId) as DbPermission[];
+    const effectivePermissions = new Set<string>(basePermissions as unknown as string[]);
+
+    const isDirectorOrPrincipal =
+      user.role.includes(PrismaRole.DIRECTOR) || user.role.includes(PrismaRole.PRINCIPAL);
+    if (isDirectorOrPrincipal) {
+      effectivePermissions.add(Permission.VIEW_FEE_SUMMARY);
+      effectivePermissions.add(Permission.RECORD_FEE_TRANSACTION);
+      effectivePermissions.add(Permission.VIEW_FEE_DOC);
+    }
+
     return res.status(HTTP_STATUS.OK).json({
       success: true,
       message: "Session refreshed",
@@ -305,7 +331,7 @@ export const getSession = async (req: any, res: any) => {
           id: user.id,
           name: user.name,
           email: user.email,
-          permissions: resolveEffectivePermissions(sessionUser, resolvedBranchId),
+          permissions: Array.from(effectivePermissions),
           roles: resolveEffectiveRoles(sessionUser, resolvedBranchId),
           branchId: resolvedBranchId,
         },

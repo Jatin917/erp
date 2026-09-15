@@ -35,23 +35,32 @@ const formatBranchOption = (branch: {
   ...(branch.softwareCharge !== undefined ? { softwareCharge: branch.softwareCharge } : {}),
 });
 
-// Updated createBranch to accept tx for transactions
-const createBranch = async (tx: Omit<PrismaClient<Prisma.PrismaClientOptions, never, DefaultArgs>, "$connect" | "$disconnect" | "$on" | "$transaction" | "$use" | "$extends">, address: any, principalId: any, name: any, schoolId: string, softwareCharge:string) => {
-    try {
-        const branch = await tx.branch.create({
-            data: {
-                principal:{connect:{id:principalId}},
-                name,
-                school:{connect:{id:schoolId}},
-                address,
-                softwareCharge:parseFloat(softwareCharge)
-            }
-        });
-        return branch;
-    } catch (error) {
-        console.log(error)
-        return null;
-    }
+// Helper: create a branch inside an existing transaction
+const createBranch = async (
+  tx: Omit<
+    PrismaClient<Prisma.PrismaClientOptions, never, DefaultArgs>,
+    "$connect" | "$disconnect" | "$on" | "$transaction" | "$use" | "$extends"
+  >,
+  address: any,
+  principalId: any,
+  name: any,
+  schoolId: string,
+) => {
+  try {
+    const branch = await tx.branch.create({
+      data: {
+        principal: { connect: { id: principalId } },
+        name,
+        school: { connect: { id: schoolId } },
+        address,
+        // softwareCharge is omitted here; Prisma schema sets it to default 0
+      },
+    });
+    return branch;
+  } catch (error) {
+    console.log(error);
+    return null;
+  }
 };
 // ---------- Helper: director/principal must be brand-new users ----------
 const createNewLeadershipUser = async (
@@ -98,7 +107,6 @@ export const createSchool = async (req: any, res: any) => {
       schoolName,
       name,
       currentSession,
-      softwareCharge,
       startMonthName,
       endMonthName,
     } = req.body;
@@ -198,7 +206,7 @@ export const createSchool = async (req: any, res: any) => {
       });
       schoolId = school.id;
 
-      // 3️⃣ Create branches + academic sessions
+      // 3️⃣ Create branches + academic sessions (+ register principals as school faculty)
       for (const principal of principals) {
         const principalId = await createNewLeadershipUser("PRINCIPAL", principal, tx);
 
@@ -208,12 +216,20 @@ export const createSchool = async (req: any, res: any) => {
           principalId,
           finalSchoolName,
           school.id,
-          softwareCharge
         );
         if(!branch){
           throw new Error("Branch don't exist");
         }
         branchIds.push(branch.id);
+
+        // Also register principal as school faculty for this branch
+        await tx.schoolFaculty.create({
+          data: {
+            userId: principalId,
+            name: principal.name,
+            branchId: branch.id,
+          },
+        });
 
         // 🔹 Create academic months first
         const session = await tx.academicSession.create({
