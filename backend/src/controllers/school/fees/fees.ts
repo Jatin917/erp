@@ -1381,7 +1381,6 @@ export const updateFeePayment = async (req: any, res: any) => {
 export const getUnpaidFeePaymentAmount = async (req: any, res: any) => {
   try {
     const { studentId, branchId } = req.query;
-    console.log("student details ", studentId)
     const createdById = req.user.id;
 
     if (!studentId || !createdById) {
