@@ -6,7 +6,10 @@ import {
 	createStudent,
 	downloadSampleSheetForBulkUpload,
 	fetchStudents,
+	getBulkUploadJob,
 	getStudentDetail,
+	listBulkUploadJobRows,
+	listBulkUploadJobs,
 	updateStudent,
 } from "../../../controllers/school/student/index.js";
 import { requirePermission } from "../../../middlewares/permission/index.js";
@@ -36,6 +39,21 @@ studentRouter.get(
 	"/download-bulk-sample",
 	requirePermission(Permission.GET_BULK_UPLOAD_SHEET),
 	downloadSampleSheetForBulkUpload,
+);
+studentRouter.get(
+	"/bulk-upload-jobs",
+	requirePermission(Permission.BULK_UPLOAD_STUDENTS),
+	listBulkUploadJobs,
+);
+studentRouter.get(
+	"/bulk-upload-jobs/:jobId",
+	requirePermission(Permission.BULK_UPLOAD_STUDENTS),
+	getBulkUploadJob,
+);
+studentRouter.get(
+	"/bulk-upload-jobs/:jobId/rows",
+	requirePermission(Permission.BULK_UPLOAD_STUDENTS),
+	listBulkUploadJobRows,
 );
 studentRouter.get("/:id", requirePermission(Permission.VIEW_STUDENT), getStudentDetail);
 //@ts-ignore

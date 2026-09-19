@@ -8,4 +8,5 @@ const connection = {
 export const emailQueue = new Queue('email-queue', { connection });
 export const schedulerQueue = new Queue('daily-scheduler-queue', { connection });
 export const teacherAttendanceQueue = new Queue('teacher-attendance-queue', { connection });
+export const studentBulkUploadQueue = new Queue('student-bulk-upload-queue', { connection });
 //# sourceMappingURL=queue.js.map

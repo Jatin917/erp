@@ -3,116 +3,188 @@ import type { Prisma } from "@prisma/client/extension";
 export declare const getBranchService: (where: any, include?: any) => Promise<({
     [x: string]: ({
         id: string;
-        type: import("../../../generated/prisma/index.js").$Enums.customFieldType;
         name: string;
-        branchId: string;
+        createdById: string;
         createdAt: Date;
-        options: import("../../../generated/prisma/runtime/library.js").JsonValue | null;
+        branchId: string;
+        type: import("../../../generated/prisma/index.js").$Enums.customFieldType;
         entityType: import("../../../generated/prisma/index.js").$Enums.ENTITES;
         label: string;
+        options: import("../../../generated/prisma/runtime/library.js").JsonValue | null;
         required: boolean;
         regex: string | null;
         minLength: number | null;
         maxLength: number | null;
-        createdById: string;
     } | {
         id: string;
-        type: import("../../../generated/prisma/index.js").$Enums.customFieldType;
         name: string;
-        branchId: string;
+        createdById: string;
         createdAt: Date;
-        options: import("../../../generated/prisma/runtime/library.js").JsonValue | null;
+        branchId: string;
+        type: import("../../../generated/prisma/index.js").$Enums.customFieldType;
         entityType: import("../../../generated/prisma/index.js").$Enums.ENTITES;
         label: string;
+        options: import("../../../generated/prisma/runtime/library.js").JsonValue | null;
         required: boolean;
         regex: string | null;
         minLength: number | null;
         maxLength: number | null;
+    })[] | ({
+        id: string;
         createdById: string;
+        createdAt: Date;
+        branchId: string;
+        classLabelId: string | null;
+        className: string;
+        sectionId: string | null;
+        fileName: string;
+        filePath: string;
+        status: import("../../../generated/prisma/index.js").$Enums.BulkUploadJobStatus;
+        totalRows: number;
+        successCount: number;
+        failCount: number;
+        errorMessage: string | null;
+        startedAt: Date | null;
+        finishedAt: Date | null;
+    } | {
+        id: string;
+        createdById: string;
+        createdAt: Date;
+        branchId: string;
+        classLabelId: string | null;
+        className: string;
+        sectionId: string | null;
+        fileName: string;
+        filePath: string;
+        status: import("../../../generated/prisma/index.js").$Enums.BulkUploadJobStatus;
+        totalRows: number;
+        successCount: number;
+        failCount: number;
+        errorMessage: string | null;
+        startedAt: Date | null;
+        finishedAt: Date | null;
     })[] | {
         id: string;
-        type: import("../../../generated/prisma/index.js").$Enums.customFieldType;
         name: string;
-        branchId: string;
+        createdById: string;
         createdAt: Date;
-        options: import("../../../generated/prisma/runtime/library.js").JsonValue | null;
+        branchId: string;
+        type: import("../../../generated/prisma/index.js").$Enums.customFieldType;
         entityType: import("../../../generated/prisma/index.js").$Enums.ENTITES;
         label: string;
+        options: import("../../../generated/prisma/runtime/library.js").JsonValue | null;
         required: boolean;
         regex: string | null;
         minLength: number | null;
         maxLength: number | null;
+    }[] | {
+        id: string;
         createdById: string;
+        createdAt: Date;
+        branchId: string;
+        classLabelId: string | null;
+        className: string;
+        sectionId: string | null;
+        fileName: string;
+        filePath: string;
+        status: import("../../../generated/prisma/index.js").$Enums.BulkUploadJobStatus;
+        totalRows: number;
+        successCount: number;
+        failCount: number;
+        errorMessage: string | null;
+        startedAt: Date | null;
+        finishedAt: Date | null;
     }[] | ({
         id: string;
         name: string;
-        branchId: string;
-        isCurrent: boolean;
-        isLocked: boolean;
         createdAt: Date;
+        branchId: string;
         endMonthId: string | null;
         startMonthId: string | null;
-    } | {
-        id: string;
-        name: string;
-        branchId: string;
         isCurrent: boolean;
         isLocked: boolean;
+    } | {
+        id: string;
+        name: string;
         createdAt: Date;
+        branchId: string;
         endMonthId: string | null;
         startMonthId: string | null;
+        isCurrent: boolean;
+        isLocked: boolean;
     })[] | ({
         id: string;
-        branchId: string;
         createdAt: Date;
-        sectionId: string;
+        branchId: string;
         classLabelId: string;
-    } | {
-        id: string;
-        branchId: string;
-        createdAt: Date;
         sectionId: string;
+    } | {
+        id: string;
+        createdAt: Date;
+        branchId: string;
         classLabelId: string;
+        sectionId: string;
     })[] | ({
         id: string;
         name: string;
-        branchId: string;
         createdAt: Date;
+        branchId: string;
     } | {
         id: string;
         name: string;
-        branchId: string;
         createdAt: Date;
+        branchId: string;
     })[] | ({
         id: string;
         name: string;
-        branchId: string;
         createdAt: Date;
+        branchId: string;
+        description: string | null;
+        discountType: import("../../../generated/prisma/index.js").$Enums.DiscountType;
+        percentage: number | null;
+        amount: number | null;
+        usageLimit: number | null;
+        expiryDate: Date | null;
     } | {
         id: string;
         name: string;
-        branchId: string;
         createdAt: Date;
+        branchId: string;
+        description: string | null;
+        discountType: import("../../../generated/prisma/index.js").$Enums.DiscountType;
+        percentage: number | null;
+        amount: number | null;
+        usageLimit: number | null;
+        expiryDate: Date | null;
     })[] | ({
         id: string;
         name: string;
-        branchId: string;
         createdAt: Date;
         userId: string;
+        branchId: string;
     } | {
         id: string;
         name: string;
-        branchId: string;
         createdAt: Date;
         userId: string;
+        branchId: string;
+    })[] | ({
+        id: string;
+        name: string;
+        createdAt: Date;
+        branchId: string;
+    } | {
+        id: string;
+        name: string;
+        createdAt: Date;
+        branchId: string;
     })[] | ({
         result: import("../../../generated/prisma/runtime/library.js").JsonValue | null;
         id: string;
         name: string;
-        branchId: string;
         createdAt: Date;
         userId: string | null;
-        studentId: string | null;
+        branchId: string;
         aadhaar: string | null;
         abcId: string | null;
         admissionNo: string | null;
@@ -170,16 +242,16 @@ export declare const getBranchService: (where: any, include?: any) => Promise<({
         visaNo: string | null;
         visaType: string | null;
         visaValidity: Date | null;
+        studentId: string | null;
         fatherId: string | null;
         motherId: string | null;
     } | {
         result: import("../../../generated/prisma/runtime/library.js").JsonValue | null;
         id: string;
         name: string;
-        branchId: string;
         createdAt: Date;
         userId: string | null;
-        studentId: string | null;
+        branchId: string;
         aadhaar: string | null;
         abcId: string | null;
         admissionNo: string | null;
@@ -237,69 +309,58 @@ export declare const getBranchService: (where: any, include?: any) => Promise<({
         visaNo: string | null;
         visaType: string | null;
         visaValidity: Date | null;
+        studentId: string | null;
         fatherId: string | null;
         motherId: string | null;
-    })[] | ({
-        id: string;
-        name: string;
-        branchId: string;
-        createdAt: Date;
-        description: string | null;
-        discountType: import("../../../generated/prisma/index.js").$Enums.DiscountType;
-        percentage: number | null;
-        amount: number | null;
-        usageLimit: number | null;
-        expiryDate: Date | null;
-    } | {
-        id: string;
-        name: string;
-        branchId: string;
-        createdAt: Date;
-        description: string | null;
-        discountType: import("../../../generated/prisma/index.js").$Enums.DiscountType;
-        percentage: number | null;
-        amount: number | null;
-        usageLimit: number | null;
-        expiryDate: Date | null;
     })[] | {
         id: string;
         name: string;
-        branchId: string;
-        isCurrent: boolean;
-        isLocked: boolean;
         createdAt: Date;
+        branchId: string;
         endMonthId: string | null;
         startMonthId: string | null;
+        isCurrent: boolean;
+        isLocked: boolean;
     }[] | {
         id: string;
-        branchId: string;
         createdAt: Date;
-        sectionId: string;
+        branchId: string;
         classLabelId: string;
+        sectionId: string;
     }[] | {
         id: string;
         name: string;
-        branchId: string;
         createdAt: Date;
+        branchId: string;
     }[] | {
         id: string;
         name: string;
-        branchId: string;
         createdAt: Date;
+        branchId: string;
+        description: string | null;
+        discountType: import("../../../generated/prisma/index.js").$Enums.DiscountType;
+        percentage: number | null;
+        amount: number | null;
+        usageLimit: number | null;
+        expiryDate: Date | null;
     }[] | {
         id: string;
         name: string;
-        branchId: string;
         createdAt: Date;
         userId: string;
+        branchId: string;
+    }[] | {
+        id: string;
+        name: string;
+        createdAt: Date;
+        branchId: string;
     }[] | {
         result: import("../../../generated/prisma/runtime/library.js").JsonValue | null;
         id: string;
         name: string;
-        branchId: string;
         createdAt: Date;
         userId: string | null;
-        studentId: string | null;
+        branchId: string;
         aadhaar: string | null;
         abcId: string | null;
         admissionNo: string | null;
@@ -357,19 +418,9 @@ export declare const getBranchService: (where: any, include?: any) => Promise<({
         visaNo: string | null;
         visaType: string | null;
         visaValidity: Date | null;
+        studentId: string | null;
         fatherId: string | null;
         motherId: string | null;
-    }[] | {
-        id: string;
-        name: string;
-        branchId: string;
-        createdAt: Date;
-        description: string | null;
-        discountType: import("../../../generated/prisma/index.js").$Enums.DiscountType;
-        percentage: number | null;
-        amount: number | null;
-        usageLimit: number | null;
-        expiryDate: Date | null;
     }[];
     [x: number]: never;
     [x: symbol]: never;
@@ -377,8 +428,8 @@ export declare const getBranchService: (where: any, include?: any) => Promise<({
     id: string;
     name: string;
     createdAt: Date;
-    principalId: string | null;
     schoolId: string;
+    principalId: string | null;
     address: string;
     logoUrl: string | null;
     softwareCharge: number;
@@ -386,116 +437,188 @@ export declare const getBranchService: (where: any, include?: any) => Promise<({
 export declare const getBranchesService: (where?: any, include?: any) => Promise<({
     [x: string]: ({
         id: string;
-        type: import("../../../generated/prisma/index.js").$Enums.customFieldType;
         name: string;
-        branchId: string;
+        createdById: string;
         createdAt: Date;
-        options: import("../../../generated/prisma/runtime/library.js").JsonValue | null;
+        branchId: string;
+        type: import("../../../generated/prisma/index.js").$Enums.customFieldType;
         entityType: import("../../../generated/prisma/index.js").$Enums.ENTITES;
         label: string;
+        options: import("../../../generated/prisma/runtime/library.js").JsonValue | null;
         required: boolean;
         regex: string | null;
         minLength: number | null;
         maxLength: number | null;
-        createdById: string;
     } | {
         id: string;
-        type: import("../../../generated/prisma/index.js").$Enums.customFieldType;
         name: string;
-        branchId: string;
+        createdById: string;
         createdAt: Date;
-        options: import("../../../generated/prisma/runtime/library.js").JsonValue | null;
+        branchId: string;
+        type: import("../../../generated/prisma/index.js").$Enums.customFieldType;
         entityType: import("../../../generated/prisma/index.js").$Enums.ENTITES;
         label: string;
+        options: import("../../../generated/prisma/runtime/library.js").JsonValue | null;
         required: boolean;
         regex: string | null;
         minLength: number | null;
         maxLength: number | null;
+    })[] | ({
+        id: string;
         createdById: string;
+        createdAt: Date;
+        branchId: string;
+        classLabelId: string | null;
+        className: string;
+        sectionId: string | null;
+        fileName: string;
+        filePath: string;
+        status: import("../../../generated/prisma/index.js").$Enums.BulkUploadJobStatus;
+        totalRows: number;
+        successCount: number;
+        failCount: number;
+        errorMessage: string | null;
+        startedAt: Date | null;
+        finishedAt: Date | null;
+    } | {
+        id: string;
+        createdById: string;
+        createdAt: Date;
+        branchId: string;
+        classLabelId: string | null;
+        className: string;
+        sectionId: string | null;
+        fileName: string;
+        filePath: string;
+        status: import("../../../generated/prisma/index.js").$Enums.BulkUploadJobStatus;
+        totalRows: number;
+        successCount: number;
+        failCount: number;
+        errorMessage: string | null;
+        startedAt: Date | null;
+        finishedAt: Date | null;
     })[] | {
         id: string;
-        type: import("../../../generated/prisma/index.js").$Enums.customFieldType;
         name: string;
-        branchId: string;
+        createdById: string;
         createdAt: Date;
-        options: import("../../../generated/prisma/runtime/library.js").JsonValue | null;
+        branchId: string;
+        type: import("../../../generated/prisma/index.js").$Enums.customFieldType;
         entityType: import("../../../generated/prisma/index.js").$Enums.ENTITES;
         label: string;
+        options: import("../../../generated/prisma/runtime/library.js").JsonValue | null;
         required: boolean;
         regex: string | null;
         minLength: number | null;
         maxLength: number | null;
+    }[] | {
+        id: string;
         createdById: string;
+        createdAt: Date;
+        branchId: string;
+        classLabelId: string | null;
+        className: string;
+        sectionId: string | null;
+        fileName: string;
+        filePath: string;
+        status: import("../../../generated/prisma/index.js").$Enums.BulkUploadJobStatus;
+        totalRows: number;
+        successCount: number;
+        failCount: number;
+        errorMessage: string | null;
+        startedAt: Date | null;
+        finishedAt: Date | null;
     }[] | ({
         id: string;
         name: string;
-        branchId: string;
-        isCurrent: boolean;
-        isLocked: boolean;
         createdAt: Date;
+        branchId: string;
         endMonthId: string | null;
         startMonthId: string | null;
-    } | {
-        id: string;
-        name: string;
-        branchId: string;
         isCurrent: boolean;
         isLocked: boolean;
+    } | {
+        id: string;
+        name: string;
         createdAt: Date;
+        branchId: string;
         endMonthId: string | null;
         startMonthId: string | null;
+        isCurrent: boolean;
+        isLocked: boolean;
     })[] | ({
         id: string;
-        branchId: string;
         createdAt: Date;
-        sectionId: string;
+        branchId: string;
         classLabelId: string;
-    } | {
-        id: string;
-        branchId: string;
-        createdAt: Date;
         sectionId: string;
+    } | {
+        id: string;
+        createdAt: Date;
+        branchId: string;
         classLabelId: string;
+        sectionId: string;
     })[] | ({
         id: string;
         name: string;
-        branchId: string;
         createdAt: Date;
+        branchId: string;
     } | {
         id: string;
         name: string;
-        branchId: string;
         createdAt: Date;
+        branchId: string;
     })[] | ({
         id: string;
         name: string;
-        branchId: string;
         createdAt: Date;
+        branchId: string;
+        description: string | null;
+        discountType: import("../../../generated/prisma/index.js").$Enums.DiscountType;
+        percentage: number | null;
+        amount: number | null;
+        usageLimit: number | null;
+        expiryDate: Date | null;
     } | {
         id: string;
         name: string;
-        branchId: string;
         createdAt: Date;
+        branchId: string;
+        description: string | null;
+        discountType: import("../../../generated/prisma/index.js").$Enums.DiscountType;
+        percentage: number | null;
+        amount: number | null;
+        usageLimit: number | null;
+        expiryDate: Date | null;
     })[] | ({
         id: string;
         name: string;
-        branchId: string;
         createdAt: Date;
         userId: string;
+        branchId: string;
     } | {
         id: string;
         name: string;
-        branchId: string;
         createdAt: Date;
         userId: string;
+        branchId: string;
+    })[] | ({
+        id: string;
+        name: string;
+        createdAt: Date;
+        branchId: string;
+    } | {
+        id: string;
+        name: string;
+        createdAt: Date;
+        branchId: string;
     })[] | ({
         result: import("../../../generated/prisma/runtime/library.js").JsonValue | null;
         id: string;
         name: string;
-        branchId: string;
         createdAt: Date;
         userId: string | null;
-        studentId: string | null;
+        branchId: string;
         aadhaar: string | null;
         abcId: string | null;
         admissionNo: string | null;
@@ -553,16 +676,16 @@ export declare const getBranchesService: (where?: any, include?: any) => Promise
         visaNo: string | null;
         visaType: string | null;
         visaValidity: Date | null;
+        studentId: string | null;
         fatherId: string | null;
         motherId: string | null;
     } | {
         result: import("../../../generated/prisma/runtime/library.js").JsonValue | null;
         id: string;
         name: string;
-        branchId: string;
         createdAt: Date;
         userId: string | null;
-        studentId: string | null;
+        branchId: string;
         aadhaar: string | null;
         abcId: string | null;
         admissionNo: string | null;
@@ -620,69 +743,58 @@ export declare const getBranchesService: (where?: any, include?: any) => Promise
         visaNo: string | null;
         visaType: string | null;
         visaValidity: Date | null;
+        studentId: string | null;
         fatherId: string | null;
         motherId: string | null;
-    })[] | ({
-        id: string;
-        name: string;
-        branchId: string;
-        createdAt: Date;
-        description: string | null;
-        discountType: import("../../../generated/prisma/index.js").$Enums.DiscountType;
-        percentage: number | null;
-        amount: number | null;
-        usageLimit: number | null;
-        expiryDate: Date | null;
-    } | {
-        id: string;
-        name: string;
-        branchId: string;
-        createdAt: Date;
-        description: string | null;
-        discountType: import("../../../generated/prisma/index.js").$Enums.DiscountType;
-        percentage: number | null;
-        amount: number | null;
-        usageLimit: number | null;
-        expiryDate: Date | null;
     })[] | {
         id: string;
         name: string;
-        branchId: string;
-        isCurrent: boolean;
-        isLocked: boolean;
         createdAt: Date;
+        branchId: string;
         endMonthId: string | null;
         startMonthId: string | null;
+        isCurrent: boolean;
+        isLocked: boolean;
     }[] | {
         id: string;
-        branchId: string;
         createdAt: Date;
-        sectionId: string;
+        branchId: string;
         classLabelId: string;
+        sectionId: string;
     }[] | {
         id: string;
         name: string;
-        branchId: string;
         createdAt: Date;
+        branchId: string;
     }[] | {
         id: string;
         name: string;
-        branchId: string;
         createdAt: Date;
+        branchId: string;
+        description: string | null;
+        discountType: import("../../../generated/prisma/index.js").$Enums.DiscountType;
+        percentage: number | null;
+        amount: number | null;
+        usageLimit: number | null;
+        expiryDate: Date | null;
     }[] | {
         id: string;
         name: string;
-        branchId: string;
         createdAt: Date;
         userId: string;
+        branchId: string;
+    }[] | {
+        id: string;
+        name: string;
+        createdAt: Date;
+        branchId: string;
     }[] | {
         result: import("../../../generated/prisma/runtime/library.js").JsonValue | null;
         id: string;
         name: string;
-        branchId: string;
         createdAt: Date;
         userId: string | null;
-        studentId: string | null;
+        branchId: string;
         aadhaar: string | null;
         abcId: string | null;
         admissionNo: string | null;
@@ -740,19 +852,9 @@ export declare const getBranchesService: (where?: any, include?: any) => Promise
         visaNo: string | null;
         visaType: string | null;
         visaValidity: Date | null;
+        studentId: string | null;
         fatherId: string | null;
         motherId: string | null;
-    }[] | {
-        id: string;
-        name: string;
-        branchId: string;
-        createdAt: Date;
-        description: string | null;
-        discountType: import("../../../generated/prisma/index.js").$Enums.DiscountType;
-        percentage: number | null;
-        amount: number | null;
-        usageLimit: number | null;
-        expiryDate: Date | null;
     }[];
     [x: number]: never;
     [x: symbol]: never;
@@ -760,26 +862,50 @@ export declare const getBranchesService: (where?: any, include?: any) => Promise
     id: string;
     name: string;
     createdAt: Date;
-    principalId: string | null;
     schoolId: string;
+    principalId: string | null;
     address: string;
     logoUrl: string | null;
     softwareCharge: number;
 })[]>;
+export declare const CUSTOM_FIELD_OPTION_TYPES: customFieldType[];
+export declare const customFieldRequiresOptions: (type: customFieldType) => boolean;
+export declare const normalizeCustomFieldOptions: (options: unknown) => string[];
 export declare const createCustomFieldService: (name: string, label: string, entityType: ENTITES, type: customFieldType, options: string[], required: boolean, branchId: string, createdById: string) => Promise<{
     id: string;
-    type: import("../../../generated/prisma/index.js").$Enums.customFieldType;
     name: string;
-    branchId: string;
+    createdById: string;
     createdAt: Date;
-    options: import("../../../generated/prisma/runtime/library.js").JsonValue | null;
+    branchId: string;
+    type: import("../../../generated/prisma/index.js").$Enums.customFieldType;
     entityType: import("../../../generated/prisma/index.js").$Enums.ENTITES;
     label: string;
+    options: import("../../../generated/prisma/runtime/library.js").JsonValue | null;
     required: boolean;
     regex: string | null;
     minLength: number | null;
     maxLength: number | null;
+}>;
+export declare const updateCustomFieldService: (id: string, data: {
+    name: string;
+    label: string;
+    type: customFieldType;
+    options: string[];
+    required: boolean;
+}) => Promise<{
+    id: string;
+    name: string;
     createdById: string;
+    createdAt: Date;
+    branchId: string;
+    type: import("../../../generated/prisma/index.js").$Enums.customFieldType;
+    entityType: import("../../../generated/prisma/index.js").$Enums.ENTITES;
+    label: string;
+    options: import("../../../generated/prisma/runtime/library.js").JsonValue | null;
+    required: boolean;
+    regex: string | null;
+    minLength: number | null;
+    maxLength: number | null;
 }>;
 export declare const getCustomFieldsService: (where?: any, include?: any) => Promise<({
     [x: string]: ({
@@ -808,18 +934,18 @@ export declare const getCustomFieldsService: (where?: any, include?: any) => Pro
     [x: symbol]: never;
 } & {
     id: string;
-    type: import("../../../generated/prisma/index.js").$Enums.customFieldType;
     name: string;
-    branchId: string;
+    createdById: string;
     createdAt: Date;
-    options: import("../../../generated/prisma/runtime/library.js").JsonValue | null;
+    branchId: string;
+    type: import("../../../generated/prisma/index.js").$Enums.customFieldType;
     entityType: import("../../../generated/prisma/index.js").$Enums.ENTITES;
     label: string;
+    options: import("../../../generated/prisma/runtime/library.js").JsonValue | null;
     required: boolean;
     regex: string | null;
     minLength: number | null;
     maxLength: number | null;
-    createdById: string;
 })[]>;
 export declare const getCustomFieldService: (where?: any, include?: any) => Promise<({
     [x: string]: ({
@@ -848,27 +974,36 @@ export declare const getCustomFieldService: (where?: any, include?: any) => Prom
     [x: symbol]: never;
 } & {
     id: string;
-    type: import("../../../generated/prisma/index.js").$Enums.customFieldType;
     name: string;
-    branchId: string;
+    createdById: string;
     createdAt: Date;
-    options: import("../../../generated/prisma/runtime/library.js").JsonValue | null;
+    branchId: string;
+    type: import("../../../generated/prisma/index.js").$Enums.customFieldType;
     entityType: import("../../../generated/prisma/index.js").$Enums.ENTITES;
     label: string;
+    options: import("../../../generated/prisma/runtime/library.js").JsonValue | null;
     required: boolean;
     regex: string | null;
     minLength: number | null;
     maxLength: number | null;
-    createdById: string;
 }) | null>;
 export declare const createCustomFieldValue: (data: any, tx: Prisma.TransactionClient) => Promise<any>;
 export declare const getSchoolsService: (where: any, include?: any) => Promise<({
-    [x: string]: ({
+    [x: string]: {
         id: string;
         name: string;
         createdAt: Date;
-        principalId: string | null;
         schoolId: string;
+        principalId: string | null;
+        address: string;
+        logoUrl: string | null;
+        softwareCharge: number;
+    }[] | ({
+        id: string;
+        name: string;
+        createdAt: Date;
+        schoolId: string;
+        principalId: string | null;
         address: string;
         logoUrl: string | null;
         softwareCharge: number;
@@ -876,28 +1011,37 @@ export declare const getSchoolsService: (where: any, include?: any) => Promise<(
         id: string;
         name: string;
         createdAt: Date;
-        principalId: string | null;
         schoolId: string;
+        principalId: string | null;
         address: string;
         logoUrl: string | null;
         softwareCharge: number;
-    })[] | {
-        id: string;
-        name: string;
-        createdAt: Date;
-        principalId: string | null;
-        schoolId: string;
-        address: string;
-        logoUrl: string | null;
-        softwareCharge: number;
-    }[];
+    })[];
     [x: number]: never;
     [x: symbol]: never;
 } & {
     id: string;
     name: string;
-    createdAt: Date;
     createdById: string;
+    createdAt: Date;
+})[]>;
+/** Schools matching `where`, each including their branches. */
+export declare const getSchoolsWithBranchesService: (where?: any) => Promise<({
+    branches: {
+        id: string;
+        name: string;
+        createdAt: Date;
+        schoolId: string;
+        principalId: string | null;
+        address: string;
+        logoUrl: string | null;
+        softwareCharge: number;
+    }[];
+} & {
+    id: string;
+    name: string;
+    createdById: string;
+    createdAt: Date;
 })[]>;
 export declare function getLecturesForToday(): Promise<({
     teacher: {
@@ -918,6 +1062,7 @@ export declare function getLecturesForToday(): Promise<({
     };
 } & {
     id: string;
+    status: import("../../../generated/prisma/index.js").$Enums.LectureStatus;
     classId: string;
     teacherId: string;
     subjectId: string;
@@ -925,6 +1070,5 @@ export declare function getLecturesForToday(): Promise<({
     schoolDayId: string;
     startTime: string;
     endTime: string;
-    status: import("../../../generated/prisma/index.js").$Enums.LectureStatus;
 })[]>;
 //# sourceMappingURL=index.d.ts.map

@@ -64,6 +64,31 @@ services:
     volumes:
       - backend_uploads:/app/uploads
 
+  bulk-upload-worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: kashish-erp-bulk-upload-worker
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      backend:
+        condition: service_started
+    environment:
+      ENV: WORKER
+      RUN_AS_WORKER: "1"
+      DATABASE_URL: postgresql://${POSTGRES_USER:-erp_user}:${POSTGRES_PASSWORD:-erp_password}@db:5432/${POSTGRES_DB:-erp}
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET:-KASHISH-ERP}
+      DEFAULT_PASSWORD: ${DEFAULT_PASSWORD:-default}
+      PHOTO_URL: ${PHOTO_URL:-http://localhost:3000}
+    volumes:
+      - backend_uploads:/app/uploads
+    entrypoint: ["node", "dist/services/producers-notifications/worker/student-bulk-upload-worker.js"]
+
   worker:
     build:
       context: ./worker

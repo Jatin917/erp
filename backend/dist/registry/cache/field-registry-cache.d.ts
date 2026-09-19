@@ -1,10 +1,10 @@
 export declare const loadFieldRegistryCache: () => Promise<Map<string, {
     id: string;
-    branchId: string | null;
     createdAt: Date;
-    description: string | null;
-    label: string;
     schoolId: string | null;
+    branchId: string | null;
+    label: string;
+    description: string | null;
     fieldKey: string;
     sourceModule: import("../../../generated/prisma/index.js").$Enums.SourceModule;
     sourceTable: string;
@@ -32,11 +32,11 @@ export declare const loadFieldRegistryCache: () => Promise<Map<string, {
 export declare const invalidateFieldRegistryCache: () => Promise<void>;
 export declare const getFieldRegistryCache: () => Map<string, {
     id: string;
-    branchId: string | null;
     createdAt: Date;
-    description: string | null;
-    label: string;
     schoolId: string | null;
+    branchId: string | null;
+    label: string;
+    description: string | null;
     fieldKey: string;
     sourceModule: import("../../../generated/prisma/index.js").$Enums.SourceModule;
     sourceTable: string;

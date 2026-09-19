@@ -99,12 +99,30 @@ async function resolveRequestedBranchId(req: any): Promise<string | null> {
 
 	const resourceId = req.params?.id;
 	const baseUrl = String(req.baseUrl || "");
+	const requestPath = String(req.path || "");
 	if (resourceId && baseUrl.includes("/student")) {
 		const student = await prisma.student.findUnique({
 			where: { id: String(resourceId) },
 			select: { branchId: true },
 		});
 		return student?.branchId ?? null;
+	}
+
+	if (resourceId && requestPath.includes("update-customField")) {
+		const customField = await prisma.customField.findUnique({
+			where: { id: String(resourceId) },
+			select: { branchId: true },
+		});
+		return customField?.branchId ?? null;
+	}
+
+	const jobId = req.params?.jobId;
+	if (jobId && requestPath.includes("bulk-upload-jobs")) {
+		const job = await prisma.bulkUploadJob.findUnique({
+			where: { id: String(jobId) },
+			select: { branchId: true },
+		});
+		return job?.branchId ?? null;
 	}
 
 	return null;

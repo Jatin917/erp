@@ -5,14 +5,23 @@ import { connect } from "http2";
 import { sendError, sendSuccess } from "../../../lib/utils.js";
 import { isEmailVerified } from "../../../services/otp.js";
 import { OTP_TYPE } from "../../../lib/types.js";
-import { getPermissionsForRoles } from "../../../lib/apply-role-permissions.js";
-import { validateRoleAssignment } from "../../../lib/role-grant.js";
+import { getPermissionsForRoles, resolveRequestEffectivePermissions } from "../../../lib/apply-role-permissions.js";
+import { validateFacultyRoleList, validateRoleAssignment } from "../../../lib/role-grant.js";
 import { findOrCreateUser } from "../../../services/user/index.js";
 import { sendWelcomeEmail } from "../../../services/producers-notifications/producers/producer.email.js";
-function rejectRoleAssignment(res, grantorPermissions, roles) {
-    if (!Array.isArray(grantorPermissions)) {
+function rejectRoleAssignment(req, res, roles) {
+    const grantor = req.user;
+    if (!grantor || !Array.isArray(grantor.permissions)) {
         return sendError(res, "Not permitted for this task", HTTP_STATUS.FORBIDDEN);
     }
+    // Branch-scoped effective permissions, so a grantor cannot use permissions
+    // from another branch's role to assign roles here.
+    const grantorPermissions = resolveRequestEffectivePermissions({
+        role: grantor.role ?? [],
+        permissions: grantor.permissions,
+        principalAssignment: grantor.principalAssignment ?? null,
+        schoolFaculty: grantor.schoolFaculty ?? null,
+    }, req.branchId ?? null);
     const validation = validateRoleAssignment({
         grantorPermissions,
         rolesToAssign: roles,
@@ -499,7 +508,7 @@ export const createFaculty = async (req, res) => {
             return sendError(res, "name, email, and role are required", HTTP_STATUS.BAD_REQUEST);
         }
         const roleList = roles;
-        const roleDenied = rejectRoleAssignment(res, req.user?.permissions, roleList);
+        const roleDenied = rejectRoleAssignment(req, res, roleList);
         if (roleDenied) {
             return roleDenied;
         }
@@ -507,9 +516,35 @@ export const createFaculty = async (req, res) => {
         if (!success) {
             return sendError(res, "email is not verified", HTTP_STATUS.BAD_REQUEST);
         }
+        const existingUser = await prisma.user.findUnique({
+            where: { email },
+            include: {
+                schoolFaculty: { select: { branchId: true } },
+                principalAssignment: { select: { id: true } },
+            },
+        });
+        if (existingUser) {
+            const roleContext = {
+                existingRoles: existingUser.role,
+                hasSchoolFaculty: Boolean(existingUser.schoolFaculty),
+                facultyBranchId: existingUser.schoolFaculty?.branchId ?? null,
+                principalBranchId: existingUser.principalAssignment?.id ?? null,
+                targetBranchId: branchId,
+            };
+            const eligibilityError = validateFacultyRoleList(roleList, roleContext);
+            if (eligibilityError) {
+                return sendError(res, eligibilityError.message, HTTP_STATUS.BAD_REQUEST);
+            }
+        }
         let user;
         for (const role of roleList) {
-            user = await findOrCreateUser({ name, email, phone: contact, role });
+            user = await findOrCreateUser({
+                name,
+                email,
+                phone: contact,
+                role,
+                targetBranchId: branchId,
+            });
             if (!user) {
                 return sendError(res, "User creation failed", HTTP_STATUS.CONFLICT);
             }
@@ -586,9 +621,33 @@ export const updateFaculty = async (req, res) => {
             return sendError(res, "Please provide Required Fields", HTTP_STATUS.BAD_REQUEST);
         }
         const roleList = roles;
-        const roleDenied = rejectRoleAssignment(res, req.user?.permissions, roleList);
+        const roleDenied = rejectRoleAssignment(req, res, roleList);
         if (roleDenied) {
             return roleDenied;
+        }
+        const facultyUser = await prisma.user.findUnique({
+            where: { id },
+            include: {
+                schoolFaculty: { select: { branchId: true } },
+                principalAssignment: { select: { id: true } },
+            },
+        });
+        if (!facultyUser) {
+            return sendError(res, "User not found", HTTP_STATUS.NOT_FOUND);
+        }
+        const branchScopeId = facultyUser.schoolFaculty?.branchId ?? facultyUser.principalAssignment?.id ?? null;
+        const roleContext = {
+            existingRoles: facultyUser.role,
+            hasSchoolFaculty: Boolean(facultyUser.schoolFaculty),
+            facultyBranchId: facultyUser.schoolFaculty?.branchId ?? null,
+            principalBranchId: facultyUser.principalAssignment?.id ?? null,
+        };
+        if (branchScopeId) {
+            roleContext.targetBranchId = branchScopeId;
+        }
+        const eligibilityError = validateFacultyRoleList(roleList, roleContext);
+        if (eligibilityError) {
+            return sendError(res, eligibilityError.message, HTTP_STATUS.BAD_REQUEST);
         }
         const permissions = getPermissionsForRoles(roleList);
         const faculty = await prisma.user.update({

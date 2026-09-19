@@ -39,8 +39,11 @@ export async function processFeePayment(tx, feePaymentId, amount, mode, referenc
         });
         await tx.feeDoc.update({ where: { id: feePayment.feeDocId }, data: { afterAmount: { increment: totalLateFeeAmt } } });
     }
-    if (amount > remaining) {
-        throw new Error(`You can pay max ${remaining} for this payment`);
+    // Round remaining and requested amount to 2 decimals to avoid floating-point precision issues
+    const remainingRounded = Number(remaining.toFixed(2));
+    const requestedRounded = Number(amount.toFixed(2));
+    if (requestedRounded > remainingRounded) {
+        throw new Error(`You can pay max ${remainingRounded.toFixed(2)} for this payment`);
     }
     const receiptNo = `RCPT-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
     // 1. Create transaction
@@ -75,13 +78,15 @@ export async function processFeePayment(tx, feePaymentId, amount, mode, referenc
             paidAmount: amount,
         },
     });
-    // 4. Update FeeDoc status
+    // 4. Update FeeDoc status based on all related payments
+    const allPayments = await tx.feePayment.findMany({
+        where: { feeDocId: feePayment.feeDocId },
+    });
+    const allPaid = allPayments.length > 0 && allPayments.every((p) => p.isPaid);
     const doc = await tx.feeDoc.update({
         where: { id: feePayment.feeDocId },
         data: {
-            status: alreadyPaid + amount >= feePayment.amount
-                ? "PAID"
-                : "PARTIAL",
+            status: allPaid ? "PAID" : "PARTIAL",
         },
     });
     return { txn, txnItem, updatedPayment, doc };

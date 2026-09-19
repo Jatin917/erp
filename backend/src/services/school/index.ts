@@ -20,6 +20,23 @@ export const getBranchesService = async (where?: any, include?: any) => {
   return branches;
 };
 
+export const CUSTOM_FIELD_OPTION_TYPES: customFieldType[] = [
+  "MULTISELECT",
+  "SELECT",
+  "RADIO",
+  "CHECKBOX",
+];
+
+export const customFieldRequiresOptions = (type: customFieldType) =>
+  CUSTOM_FIELD_OPTION_TYPES.includes(type);
+
+export const normalizeCustomFieldOptions = (options: unknown): string[] => {
+  if (!Array.isArray(options)) return [];
+  return options
+    .map((option) => String(option ?? "").trim())
+    .filter((option) => option.length > 0);
+};
+
 export const createCustomFieldService = async (
   name: string,
   label: string,
@@ -43,6 +60,28 @@ export const createCustomFieldService = async (
     },
   });
   return data;
+};
+
+export const updateCustomFieldService = async (
+  id: string,
+  data: {
+    name: string;
+    label: string;
+    type: customFieldType;
+    options: string[];
+    required: boolean;
+  }
+) => {
+  return prisma.customField.update({
+    where: { id },
+    data: {
+      name: data.name,
+      label: data.label,
+      type: data.type,
+      options: data.options,
+      required: data.required,
+    },
+  });
 };
 
 export const getCustomFieldsService = async (where?: any, include?: any) => {

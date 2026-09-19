@@ -1,6 +1,7 @@
 import { defaultPassword, prisma } from "../../server.js";
 import bcrypt from "bcrypt";
 import { applyRolePermissions, mergeRolePermissions } from "../../lib/apply-role-permissions.js";
+import { validateUserEligibleForSchoolRole, } from "../../lib/role-grant.js";
 export const getUserService = async (where, include) => {
     const user = await prisma.user.findFirst({
         where,
@@ -8,16 +9,30 @@ export const getUserService = async (where, include) => {
     });
     return user;
 };
-export async function findOrCreateUser({ name, email, phone, role, tx, }) {
-    const db = tx || prisma; // ✅ choose between tx or global client
+export async function findOrCreateUser({ name, email, phone, role, tx, targetBranchId, }) {
+    const db = tx || prisma;
     if (!email)
         return null;
-    // 1️⃣ Check if user exists
     let user = await db.user.findFirst({
         where: { OR: [{ email }, { phone }] },
+        include: {
+            schoolFaculty: { select: { branchId: true } },
+            principalAssignment: { select: { id: true } },
+        },
     });
-    // 2️⃣ If exists → update role list if not already added, merge role permissions
     if (user) {
+        const roleContext = {
+            hasSchoolFaculty: Boolean(user.schoolFaculty),
+            facultyBranchId: user.schoolFaculty?.branchId ?? null,
+            principalBranchId: user.principalAssignment?.id ?? null,
+        };
+        if (targetBranchId) {
+            roleContext.targetBranchId = targetBranchId;
+        }
+        const eligibilityError = validateUserEligibleForSchoolRole(user.role, role, roleContext);
+        if (eligibilityError) {
+            throw new Error(eligibilityError.message);
+        }
         if (!user.role.includes(role)) {
             user = await db.user.update({
                 where: { id: user.id },
@@ -27,7 +42,6 @@ export async function findOrCreateUser({ name, email, phone, role, tx, }) {
         await applyRolePermissions(db, user.id, role);
         return user;
     }
-    // 3️⃣ If not found → create new user with default permissions for role
     const hashedPwd = await bcrypt.hash(defaultPassword, 10);
     return db.user.create({
         data: {

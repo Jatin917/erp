@@ -12,6 +12,20 @@ export const getBranchesService = async (where, include) => {
     });
     return branches;
 };
+export const CUSTOM_FIELD_OPTION_TYPES = [
+    "MULTISELECT",
+    "SELECT",
+    "RADIO",
+    "CHECKBOX",
+];
+export const customFieldRequiresOptions = (type) => CUSTOM_FIELD_OPTION_TYPES.includes(type);
+export const normalizeCustomFieldOptions = (options) => {
+    if (!Array.isArray(options))
+        return [];
+    return options
+        .map((option) => String(option ?? "").trim())
+        .filter((option) => option.length > 0);
+};
 export const createCustomFieldService = async (name, label, entityType, type, options, required, branchId, createdById) => {
     const data = await prisma.customField.create({
         data: {
@@ -26,6 +40,18 @@ export const createCustomFieldService = async (name, label, entityType, type, op
         },
     });
     return data;
+};
+export const updateCustomFieldService = async (id, data) => {
+    return prisma.customField.update({
+        where: { id },
+        data: {
+            name: data.name,
+            label: data.label,
+            type: data.type,
+            options: data.options,
+            required: data.required,
+        },
+    });
 };
 export const getCustomFieldsService = async (where, include) => {
     const data = await prisma.customField.findMany({ where, include });
@@ -42,6 +68,13 @@ export const createCustomFieldValue = async (data, tx) => {
 export const getSchoolsService = async (where, include) => {
     const schools = await prisma.school.findMany({ where, include });
     return schools;
+};
+/** Schools matching `where`, each including their branches. */
+export const getSchoolsWithBranchesService = async (where = {}) => {
+    return prisma.school.findMany({
+        where,
+        include: { branches: true },
+    });
 };
 export async function getLecturesForToday() {
     const today = new Date();

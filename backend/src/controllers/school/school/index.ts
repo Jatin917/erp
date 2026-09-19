@@ -1,5 +1,5 @@
 import { error } from "console";
-import { type PrismaClient, type Prisma, Role as rolesAre, customFieldType } from "../../../../generated/prisma/index.js";
+import { type PrismaClient, type Prisma, Role as rolesAre } from "../../../../generated/prisma/index.js";
 import type { DefaultArgs } from "../../../../generated/prisma/runtime/library.js";
 import { HTTP_STATUS } from "../../../lib/http-codes.js";
 import { defaultPassword, prisma } from "../../../server.js";
@@ -10,10 +10,10 @@ import fs from "fs";
 import { OTP_TYPE } from "@src/lib/types.js";
 import { isEmailVerified } from "@src/services/otp.js";
 import { sendError, sendSuccess } from "@src/lib/utils.js";
-import { createCustomFieldService, getBranchesService, getBranchService, getCustomFieldsService, getSchoolsWithBranchesService } from "@src/services/school/index.js";
+import { createCustomFieldService, customFieldRequiresOptions, getBranchesService, getBranchService, getCustomFieldService, getCustomFieldsService, getSchoolsWithBranchesService, normalizeCustomFieldOptions, updateCustomFieldService } from "@src/services/school/index.js";
 import { getUserService } from "@src/services/user/index.js";
 import { createSchoolDays } from "@src/services/attendance/index.js";
-import { syncCustomFieldsToRegistry } from "@src/registry/seed/sync-custom-fields.js";
+import { customFieldRegistryKey, syncCustomFieldToRegistry } from "@src/registry/seed/sync-custom-fields.js";
 import { mergeRolePermissions } from "@src/lib/apply-role-permissions.js";
 import {
 	normalizeEmail,
@@ -492,7 +492,8 @@ export const createCustomFields = async (req: any, res: any) => {
     if (!branchId || !name || !label || !entityType || !type || !createdById) {
       return sendError(res, "Missing required fields", HTTP_STATUS.BAD_REQUEST);
     }
-    if((type===customFieldType.MULTISELECT || type===customFieldType.SELECT || type===customFieldType.RADIO || type===customFieldType.CHECKBOX) && !options){
+    const normalizedOptions = normalizeCustomFieldOptions(options);
+    if (customFieldRequiresOptions(type) && normalizedOptions.length === 0) {
       return sendError(res, "Options are required with this fields", HTTP_STATUS.BAD_REQUEST)
     }
 
@@ -505,11 +506,11 @@ export const createCustomFields = async (req: any, res: any) => {
     if(alreadyCustomField.length>0){
       return sendError(res, "Custom field with this name already exist", HTTP_STATUS.CONFLICT);
     }
-    const customField = await createCustomFieldService(name, label, entityType, type, options, required, branchId, createdById)
+    const customField = await createCustomFieldService(name, label, entityType, type, normalizedOptions, required, branchId, createdById)
     if(!customField){
       return sendError(res, "Error Creating Custom Field", HTTP_STATUS.SERVICE_UNAVAILABLE);
     }
-    await syncCustomFieldsToRegistry();
+    await syncCustomFieldToRegistry(customField);
     return res.status(HTTP_STATUS.CREATED).json({
       success: true,
       data: customField,
@@ -531,6 +532,67 @@ export const getCustomFields = async (req:any, res:any) =>{
     return sendSuccess(res, "Successfully Fetched Data", {fields:customFields}, HTTP_STATUS.OK)
   } catch (error) {
     return sendError(res, (error as Error).message, HTTP_STATUS.INTERNAL_SERVER_ERROR)
+  }
+}
+
+export const updateCustomFields = async (req: any, res: any) => {
+  try {
+    const { id } = req.params;
+    const { name, label, entityType, type, options, required, branchId } = req.body;
+
+    if (!id || !name || !label || !type) {
+      return sendError(res, "Missing required fields", HTTP_STATUS.BAD_REQUEST);
+    }
+
+    const existing = await getCustomFieldService({ id: String(id) });
+    if (!existing) {
+      return sendError(res, "Custom field not found", HTTP_STATUS.NOT_FOUND);
+    }
+
+    if (!req.branchId || String(req.branchId) !== existing.branchId) {
+      return sendError(res, "You do not have access to this branch", HTTP_STATUS.FORBIDDEN);
+    }
+
+    if (branchId && String(branchId) !== existing.branchId) {
+      return sendError(res, "Custom field does not belong to this branch", HTTP_STATUS.FORBIDDEN);
+    }
+
+    if (entityType && entityType !== existing.entityType) {
+      return sendError(res, "Entity type cannot be changed", HTTP_STATUS.BAD_REQUEST);
+    }
+
+    const normalizedOptions = normalizeCustomFieldOptions(options);
+    if (customFieldRequiresOptions(type) && normalizedOptions.length === 0) {
+      return sendError(res, "Options are required with this fields", HTTP_STATUS.BAD_REQUEST);
+    }
+
+    const nameConflict = await getCustomFieldsService({
+      name,
+      branchId: existing.branchId,
+      id: { not: existing.id },
+    });
+    if (nameConflict.length > 0) {
+      return sendError(res, "Custom field with this name already exist", HTTP_STATUS.CONFLICT);
+    }
+
+    const previousFieldKey = customFieldRegistryKey(existing.entityType, existing.name);
+    const customField = await updateCustomFieldService(existing.id, {
+      name,
+      label,
+      type,
+      options: normalizedOptions,
+      required: Boolean(required),
+    });
+
+    await syncCustomFieldToRegistry(customField, previousFieldKey);
+    return sendSuccess(res, "Custom field updated successfully", customField, HTTP_STATUS.OK);
+  } catch (error) {
+    const message = (error as Error).message;
+    console.error("Error updating custom field:", message);
+    if (message === "A report field with this name already exists") {
+      return sendError(res, message, HTTP_STATUS.CONFLICT);
+    }
+    return sendError(res, message, HTTP_STATUS.INTERNAL_SERVER_ERROR);
   }
 }
 

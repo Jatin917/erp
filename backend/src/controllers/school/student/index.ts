@@ -18,6 +18,15 @@ import { connect } from "http2";
 import { sendError, sendSuccess } from "@src/lib/utils.js";
 import { createCustomFieldValue, getCustomFieldService } from "@src/services/school/index.js";
 import { findOrCreateUser } from "@src/services/user/index.js";
+import {
+  createBulkUploadJob,
+  getBulkUploadJobById,
+  getBulkUploadJobs,
+  getBulkUploadRows,
+  markBulkUploadJobFailed,
+} from "@src/services/student/bulk-upload.js";
+import { enqueueStudentBulkUpload } from "@src/services/producers-notifications/producers/producer.bulk-upload.js";
+import { BulkUploadRowStatus } from "../../../../generated/prisma/index.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -504,13 +513,14 @@ export const createStudent = async (req: any, res: any) => {
 
 export const bulkUploadStudents = async (req: any, res: any) => {
   const filePath = req.file?.path as string | undefined;
+  let jobId: string | undefined;
   try {
     if (!req.file || !filePath) {
       return res
         .status(400)
         .json({ success: false, message: "No file uploaded" });
     }
-    const { branchId, className, class: classFromFrontend } = req.body;
+    const { branchId, className, class: classFromFrontend, sectionId } = req.body;
     const resolvedClassName = className || classFromFrontend;
     if (!branchId || !resolvedClassName) {
       return sendError(
@@ -526,280 +536,113 @@ export const bulkUploadStudents = async (req: any, res: any) => {
     if (!classLabel) {
       return sendError(res, "ClassName don't exist", HTTP_STATUS.CONFLICT);
     }
-    const classNameId = classLabel.id;
 
-    const workbook = XLSX.readFile(filePath);
-    const sheetName = workbook.SheetNames[0];
-    // raw:false → formatted strings (avoids Int URLs / Excel serials as bare numbers)
-    const sheetData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], {
-      raw: false,
-      defval: null,
-    }) as any[];
+    const job = await createBulkUploadJob({
+      branchId,
+      classLabelId: classLabel.id,
+      className: resolvedClassName,
+      sectionId: sectionId ? String(sectionId) : null,
+      fileName: req.file.originalname || req.file.filename || "upload.xlsx",
+      filePath,
+      createdById: req.user.id,
+    });
+    jobId = job.id;
 
-    const results: Array<{
-      row: number;
-      success: boolean;
-      studentId?: string;
-      error?: string;
-    }> = [];
-
-    for (let i = 0; i < sheetData.length; i++) {
-      const row = sheetData[i];
-      const rowNumber = i + 2; // header is row 1
-      try {
-        const { rollNo, dob, ...raw } = row;
-        const data = {
-          name: toNullableString(raw.name),
-          studentId: toNullableString(raw.studentId),
-          admissionNo: toNullableString(raw.admissionNo),
-          gender: toNullableString(raw.gender),
-          aadhaar: toNullableString(raw.aadhaar),
-          birthCertificateUrl: toNullableString(raw.birthCertificateUrl),
-          abcId: toNullableString(raw.abcId),
-          sssmId: toNullableString(raw.sssmId),
-          familySssmId: toNullableString(raw.familySssmId),
-          minority: toNullableString(raw.minority),
-          scStObc: toNullableString(raw.scStObc),
-          bpl: toNullableString(raw.bpl),
-          scStObcCertificateUrl: toNullableString(raw.scStObcCertificateUrl),
-          bplCertificateUrl: toNullableString(raw.bplCertificateUrl),
-          specialChild: parseOptionalBool(raw.specialChild),
-          allergies: toNullableString(raw.allergies),
-          studentEmail: toNullableString(raw.studentEmail ?? raw.email),
-          studentMobile: toNullableString(
-            raw.studentMobile ?? raw.mobile ?? raw.phone,
-          ),
-          citizenship: toNullableString(raw.citizenship),
-          visaNo: toNullableString(raw.visaNo),
-          visaType: toNullableString(raw.visaType),
-          visaValidity: parseOptionalDate(raw.visaValidity),
-          fatherName: toNullableString(raw.fatherName),
-          fatherOccupation: toNullableString(raw.fatherOccupation),
-          fatherEmail: toNullableString(raw.fatherEmail),
-          fatherMobile: toNullableString(raw.fatherMobile),
-          fatherAadhaar: toNullableString(raw.fatherAadhaar),
-          fatherIdUrl: toNullableString(raw.fatherIdUrl),
-          fatherPan: toNullableString(raw.fatherPan),
-          fatherPassport: toNullableString(raw.fatherPassport),
-          fatherCitizenship: toNullableString(raw.fatherCitizenship),
-          fatherVisaNo: toNullableString(raw.fatherVisaNo),
-          fatherVisaType: toNullableString(raw.fatherVisaType),
-          fatherVisaValidity: parseOptionalDate(raw.fatherVisaValidity),
-          motherName: toNullableString(raw.motherName),
-          motherOccupation: toNullableString(raw.motherOccupation),
-          motherEmail: toNullableString(raw.motherEmail),
-          motherMobile: toNullableString(raw.motherMobile),
-          motherAadhaar: toNullableString(raw.motherAadhaar),
-          motherIdUrl: toNullableString(raw.motherIdUrl),
-          motherPan: toNullableString(raw.motherPan),
-          motherPassport: toNullableString(raw.motherPassport),
-          motherCitizenship: toNullableString(raw.motherCitizenship),
-          motherVisaNo: toNullableString(raw.motherVisaNo),
-          motherVisaType: toNullableString(raw.motherVisaType),
-          motherVisaValidity: parseOptionalDate(raw.motherVisaValidity),
-          previousSchoolName: toNullableString(raw.previousSchoolName),
-          previousClassPassed: toNullableString(raw.previousClassPassed),
-          previousClassMarks: toNullableString(raw.previousClassMarks),
-          previousClassYear: toNullableString(raw.previousClassYear),
-          previousBoard: toNullableString(raw.previousBoard),
-          migrationCertificateUrl: toNullableString(raw.migrationCertificateUrl),
-          tcNo: toNullableString(raw.tcNo),
-          permanentAddress: toNullableString(raw.permanentAddress),
-          temporaryAddress: toNullableString(raw.temporaryAddress),
-          result: toNullableString(raw.result),
-          resultStatus: toNullableString(raw.resultStatus),
-          sectionId: toNullableString(raw.sectionId),
-        };
-        const parsedDob = parseOptionalDate(dob);
-        const parsedRollNo = toNullableString(rollNo);
-
-        if (!data.name) {
-          throw new Error("Student name is required");
-        }
-        if (!data.fatherName || !data.fatherMobile) {
-          throw new Error("Father details required");
-        }
-        if (!data.motherName || !data.motherMobile) {
-          throw new Error("Mother details required");
-        }
-
-        const student = await prisma.$transaction(async (tx) => {
-          const studentUser = await findOrCreateUser({
-            tx,
-            role: "STUDENT",
-            name: data.name!,
-            email: data.studentEmail,
-            phone: data.studentMobile,
-          });
-
-          const fatherUser = await findOrCreateUser({
-            tx,
-            role: "FATHER",
-            name: data.fatherName!,
-            email: data.fatherEmail,
-            phone: data.fatherMobile,
-          });
-          const fatherParent = fatherUser
-            ? await findOrCreateParentRecord(tx, "FATHER", fatherUser.id)
-            : null;
-
-          const motherUser = await findOrCreateUser({
-            tx,
-            role: "MOTHER",
-            name: data.motherName!,
-            email: data.motherEmail,
-            phone: data.motherMobile,
-          });
-          const motherParent = motherUser
-            ? await findOrCreateParentRecord(tx, "MOTHER", motherUser.id)
-            : null;
-
-          const created = await tx.student.create({
-            data: {
-              user: studentUser
-                ? { connect: { id: String(studentUser.id) } }
-                : undefined,
-              father: fatherParent
-                ? { connect: { id: String(fatherParent.id) } }
-                : undefined,
-              mother: motherParent
-                ? { connect: { id: String(motherParent.id) } }
-                : undefined,
-              branch: { connect: { id: branchId } },
-
-              name: data.name!,
-              studentId: data.studentId,
-              admissionNo: data.admissionNo,
-              gender: data.gender,
-              dob: parsedDob,
-              aadhaar: data.aadhaar,
-              birthCertificateUrl: data.birthCertificateUrl,
-              abcId: data.abcId,
-              sssmId: data.sssmId,
-              familySssmId: data.familySssmId,
-              minority: data.minority,
-              scStObc: data.scStObc,
-              bpl: data.bpl,
-              scStObcCertificateUrl: data.scStObcCertificateUrl,
-              bplCertificateUrl: data.bplCertificateUrl,
-              specialChild: data.specialChild,
-              allergies: data.allergies,
-              studentEmail: data.studentEmail,
-              studentMobile: data.studentMobile,
-
-              citizenship: data.citizenship,
-              visaNo: data.visaNo,
-              visaType: data.visaType,
-              visaValidity: data.visaValidity,
-
-              fatherName: data.fatherName,
-              fatherOccupation: data.fatherOccupation,
-              fatherEmail: data.fatherEmail,
-              fatherMobile: data.fatherMobile,
-              fatherAadhaar: data.fatherAadhaar,
-              fatherIdUrl: data.fatherIdUrl,
-              fatherPan: data.fatherPan,
-              fatherPassport: data.fatherPassport,
-              fatherCitizenship: data.fatherCitizenship,
-              fatherVisaNo: data.fatherVisaNo,
-              fatherVisaType: data.fatherVisaType,
-              fatherVisaValidity: data.fatherVisaValidity,
-
-              motherName: data.motherName,
-              motherOccupation: data.motherOccupation,
-              motherEmail: data.motherEmail,
-              motherMobile: data.motherMobile,
-              motherAadhaar: data.motherAadhaar,
-              motherIdUrl: data.motherIdUrl,
-              motherPan: data.motherPan,
-              motherPassport: data.motherPassport,
-              motherCitizenship: data.motherCitizenship,
-              motherVisaNo: data.motherVisaNo,
-              motherVisaType: data.motherVisaType,
-              motherVisaValidity: data.motherVisaValidity,
-
-              previousSchoolName: data.previousSchoolName,
-              previousClassPassed: data.previousClassPassed,
-              previousClassMarks: data.previousClassMarks,
-              previousClassYear: data.previousClassYear,
-              previousBoard: data.previousBoard,
-              migrationCertificateUrl: data.migrationCertificateUrl,
-              tcNo: data.tcNo,
-
-              permanentAddress: data.permanentAddress,
-              temporaryAddress: data.temporaryAddress,
-
-              result: data.result,
-              resultStatus: data.resultStatus,
-            },
-            include: {
-              user: true,
-              enrollments: true,
-              branch: true,
-            },
-          });
-
-          await createEnrollment(
-            tx,
-            classNameId,
-            branchId,
-            created.id,
-            data.sectionId,
-            parsedRollNo,
-          );
-
-          return created;
-        });
-
+    try {
+      await enqueueStudentBulkUpload(job.id);
+    } catch (enqueueError: any) {
+      await markBulkUploadJobFailed(
+        job.id,
+        enqueueError.message || "Failed to enqueue bulk upload",
+      );
+      if (filePath && fs.existsSync(filePath)) {
         try {
-          const barcodeUrl = await generateBarcode(student);
-          await prisma.student.update({
-            where: { id: student.id },
-            data: { barcodeUrl },
-          });
-        } catch (barcodeErr: any) {
-          results.push({
-            row: rowNumber,
-            success: true,
-            studentId: student.id,
-            error: `Created but barcode failed: ${barcodeErr.message}`,
-          });
-          continue;
+          fs.unlinkSync(filePath);
+        } catch {
+          /* ignore */
         }
-
-        results.push({
-          row: rowNumber,
-          success: true,
-          studentId: student.id,
-        });
-      } catch (err: any) {
-        results.push({
-          row: rowNumber,
-          success: false,
-          error: err.message,
-        });
       }
+      return sendError(
+        res,
+        "Failed to start bulk upload job",
+        HTTP_STATUS.SERVICE_UNAVAILABLE,
+      );
     }
 
-    const successCount = results.filter((r) => r.success).length;
-    const failCount = results.length - successCount;
-
-    return res.status(201).json({
-      success: failCount === 0,
-      message: `Bulk upload completed: ${successCount} succeeded, ${failCount} failed`,
-      data: { results },
-    });
+    return sendSuccess(
+      res,
+      "Bulk upload started",
+      { jobId: job.id, status: job.status },
+      HTTP_STATUS.ACCEPTED,
+    );
   } catch (error: any) {
     console.error(error);
-    return res.status(500).json({ success: false, message: error.message });
-  } finally {
-    if (filePath && fs.existsSync(filePath)) {
+    if (!jobId && filePath && fs.existsSync(filePath)) {
       try {
         fs.unlinkSync(filePath);
       } catch {
-        /* ignore cleanup errors */
+        /* ignore */
       }
     }
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const listBulkUploadJobs = async (req: any, res: any) => {
+  try {
+    const branchId = req.query.branchId || req.branchId;
+    if (!branchId) {
+      return sendError(res, "branchId is required", HTTP_STATUS.BAD_REQUEST);
+    }
+    const jobs = await getBulkUploadJobs(String(branchId));
+    return sendSuccess(res, "Bulk upload jobs fetched", { jobs }, HTTP_STATUS.OK);
+  } catch (error: any) {
+    return sendError(res, error.message, HTTP_STATUS.INTERNAL_SERVER_ERROR);
+  }
+};
+
+export const getBulkUploadJob = async (req: any, res: any) => {
+  try {
+    const { jobId } = req.params;
+    const job = await getBulkUploadJobById(String(jobId));
+    if (!job) {
+      return sendError(res, "Bulk upload job not found", HTTP_STATUS.NOT_FOUND);
+    }
+    if (req.branchId && String(req.branchId) !== job.branchId) {
+      return sendError(res, "You do not have access to this branch", HTTP_STATUS.FORBIDDEN);
+    }
+    const { filePath: _filePath, ...safeJob } = job;
+    return sendSuccess(res, "Bulk upload job fetched", { job: safeJob }, HTTP_STATUS.OK);
+  } catch (error: any) {
+    return sendError(res, error.message, HTTP_STATUS.INTERNAL_SERVER_ERROR);
+  }
+};
+
+export const listBulkUploadJobRows = async (req: any, res: any) => {
+  try {
+    const { jobId } = req.params;
+    const status = req.query.status as string | undefined;
+    const job = await getBulkUploadJobById(String(jobId));
+    if (!job) {
+      return sendError(res, "Bulk upload job not found", HTTP_STATUS.NOT_FOUND);
+    }
+    if (req.branchId && String(req.branchId) !== job.branchId) {
+      return sendError(res, "You do not have access to this branch", HTTP_STATUS.FORBIDDEN);
+    }
+
+    let rowStatus: BulkUploadRowStatus | undefined;
+    if (status) {
+      const upper = String(status).toUpperCase();
+      if (!Object.values(BulkUploadRowStatus).includes(upper as BulkUploadRowStatus)) {
+        return sendError(res, "Invalid row status filter", HTTP_STATUS.BAD_REQUEST);
+      }
+      rowStatus = upper as BulkUploadRowStatus;
+    }
+
+    const rows = await getBulkUploadRows(String(jobId), rowStatus);
+    return sendSuccess(res, "Bulk upload rows fetched", { rows }, HTTP_STATUS.OK);
+  } catch (error: any) {
+    return sendError(res, error.message, HTTP_STATUS.INTERNAL_SERVER_ERROR);
   }
 };
 

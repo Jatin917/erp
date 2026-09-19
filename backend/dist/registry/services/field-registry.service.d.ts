@@ -3,11 +3,11 @@ export declare const getActiveRegistryFields: (filters?: {
     groupKey?: string;
 }) => Promise<{
     id: string;
-    branchId: string | null;
     createdAt: Date;
-    description: string | null;
-    label: string;
     schoolId: string | null;
+    branchId: string | null;
+    label: string;
+    description: string | null;
     fieldKey: string;
     sourceModule: import("../../../generated/prisma/index.js").$Enums.SourceModule;
     sourceTable: string;
@@ -34,11 +34,11 @@ export declare const getActiveRegistryFields: (filters?: {
 }[]>;
 export declare const getActiveRegistryFieldsFromDb: () => Promise<{
     id: string;
-    branchId: string | null;
     createdAt: Date;
-    description: string | null;
-    label: string;
     schoolId: string | null;
+    branchId: string | null;
+    label: string;
+    description: string | null;
     fieldKey: string;
     sourceModule: import("../../../generated/prisma/index.js").$Enums.SourceModule;
     sourceTable: string;

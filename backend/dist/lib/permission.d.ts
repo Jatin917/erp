@@ -13,9 +13,9 @@ export declare const roleDefaults: {
     RECEPTIONIST: $Enums.Permission[];
     ACCOUNTANT: $Enums.Permission[];
     SCHOOL_ADMIN: $Enums.Permission[];
-    STUDENT: ("VIEW_BRANCH" | "VIEW_NOTIFICATIONS" | "VIEW_DOCUMENT")[];
-    FATHER: ("VIEW_BRANCH" | "VIEW_NOTIFICATIONS" | "VIEW_DOCUMENT")[];
-    MOTHER: ("VIEW_BRANCH" | "VIEW_NOTIFICATIONS" | "VIEW_DOCUMENT")[];
+    STUDENT: ("VIEW_BRANCH" | "VIEW_DOCUMENT" | "VIEW_NOTIFICATIONS")[];
+    FATHER: ("VIEW_BRANCH" | "VIEW_DOCUMENT" | "VIEW_NOTIFICATIONS")[];
+    MOTHER: ("VIEW_BRANCH" | "VIEW_DOCUMENT" | "VIEW_NOTIFICATIONS")[];
 };
 export {};
 //# sourceMappingURL=permission.d.ts.map

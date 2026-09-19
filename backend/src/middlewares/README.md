@@ -30,4 +30,6 @@ Add new middleware modules under this directory; register in route files under r
 ## Recent changes
 | Date | Change |
 |------|--------|
+| 2026-09-18 | Branch id for PUT update-customField/:id resolved from the CustomField row |
+| 2026-09-18 | Branch id for bulk-upload-jobs/:jobId resolved from BulkUploadJob |
 | 2026-07-05 | Co-located README added (workflow bootstrap) |

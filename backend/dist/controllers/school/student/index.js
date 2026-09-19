@@ -13,6 +13,9 @@ import { connect } from "http2";
 import { sendError, sendSuccess } from "../../../lib/utils.js";
 import { createCustomFieldValue, getCustomFieldService } from "../../../services/school/index.js";
 import { findOrCreateUser } from "../../../services/user/index.js";
+import { createBulkUploadJob, getBulkUploadJobById, getBulkUploadJobs, getBulkUploadRows, markBulkUploadJobFailed, } from "../../../services/student/bulk-upload.js";
+import { enqueueStudentBulkUpload } from "../../../services/producers-notifications/producers/producer.bulk-upload.js";
+import { BulkUploadRowStatus } from "../../../../generated/prisma/index.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 function getStudentDir(sid, bid, admissionNo) {
@@ -79,6 +82,12 @@ async function createEnrollment(tx, classNameId, branchId, studentId, sectionId,
         },
     });
 }
+async function findOrCreateParentRecord(tx, type, userId) {
+    const existing = await tx.parent.findFirst({ where: { userId, type } });
+    if (existing)
+        return existing;
+    return tx.parent.create({ data: { type, userId } });
+}
 function normalizeSession(session) {
     // 1. Extract years (assume formats like "2024-2025", "2024-25", "24-25")
     const parts = session.split("-");
@@ -104,9 +113,24 @@ function formatDateInput(value) {
     return date.toISOString().slice(0, 10);
 }
 function parseOptionalDate(value) {
-    if (!value)
+    if (value === undefined || value === null || value === "")
         return null;
-    const date = new Date(String(value));
+    if (value instanceof Date) {
+        return Number.isNaN(value.getTime()) ? null : value;
+    }
+    // Excel serial day numbers from xlsx (e.g. 44927 ≈ 2023-01-01)
+    const asNumber = typeof value === "number"
+        ? value
+        : typeof value === "string" && /^\d+(\.\d+)?$/.test(value.trim())
+            ? Number(value.trim())
+            : null;
+    if (asNumber !== null && Number.isFinite(asNumber) && asNumber > 20000 && asNumber < 80000) {
+        const parsed = XLSX.SSF.parse_date_code(asNumber);
+        if (parsed) {
+            return new Date(Date.UTC(parsed.y, parsed.m - 1, parsed.d));
+        }
+    }
+    const date = new Date(String(value).trim());
     return Number.isNaN(date.getTime()) ? null : date;
 }
 function toNullableString(value) {
@@ -114,6 +138,14 @@ function toNullableString(value) {
         return null;
     const trimmed = String(value).trim();
     return trimmed.length ? trimmed : null;
+}
+function parseOptionalBool(value) {
+    if (typeof value === "boolean")
+        return value;
+    if (typeof value === "number")
+        return value !== 0;
+    const normalized = String(value ?? "").trim().toLowerCase();
+    return ["true", "yes", "1", "y"].includes(normalized);
 }
 function mapClassInput(input) {
     if (!input)
@@ -192,32 +224,34 @@ export const createStudent = async (req, res) => {
             // ---------- Student User ----------
             const studentEmail = data.studentEmail || data.email || null;
             const studentMobile = data.studentMobile || data.mobile || data.phone || null;
-            const studentUser = await findOrCreateUser({ tx, role: "STUDENT",
+            const studentUser = await findOrCreateUser({
+                tx,
+                role: "STUDENT",
                 name: data.name,
                 email: studentEmail,
-                contact: studentMobile,
+                phone: studentMobile,
             });
             // ---------- Father ----------
-            const fatherUser = await findOrCreateUser({ tx, role: "FATHER",
+            const fatherUser = await findOrCreateUser({
+                tx,
+                role: "FATHER",
                 name: data.fatherName,
                 email: data.fatherEmail,
-                contact: data.fatherMobile,
+                phone: data.fatherMobile,
             });
             const fatherParent = fatherUser
-                ? await tx.parent.create({
-                    data: { type: "FATHER", userId: fatherUser.id },
-                })
+                ? await findOrCreateParentRecord(tx, "FATHER", fatherUser.id)
                 : null;
             // ---------- Mother ----------
-            const motherUser = await findOrCreateUser({ tx, role: "MOTHER",
+            const motherUser = await findOrCreateUser({
+                tx,
+                role: "MOTHER",
                 name: data.motherName,
                 email: data.motherEmail,
-                contact: data.motherMobile,
+                phone: data.motherMobile,
             });
             const motherParent = motherUser
-                ? await tx.parent.create({
-                    data: { type: "MOTHER", userId: motherUser.id },
-                })
+                ? await findOrCreateParentRecord(tx, "MOTHER", motherUser.id)
                 : null;
             // ---------- Student ----------
             const student = await tx.student.create({
@@ -359,186 +393,132 @@ export const createStudent = async (req, res) => {
     }
 };
 export const bulkUploadStudents = async (req, res) => {
+    const filePath = req.file?.path;
+    let jobId;
     try {
-        if (!req.file) {
+        if (!req.file || !filePath) {
             return res
                 .status(400)
                 .json({ success: false, message: "No file uploaded" });
         }
-        const { branchId, className, class: classFromFrontend } = req.body;
+        const { branchId, className, class: classFromFrontend, sectionId } = req.body;
         const resolvedClassName = className || classFromFrontend;
         if (!branchId || !resolvedClassName) {
             return sendError(res, "branchId and className required", HTTP_STATUS.BAD_REQUEST);
         }
-        const filePath = req.file.path; // multer stores file temporarily
-        const workbook = XLSX.readFile(filePath);
-        const sheetName = workbook.SheetNames[0];
-        const sheetData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
-        let results = [];
-        try {
-            for (const row of sheetData) {
-                const { rollNo, dob, ...data } = row;
-                const classLabel = await prisma.classLabel.findFirst({ where: { branchId, name: resolvedClassName } });
-                if (!classLabel) {
-                    return sendError(res, "ClassName don't exist", HTTP_STATUS.CONFLICT);
-                }
-                const classNameId = classLabel.id;
-                if (!data.fatherName || !data.fatherMobile) {
-                    return sendError(res, "Father details required", HTTP_STATUS.BAD_REQUEST);
-                }
-                if (!data.motherName || !data.motherMobile) {
-                    return sendError(res, "Mother details required", HTTP_STATUS.BAD_REQUEST);
-                }
-                const student = await prisma.$transaction(async (tx) => {
-                    // ---------- Student User ----------
-                    const studentEmail = data.studentEmail || data.email || null;
-                    const studentMobile = data.studentMobile || data.mobile || data.phone || null;
-                    const studentUser = await findOrCreateUser({ tx, role: "STUDENT",
-                        name: data.name,
-                        email: studentEmail,
-                        contact: studentMobile,
-                    });
-                    // ---------- Father ----------
-                    const fatherUser = await findOrCreateUser({ tx, roel: "FATHER",
-                        name: data.fatherName,
-                        email: data.fatherEmail,
-                        contact: data.fatherMobile,
-                    });
-                    const fatherParent = fatherUser
-                        ? await tx.parent.create({
-                            data: { type: "FATHER", userId: fatherUser.id },
-                        })
-                        : null;
-                    // ---------- Mother ----------
-                    const motherUser = await findOrCreateUser({ tx, role: "MOTHER",
-                        name: data.motherName,
-                        email: data.motherEmail,
-                        contact: data.motherMobile,
-                    });
-                    const motherParent = motherUser
-                        ? await tx.parent.create({
-                            data: { type: "MOTHER", userId: motherUser.id },
-                        })
-                        : null;
-                    // ---------- Student ----------
-                    const student = await tx.student.create({
-                        data: {
-                            // ---------- Relations ----------
-                            user: studentUser
-                                ? { connect: { id: String(studentUser.id) } }
-                                : undefined,
-                            father: fatherParent
-                                ? { connect: { id: String(fatherParent.id) } }
-                                : undefined,
-                            mother: motherParent
-                                ? { connect: { id: String(motherParent.id) } }
-                                : undefined,
-                            branch: { connect: { id: branchId } },
-                            // ---------- Basic Info ----------
-                            name: String(data.name),
-                            studentId: data.studentId || null,
-                            admissionNo: data.admissionNo || null,
-                            gender: data.gender || null,
-                            dob: dob ? new Date(dob) : null,
-                            aadhaar: data.aadhaar || null,
-                            birthCertificateUrl: data.birthCertificateUrl || null,
-                            abcId: data.abcId || null,
-                            sssmId: data.sssmId || null,
-                            familySssmId: data.familySssmId || null,
-                            minority: data.minority || null,
-                            scStObc: data.scStObc || null,
-                            bpl: data.bpl || null,
-                            scStObcCertificateUrl: data.scStObcCertificateUrl || null,
-                            bplCertificateUrl: data.bplCertificateUrl || null,
-                            specialChild: data.specialChild ? Boolean(data.specialChild) : false,
-                            allergies: data.allergies || null,
-                            studentEmail: studentEmail,
-                            studentMobile: studentMobile,
-                            // ---------- Citizenship & Visa ----------
-                            citizenship: data.citizenship || null,
-                            visaNo: data.visaNo || null,
-                            visaType: data.visaType || null,
-                            visaValidity: data.visaValidity ? new Date(data.visaValidity) : null,
-                            // ---------- Father Details ----------
-                            fatherName: data.fatherName || null,
-                            fatherOccupation: data.fatherOccupation || null,
-                            fatherEmail: data.fatherEmail || null,
-                            fatherMobile: data.fatherMobile || null,
-                            fatherAadhaar: data.fatherAadhaar || null,
-                            fatherIdUrl: data.fatherIdUrl || null,
-                            fatherPan: data.fatherPan || null,
-                            fatherPassport: data.fatherPassport || null,
-                            fatherCitizenship: data.fatherCitizenship || null,
-                            fatherVisaNo: data.fatherVisaNo || null,
-                            fatherVisaType: data.fatherVisaType || null,
-                            fatherVisaValidity: data.fatherVisaValidity
-                                ? new Date(data.fatherVisaValidity)
-                                : null,
-                            // ---------- Mother Details ----------
-                            motherName: data.motherName || null,
-                            motherOccupation: data.motherOccupation || null,
-                            motherEmail: data.motherEmail || null,
-                            motherMobile: data.motherMobile || null,
-                            motherAadhaar: data.motherAadhaar || null,
-                            motherIdUrl: data.motherIdUrl || null,
-                            motherPan: data.motherPan || null,
-                            motherPassport: data.motherPassport || null,
-                            motherCitizenship: data.motherCitizenship || null,
-                            motherVisaNo: data.motherVisaNo || null,
-                            motherVisaType: data.motherVisaType || null,
-                            motherVisaValidity: data.motherVisaValidity
-                                ? new Date(data.motherVisaValidity)
-                                : null,
-                            // ---------- Previous Education ----------
-                            previousSchoolName: data.previousSchoolName || null,
-                            previousClassPassed: data.previousClassPassed || null,
-                            previousClassMarks: data.previousClassMarks || null,
-                            previousClassYear: data.previousClassYear || null,
-                            previousBoard: data.previousBoard || null,
-                            migrationCertificateUrl: data.migrationCertificateUrl || null,
-                            tcNo: data.tcNo || null,
-                            // ---------- Address ----------
-                            permanentAddress: data.permanentAddress || null,
-                            temporaryAddress: data.temporaryAddress || null,
-                            // ---------- Extras ----------
-                            result: data.result || null,
-                            resultStatus: data.resultStatus || null,
-                        },
-                        include: {
-                            user: true,
-                            enrollments: true,
-                            branch: true,
-                        },
-                    });
-                    // ---------- Enrollment ----------
-                    await createEnrollment(tx, classNameId, branchId, student.id, data.sectionId || null, rollNo || null);
-                    return student; // ✅ return student object
-                });
-                // ---------- Barcode after commit ----------
-                const barcodeUrl = await generateBarcode(student);
-                await prisma.student.update({
-                    where: { id: student.id },
-                    data: { barcodeUrl },
-                });
-                results.push({ studentId: student.id, success: true });
-            }
-        }
-        catch (err) {
-            results.push({ error: err.message, success: false });
-        }
-        return res.status(201).json({
-            success: true,
-            message: "Bulk upload completed",
+        const classLabel = await prisma.classLabel.findFirst({
+            where: { branchId, name: resolvedClassName },
         });
+        if (!classLabel) {
+            return sendError(res, "ClassName don't exist", HTTP_STATUS.CONFLICT);
+        }
+        const job = await createBulkUploadJob({
+            branchId,
+            classLabelId: classLabel.id,
+            className: resolvedClassName,
+            sectionId: sectionId ? String(sectionId) : null,
+            fileName: req.file.originalname || req.file.filename || "upload.xlsx",
+            filePath,
+            createdById: req.user.id,
+        });
+        jobId = job.id;
+        try {
+            await enqueueStudentBulkUpload(job.id);
+        }
+        catch (enqueueError) {
+            await markBulkUploadJobFailed(job.id, enqueueError.message || "Failed to enqueue bulk upload");
+            if (filePath && fs.existsSync(filePath)) {
+                try {
+                    fs.unlinkSync(filePath);
+                }
+                catch {
+                    /* ignore */
+                }
+            }
+            return sendError(res, "Failed to start bulk upload job", HTTP_STATUS.SERVICE_UNAVAILABLE);
+        }
+        return sendSuccess(res, "Bulk upload started", { jobId: job.id, status: job.status }, HTTP_STATUS.ACCEPTED);
     }
     catch (error) {
         console.error(error);
+        if (!jobId && filePath && fs.existsSync(filePath)) {
+            try {
+                fs.unlinkSync(filePath);
+            }
+            catch {
+                /* ignore */
+            }
+        }
         return res.status(500).json({ success: false, message: error.message });
+    }
+};
+export const listBulkUploadJobs = async (req, res) => {
+    try {
+        const branchId = req.query.branchId || req.branchId;
+        if (!branchId) {
+            return sendError(res, "branchId is required", HTTP_STATUS.BAD_REQUEST);
+        }
+        const jobs = await getBulkUploadJobs(String(branchId));
+        return sendSuccess(res, "Bulk upload jobs fetched", { jobs }, HTTP_STATUS.OK);
+    }
+    catch (error) {
+        return sendError(res, error.message, HTTP_STATUS.INTERNAL_SERVER_ERROR);
+    }
+};
+export const getBulkUploadJob = async (req, res) => {
+    try {
+        const { jobId } = req.params;
+        const job = await getBulkUploadJobById(String(jobId));
+        if (!job) {
+            return sendError(res, "Bulk upload job not found", HTTP_STATUS.NOT_FOUND);
+        }
+        if (req.branchId && String(req.branchId) !== job.branchId) {
+            return sendError(res, "You do not have access to this branch", HTTP_STATUS.FORBIDDEN);
+        }
+        const { filePath: _filePath, ...safeJob } = job;
+        return sendSuccess(res, "Bulk upload job fetched", { job: safeJob }, HTTP_STATUS.OK);
+    }
+    catch (error) {
+        return sendError(res, error.message, HTTP_STATUS.INTERNAL_SERVER_ERROR);
+    }
+};
+export const listBulkUploadJobRows = async (req, res) => {
+    try {
+        const { jobId } = req.params;
+        const status = req.query.status;
+        const job = await getBulkUploadJobById(String(jobId));
+        if (!job) {
+            return sendError(res, "Bulk upload job not found", HTTP_STATUS.NOT_FOUND);
+        }
+        if (req.branchId && String(req.branchId) !== job.branchId) {
+            return sendError(res, "You do not have access to this branch", HTTP_STATUS.FORBIDDEN);
+        }
+        let rowStatus;
+        if (status) {
+            const upper = String(status).toUpperCase();
+            if (!Object.values(BulkUploadRowStatus).includes(upper)) {
+                return sendError(res, "Invalid row status filter", HTTP_STATUS.BAD_REQUEST);
+            }
+            rowStatus = upper;
+        }
+        const rows = await getBulkUploadRows(String(jobId), rowStatus);
+        return sendSuccess(res, "Bulk upload rows fetched", { rows }, HTTP_STATUS.OK);
+    }
+    catch (error) {
+        return sendError(res, error.message, HTTP_STATUS.INTERNAL_SERVER_ERROR);
     }
 };
 export const fetchStudents = async (req, res) => {
     try {
         const { studentId, class: className, section, session, name, admissionNo, rollNo, fatherName, mobile, gender, category, page, task, branchId, } = req.query;
+        // Required: without it the query would return students across all
+        // branches, bypassing branch access checks.
+        if (!branchId) {
+            return res.status(400).json({
+                success: false,
+                message: "Please provide branchId",
+            });
+        }
         const containsInsensitive = (value) => ({
             contains: String(value),
             mode: "insensitive",

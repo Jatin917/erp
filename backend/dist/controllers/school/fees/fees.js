@@ -1199,7 +1199,6 @@ export const updateFeePayment = async (req, res) => {
 export const getUnpaidFeePaymentAmount = async (req, res) => {
     try {
         const { studentId, branchId } = req.query;
-        console.log("student details ", studentId);
         const createdById = req.user.id;
         if (!studentId || !createdById) {
             return sendError(res, "Missing Fields", HTTP_STATUS.BAD_REQUEST);

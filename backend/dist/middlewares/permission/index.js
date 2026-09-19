@@ -1,10 +1,25 @@
 import { Permission } from "../../../generated/prisma/index.js";
+import { resolveRequestEffectivePermissions } from "../../lib/apply-role-permissions.js";
 import { HTTP_STATUS } from "../../lib/http-codes.js";
 const userHasAnyPermission = (userPermissions, required) => {
     if (userPermissions.includes(Permission.ALL)) {
         return true;
     }
     return required.some((permission) => userPermissions.includes(permission));
+};
+/**
+ * Permissions the user actually holds for this request, scoped to the
+ * request's branch (req.branchId, validated by requireBranchAccess) or the
+ * user's home branch. Prevents e.g. a PRINCIPAL of branch A who is also a
+ * TEACHER at branch B from using principal-level permissions at branch B.
+ */
+const getEffectivePermissions = (req, user) => {
+    return resolveRequestEffectivePermissions({
+        role: user.role ?? [],
+        permissions: (user.permissions ?? []),
+        principalAssignment: user.principalAssignment ?? null,
+        schoolFaculty: user.schoolFaculty ?? null,
+    }, req.branchId ?? null);
 };
 export const requirePermission = (permission) => {
     return async (req, res, next) => {
@@ -16,13 +31,13 @@ export const requirePermission = (permission) => {
                     message: "Unauthorized",
                 });
             }
-            const permissions = user.permissions;
-            if (!Array.isArray(permissions)) {
+            if (!Array.isArray(user.permissions)) {
                 return res.status(HTTP_STATUS.FORBIDDEN).json({
                     success: false,
                     message: "Permissions not set",
                 });
             }
+            const permissions = getEffectivePermissions(req, user);
             if (userHasAnyPermission(permissions, [permission])) {
                 return next();
             }
@@ -50,13 +65,13 @@ export const requireAnyPermission = (...required) => {
                     message: "Unauthorized",
                 });
             }
-            const permissions = user.permissions;
-            if (!Array.isArray(permissions)) {
+            if (!Array.isArray(user.permissions)) {
                 return res.status(HTTP_STATUS.FORBIDDEN).json({
                     success: false,
                     message: "Permissions not set",
                 });
             }
+            const permissions = getEffectivePermissions(req, user);
             if (userHasAnyPermission(permissions, required)) {
                 return next();
             }

@@ -1,5 +1,5 @@
 import { error } from "console";
-import { Role as rolesAre, customFieldType } from "../../../../generated/prisma/index.js";
+import { Role as rolesAre } from "../../../../generated/prisma/index.js";
 import { HTTP_STATUS } from "../../../lib/http-codes.js";
 import { defaultPassword, prisma } from "../../../server.js";
 import path from "path";
@@ -8,26 +8,20 @@ import fs from "fs";
 import { OTP_TYPE } from "../../../lib/types.js";
 import { isEmailVerified } from "../../../services/otp.js";
 import { sendError, sendSuccess } from "../../../lib/utils.js";
-import { createCustomFieldService, getBranchesService, getBranchService, getCustomFieldsService } from "../../../services/school/index.js";
+import { createCustomFieldService, customFieldRequiresOptions, getBranchesService, getBranchService, getCustomFieldService, getCustomFieldsService, getSchoolsWithBranchesService, normalizeCustomFieldOptions, updateCustomFieldService } from "../../../services/school/index.js";
 import { getUserService } from "../../../services/user/index.js";
 import { createSchoolDays } from "../../../services/attendance/index.js";
-import { syncCustomFieldsToRegistry } from "../../../registry/seed/sync-custom-fields.js";
-import { applyRolePermissions, mergeRolePermissions } from "../../../lib/apply-role-permissions.js";
-const SCHOOL_FACULTY_ROLES = [
-    rolesAre.TEACHER,
-    rolesAre.LIBRARIAN,
-    rolesAre.RECEPTIONIST,
-    rolesAre.ACCOUNTANT,
-    rolesAre.SCHOOL_ADMIN,
-];
+import { customFieldRegistryKey, syncCustomFieldToRegistry } from "../../../registry/seed/sync-custom-fields.js";
+import { mergeRolePermissions } from "../../../lib/apply-role-permissions.js";
+import { normalizeEmail, SCHOOL_FACULTY_ROLES, validateDistinctDirectorAndPrincipals, validateNoSelfAssignment, } from "../../../lib/role-grant.js";
 const formatBranchOption = (branch) => ({
     name: `${branch.name} ${branch.address}`,
     id: branch.id,
     logo: branch.logoUrl,
     ...(branch.softwareCharge !== undefined ? { softwareCharge: branch.softwareCharge } : {}),
 });
-// Updated createBranch to accept tx for transactions
-const createBranch = async (tx, address, principalId, name, schoolId, softwareCharge) => {
+// Helper: create a branch inside an existing transaction
+const createBranch = async (tx, address, principalId, name, schoolId) => {
     try {
         const branch = await tx.branch.create({
             data: {
@@ -35,8 +29,8 @@ const createBranch = async (tx, address, principalId, name, schoolId, softwareCh
                 name,
                 school: { connect: { id: schoolId } },
                 address,
-                softwareCharge: parseFloat(softwareCharge)
-            }
+                // softwareCharge is omitted here; Prisma schema sets it to default 0
+            },
         });
         return branch;
     }
@@ -45,53 +39,38 @@ const createBranch = async (tx, address, principalId, name, schoolId, softwareCh
         return null;
     }
 };
-// ---------- Helper function for director/principal creation ----------
-const findOrCreateUser = async (role, userData, tx) => {
+// ---------- Helper: director/principal must be brand-new users ----------
+const createNewLeadershipUser = async (role, userData, tx) => {
     const existingUser = await tx.user.findUnique({
         where: { email: userData.email },
+        select: { id: true },
     });
     if (existingUser) {
-        if (!existingUser.role.includes(role)) {
-            await tx.user.update({
-                where: { email: userData.email },
-                data: { role: { push: role }, phone: userData.contact },
-            });
-        }
-        else if (userData.contact) {
-            await tx.user.update({
-                where: { email: userData.email },
-                data: { phone: userData.contact },
-            });
-        }
-        await applyRolePermissions(tx, existingUser.id, role);
-        return existingUser.id;
+        throw new Error(`${role} must be a new user. An account already exists for ${userData.email}.`);
     }
-    else {
-        const verified = await isEmailVerified(userData.email, OTP_TYPE.VERIFY_OTP);
-        if (!verified) {
-            throw new Error(`${role} email is not verified. Please verify first.`);
-        }
-        const roles = [role];
-        const hashedPassword = await bcrypt.hash(defaultPassword, 10);
-        const newUser = await tx.user.create({
-            data: {
-                name: userData.name,
-                email: userData.email,
-                password: hashedPassword,
-                role: roles,
-                isEmailVerified: true,
-                isPhoneVerified: false,
-                phone: userData.contact,
-                permissions: { set: mergeRolePermissions([], role) },
-            },
-        });
-        return newUser.id;
+    const verified = await isEmailVerified(userData.email, OTP_TYPE.VERIFY_OTP);
+    if (!verified) {
+        throw new Error(`${role} email is not verified. Please verify first.`);
     }
+    const hashedPassword = await bcrypt.hash(defaultPassword, 10);
+    const newUser = await tx.user.create({
+        data: {
+            name: userData.name,
+            email: userData.email,
+            password: hashedPassword,
+            role: [role],
+            isEmailVerified: true,
+            isPhoneVerified: false,
+            phone: userData.contact,
+            permissions: { set: mergeRolePermissions([], role) },
+        },
+    });
+    return newUser.id;
 };
 export const createSchool = async (req, res) => {
     const file = req.file;
     try {
-        const { schoolName, name, currentSession, softwareCharge, startMonthName, endMonthName, } = req.body;
+        const { schoolName, name, currentSession, startMonthName, endMonthName, } = req.body;
         const director = req.body.directors ? JSON.parse(req.body.directors) : null;
         const principals = req.body.principals ? JSON.parse(req.body.principals) : null;
         const academicMonths = req.body.academicMonths ? JSON.parse(req.body.academicMonths) : [];
@@ -99,15 +78,46 @@ export const createSchool = async (req, res) => {
         if (!director || !principals || !finalSchoolName || !currentSession || academicMonths.length === 0) {
             return res.status(400).json({ success: false, message: "Required fields missing" });
         }
+        const directorEmail = director.email?.trim();
+        const principalEmails = principals
+            .map((p) => p.email?.trim())
+            .filter(Boolean);
+        if (!directorEmail || principalEmails.length !== principals.length) {
+            return res.status(400).json({ success: false, message: "Director and principal emails are required" });
+        }
+        const selfAssignmentError = validateNoSelfAssignment(req.user?.email, [
+            directorEmail,
+            ...principalEmails,
+        ]);
+        if (selfAssignmentError) {
+            return res.status(400).json({ success: false, message: selfAssignmentError.message });
+        }
+        const roleSeparationError = validateDistinctDirectorAndPrincipals(directorEmail, principalEmails);
+        if (roleSeparationError) {
+            return res.status(400).json({ success: false, message: roleSeparationError.message });
+        }
+        const existingUsers = await prisma.user.findMany({
+            where: {
+                OR: [directorEmail, ...principalEmails].map((email) => ({
+                    email: { equals: email, mode: "insensitive" },
+                })),
+            },
+            select: { email: true },
+        });
+        if (existingUsers.length > 0) {
+            const emails = existingUsers.map((u) => u.email).join(", ");
+            return res.status(400).json({
+                success: false,
+                message: `Director and principal must be new users. Account already exists for: ${emails}`,
+            });
+        }
         let schoolId = "";
         const branchIds = [];
         await prisma.$transaction(async (tx) => {
-            // 1️⃣ Create or find director
-            const directorId = await findOrCreateUser("DIRECTOR", director, tx);
+            // 1️⃣ Create director (new user only)
+            const directorId = await createNewLeadershipUser("DIRECTOR", director, tx);
             // Block duplicate: same director + school name + principal
-            const principalEmails = principals
-                .map((p) => p.email?.trim().toLowerCase())
-                .filter(Boolean);
+            const normalizedPrincipalEmails = principalEmails.map((email) => normalizeEmail(email));
             const existingSchool = await tx.school.findFirst({
                 where: {
                     name: { equals: finalSchoolName.trim(), mode: "insensitive" },
@@ -121,11 +131,11 @@ export const createSchool = async (req, res) => {
                     },
                 },
             });
-            if (existingSchool && principalEmails.length > 0) {
+            if (existingSchool && normalizedPrincipalEmails.length > 0) {
                 const existingPrincipalEmails = new Set(existingSchool.branches
                     .map((b) => b.principal?.email?.trim().toLowerCase())
                     .filter(Boolean));
-                const duplicatePrincipal = principalEmails.find((email) => existingPrincipalEmails.has(email));
+                const duplicatePrincipal = normalizedPrincipalEmails.find((email) => existingPrincipalEmails.has(email));
                 if (duplicatePrincipal) {
                     throw new Error(`A school named "${finalSchoolName}" with this director and principal already exists.`);
                 }
@@ -135,14 +145,22 @@ export const createSchool = async (req, res) => {
                 data: { name: finalSchoolName, createdById: directorId },
             });
             schoolId = school.id;
-            // 3️⃣ Create branches + academic sessions
+            // 3️⃣ Create branches + academic sessions (+ register principals as school faculty)
             for (const principal of principals) {
-                const principalId = await findOrCreateUser("PRINCIPAL", principal, tx);
-                const branch = await createBranch(tx, principal.branch.address, principalId, finalSchoolName, school.id, softwareCharge);
+                const principalId = await createNewLeadershipUser("PRINCIPAL", principal, tx);
+                const branch = await createBranch(tx, principal.branch.address, principalId, finalSchoolName, school.id);
                 if (!branch) {
                     throw new Error("Branch don't exist");
                 }
                 branchIds.push(branch.id);
+                // Also register principal as school faculty for this branch
+                await tx.schoolFaculty.create({
+                    data: {
+                        userId: principalId,
+                        name: principal.name,
+                        branchId: branch.id,
+                    },
+                });
                 // 🔹 Create academic months first
                 const session = await tx.academicSession.create({
                     data: { name: currentSession, branch: { connect: { id: branch.id } }, isCurrent: true },
@@ -205,7 +223,9 @@ export const createSchool = async (req, res) => {
 };
 export const getSchools = async (req, res) => {
     try {
+        console.log("req.user", req.user);
         const { email } = req.user; // email of the "guy"
+        console.log("email is ", email);
         if (!email) {
             return res.status(400).json({
                 success: false,
@@ -325,7 +345,7 @@ export const getBranches = async (req, res) => {
         }
         // DIRECTOR: get schools + their branches
         if (roles.includes(rolesAre.DIRECTOR)) {
-            const foundSchools = await getSchools({ createdById: user.id }, { branches: true });
+            const foundSchools = await getSchoolsWithBranchesService({ createdById: user.id });
             // Flatten all branches from all schools and format them
             foundSchools.forEach((school) => {
                 if (school.branches?.length) {
@@ -371,7 +391,8 @@ export const createCustomFields = async (req, res) => {
         if (!branchId || !name || !label || !entityType || !type || !createdById) {
             return sendError(res, "Missing required fields", HTTP_STATUS.BAD_REQUEST);
         }
-        if ((type === customFieldType.MULTISELECT || type === customFieldType.SELECT || type === customFieldType.RADIO || type === customFieldType.CHECKBOX) && !options) {
+        const normalizedOptions = normalizeCustomFieldOptions(options);
+        if (customFieldRequiresOptions(type) && normalizedOptions.length === 0) {
             return sendError(res, "Options are required with this fields", HTTP_STATUS.BAD_REQUEST);
         }
         const branch = await getBranchService({ id: branchId });
@@ -382,11 +403,11 @@ export const createCustomFields = async (req, res) => {
         if (alreadyCustomField.length > 0) {
             return sendError(res, "Custom field with this name already exist", HTTP_STATUS.CONFLICT);
         }
-        const customField = await createCustomFieldService(name, label, entityType, type, options, required, branchId, createdById);
+        const customField = await createCustomFieldService(name, label, entityType, type, normalizedOptions, required, branchId, createdById);
         if (!customField) {
             return sendError(res, "Error Creating Custom Field", HTTP_STATUS.SERVICE_UNAVAILABLE);
         }
-        await syncCustomFieldsToRegistry();
+        await syncCustomFieldToRegistry(customField);
         return res.status(HTTP_STATUS.CREATED).json({
             success: true,
             data: customField,
@@ -409,6 +430,58 @@ export const getCustomFields = async (req, res) => {
     }
     catch (error) {
         return sendError(res, error.message, HTTP_STATUS.INTERNAL_SERVER_ERROR);
+    }
+};
+export const updateCustomFields = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { name, label, entityType, type, options, required, branchId } = req.body;
+        if (!id || !name || !label || !type) {
+            return sendError(res, "Missing required fields", HTTP_STATUS.BAD_REQUEST);
+        }
+        const existing = await getCustomFieldService({ id: String(id) });
+        if (!existing) {
+            return sendError(res, "Custom field not found", HTTP_STATUS.NOT_FOUND);
+        }
+        if (!req.branchId || String(req.branchId) !== existing.branchId) {
+            return sendError(res, "You do not have access to this branch", HTTP_STATUS.FORBIDDEN);
+        }
+        if (branchId && String(branchId) !== existing.branchId) {
+            return sendError(res, "Custom field does not belong to this branch", HTTP_STATUS.FORBIDDEN);
+        }
+        if (entityType && entityType !== existing.entityType) {
+            return sendError(res, "Entity type cannot be changed", HTTP_STATUS.BAD_REQUEST);
+        }
+        const normalizedOptions = normalizeCustomFieldOptions(options);
+        if (customFieldRequiresOptions(type) && normalizedOptions.length === 0) {
+            return sendError(res, "Options are required with this fields", HTTP_STATUS.BAD_REQUEST);
+        }
+        const nameConflict = await getCustomFieldsService({
+            name,
+            branchId: existing.branchId,
+            id: { not: existing.id },
+        });
+        if (nameConflict.length > 0) {
+            return sendError(res, "Custom field with this name already exist", HTTP_STATUS.CONFLICT);
+        }
+        const previousFieldKey = customFieldRegistryKey(existing.entityType, existing.name);
+        const customField = await updateCustomFieldService(existing.id, {
+            name,
+            label,
+            type,
+            options: normalizedOptions,
+            required: Boolean(required),
+        });
+        await syncCustomFieldToRegistry(customField, previousFieldKey);
+        return sendSuccess(res, "Custom field updated successfully", customField, HTTP_STATUS.OK);
+    }
+    catch (error) {
+        const message = error.message;
+        console.error("Error updating custom field:", message);
+        if (message === "A report field with this name already exists") {
+            return sendError(res, message, HTTP_STATUS.CONFLICT);
+        }
+        return sendError(res, message, HTTP_STATUS.INTERNAL_SERVER_ERROR);
     }
 };
 //# sourceMappingURL=index.js.map

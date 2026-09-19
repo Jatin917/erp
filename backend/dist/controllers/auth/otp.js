@@ -1,5 +1,6 @@
 import { HTTP_STATUS } from "../../lib/http-codes.js";
 import { OTP_TYPE } from "../../lib/types.js";
+import { resolveEffectivePermissions, resolveEffectiveRoles, resolveSessionBranchId, } from "../../lib/apply-role-permissions.js";
 import { JWT_SECRET, prisma } from "../../server.js";
 import { emailVerification, sendOtpEmailFunction } from "../../services/otp.js";
 import jwt from "jsonwebtoken";
@@ -22,20 +23,30 @@ export const emailVerificationSignController = async (req, res) => {
         if (!email || !receivedOtp) {
             return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: "All Fields required", success: false });
         }
-        const user = await prisma.user.findFirst({ where: { email: email }, include: { principalAssignment: true } });
+        const user = await prisma.user.findFirst({
+            where: { email: email },
+            include: {
+                principalAssignment: true,
+                schoolFaculty: { select: { branchId: true } },
+            },
+        });
         if (!user) {
             return res.status(HTTP_STATUS.NOT_FOUND).json({ message: "User Not found", success: false });
         }
         const payload = { userId: user.id };
         const token = jwt.sign(payload, JWT_SECRET, { expiresIn: "15m" });
-        let branchId = null;
-        if (user && user.principalAssignment) {
-            branchId = user.principalAssignment.id;
-        }
+        const branchId = user.principalAssignment?.id ?? user.schoolFaculty?.branchId ?? null;
+        const sessionUser = {
+            role: user.role,
+            permissions: user.permissions,
+            principalAssignment: user.principalAssignment,
+            schoolFaculty: user.schoolFaculty,
+        };
+        const sessionBranchId = resolveSessionBranchId(branchId, sessionUser);
         const { success, message } = await emailVerification(receivedOtp, email, OTP_TYPE.SIGNIN_OTP);
         if (success)
-            return res.status(HTTP_STATUS.OK).json({ success: true, message: message, data: { accessToken: token, user: { name: user.name,
-                        email: user.email, permissions: user.permissions, roles: user.role, branchId } } });
+            return res.status(HTTP_STATUS.OK).json({ success: true, message: message, data: { accessToken: token, user: { id: user.id, name: user.name,
+                        email: user.email, permissions: resolveEffectivePermissions(sessionUser, sessionBranchId), roles: resolveEffectiveRoles(sessionUser, sessionBranchId), branchId: sessionBranchId } } });
     }
     catch (error) {
         return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ message: error.message, success: false });

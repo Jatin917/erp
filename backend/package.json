@@ -12,7 +12,8 @@
     "prisma:generate": "prisma generate",
     "prisma:seed": "tsx src/registry/seed/run.ts",
     "worker-daily-jobScheduler": "node dist/services/producers-notifications/worker/daily-job-scheduler.js",
-    "worker-teacher-attendance": "node dist/services/producers-notifications/worker/teacher-attendance-worker.js"
+    "worker-teacher-attendance": "node dist/services/producers-notifications/worker/teacher-attendance-worker.js",
+    "worker-student-bulk-upload": "node dist/services/producers-notifications/worker/student-bulk-upload-worker.js"
   },
   "keywords": [],
   "author": "",

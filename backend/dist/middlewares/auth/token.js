@@ -15,6 +15,11 @@ export const TokenCheck = async (req, res, next) => {
         // check if user exists in DB
         const user = await prisma.user.findFirst({
             where: { id: decodedData.userId },
+            include: {
+                // Needed downstream to resolve branch-scoped effective permissions.
+                principalAssignment: { select: { id: true } },
+                schoolFaculty: { select: { branchId: true } },
+            },
         });
         if (!user) {
             return res

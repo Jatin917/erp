@@ -11,6 +11,7 @@ export declare const registerUser: (req: Request<{}, // params
 }>, res: Response) => Promise<Response<any, Record<string, any>>>;
 export declare const changePassword: (req: any, res: any) => Promise<any>;
 export declare const login: (req: any, res: any) => Promise<any>;
+export declare const getSession: (req: any, res: any) => Promise<any>;
 export declare const userExist: (req: any, res: any) => Promise<any>;
 export {};
 //# sourceMappingURL=index.d.ts.map

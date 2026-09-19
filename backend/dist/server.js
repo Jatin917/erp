@@ -39,30 +39,34 @@ app.get("/", (req, res) => {
     res.send("<h1>Backend is running<h1/>");
 });
 export const prisma = new PrismaClient();
-if (ENV === "DEV") {
-    app.listen(PORT, () => {
-        console.log("Server running on port", PORT);
-    });
-}
-else {
-    const totalCPUs = os.cpus().length;
-    if (cluster.isPrimary) {
-        console.log('Master has started');
-        for (let i = 0; i < totalCPUs; i++) {
-            cluster.fork();
-        }
-        cluster.on('exit', (worker) => {
-            console.log(`Worker ${worker.process.pid} died, restarting...`);
-            cluster.fork();
+// Workers import prisma/defaultPassword from this module; skip HTTP listen.
+const isWorkerProcess = ENV === "WORKER" || process.env.RUN_AS_WORKER === "1";
+if (!isWorkerProcess) {
+    if (ENV === "DEV") {
+        app.listen(PORT, () => {
+            console.log("Server running on port", PORT);
         });
     }
     else {
-        console.log('Worker has started', process.pid);
-        app.listen(PORT, () => console.log(`Listening on port ${PORT}`));
+        const totalCPUs = os.cpus().length;
+        if (cluster.isPrimary) {
+            console.log('Master has started');
+            for (let i = 0; i < totalCPUs; i++) {
+                cluster.fork();
+            }
+            cluster.on('exit', (worker) => {
+                console.log(`Worker ${worker.process.pid} died, restarting...`);
+                cluster.fork();
+            });
+        }
+        else {
+            console.log('Worker has started', process.pid);
+            app.listen(PORT, () => console.log(`Listening on port ${PORT}`));
+        }
     }
+    (async () => {
+        await initDailyScheduler(); // sets up the daily job if not already there
+        await loadFieldRegistryCache();
+    })();
 }
-(async () => {
-    await initDailyScheduler(); // sets up the daily job if not already there
-    await loadFieldRegistryCache();
-})();
 //# sourceMappingURL=server.js.map

@@ -3,7 +3,7 @@ import multer from "multer";
 import { Permission } from "../../../../../generated/prisma/index.js";
 import { getTimeTable, upsertLectureFromDate } from "../../../../controllers/school/attendance/index.js";
 import { createClassName, createFaculty, createOrUpdateClass, createSection, createSubject, deleteSection, deleteSubject, getAllClass, getAllSections, getClassNames, getFaculty, getSubjects, updateFaculty, updateSection, updateSubject, } from "../../../../controllers/school/class/index.js";
-import { createCustomFields, createSchool, deleteSchool, editSchool, getBranches, getCustomFields, getSchools, } from "../../../../controllers/school/school/index.js";
+import { createCustomFields, createSchool, deleteSchool, editSchool, getBranches, getCustomFields, getSchools, updateCustomFields, } from "../../../../controllers/school/school/index.js";
 import { requirePermission } from "../../../../middlewares/permission/index.js";
 const branchRouter = Router();
 // @ts-ignore
@@ -23,6 +23,7 @@ branchRouter.get("/get-classNames", requirePermission(Permission.VIEW_CLASSNAME)
 branchRouter.post("/create-className", requirePermission(Permission.CREATE_CLASSNAME), createClassName);
 branchRouter.post("/create-customField", requirePermission(Permission.CREATE_CUSTOM_FIELD), createCustomFields);
 branchRouter.get("/get-customField", requirePermission(Permission.GET_CUSTOM_FIELD), getCustomFields);
+branchRouter.put("/update-customField/:id", requirePermission(Permission.UPDATE_CUSTOM_FIELD), updateCustomFields);
 branchRouter.post("/create-subject", requirePermission(Permission.CREATE_SUBJECT), createSubject);
 branchRouter.get("/get-subjects", requirePermission(Permission.VIEW_SUBJECT), getSubjects);
 branchRouter.delete("/delete-subject", requirePermission(Permission.DELETE_SUBJECT), deleteSubject);
