@@ -13,7 +13,8 @@
     "prisma:seed": "tsx src/registry/seed/run.ts",
     "worker-daily-jobScheduler": "node dist/services/producers-notifications/worker/daily-job-scheduler.js",
     "worker-teacher-attendance": "node dist/services/producers-notifications/worker/teacher-attendance-worker.js",
-    "worker-student-bulk-upload": "node dist/services/producers-notifications/worker/student-bulk-upload-worker.js"
+    "worker-student-bulk-upload": "node dist/services/producers-notifications/worker/student-bulk-upload-worker.js",
+    "worker-email": "node dist/services/producers-notifications/worker/email-worker.js"
   },
   "keywords": [],
   "author": "",
