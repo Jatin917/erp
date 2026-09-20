@@ -91,18 +91,24 @@ services:
 
   worker:
     build:
-      context: ./worker
+      context: ./backend
       dockerfile: Dockerfile
     container_name: kashish-erp-worker
     restart: unless-stopped
     depends_on:
       redis:
         condition: service_healthy
+      backend:
+        condition: service_started
     environment:
+      ENV: WORKER
+      RUN_AS_WORKER: "1"
       REDIS_URL: redis://redis:6379
-      SMTP_USER: ${SMTP_EMAIL:-}
-      SMTP_PASS: ${SMTP_PASSWORD:-}
-      PORT: ${WORKER_PORT:-4000}
+      SMTP_EMAIL: ${SMTP_EMAIL:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      FRONTEND_URL: ${FRONTEND_URL:-https://erp.kashishcomputers.com/}
+      JWT_SECRET: ${JWT_SECRET:-KASHISH-ERP}
+    entrypoint: ["node", "dist/services/producers-notifications/worker/email-worker.js"]
 
   frontend:
     build:

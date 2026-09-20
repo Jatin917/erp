@@ -5,6 +5,7 @@ All notable changes documented per [Keep a Changelog](https://keepachangelog.com
 ## [Unreleased]
 
 ### Added
+- Backend welcome-email BullMQ worker (`email-queue` / `send-welcome-email`); Compose `worker` service now runs it from the backend image (`npm run worker-email`)
 - Bulk upload status: export succeeded/failed rows to Excel; failed export copies original rows + `errorMessage` for fix-and-reupload (no red styling)
 - Async student bulk upload: sheet import returns 202 + jobId; BullMQ worker processes rows; dedicated Bulk Upload Status page with per-row results
 - Edit existing custom field definitions (`PUT /school/update-customField/:id`) from Custom Fields Management; report registry keys stay in sync on rename
@@ -38,6 +39,8 @@ All notable changes documented per [Keep a Changelog](https://keepachangelog.com
 - Ungated Slash Admin demo pages (components, functions, calendar, kanban, menu levels, permission demo, link, blank, analysis) and stub System Role/User pages from frontend router mode nav and routes
 
 ### Changed
+- Student detail Fees tab shows real fee docs (same list as Collect Fee) plus outstanding amount; read-only, mock data removed
+- Student list Fees action opens that student’s collect-fee page (`/management/fee/student-fee-detail/:studentId`) instead of fee receipt
 - Enforce role separation: super admin, director, principal, and school admin cannot be combined on one user
 - Block self-assignment of director/principal during school creation (backend + frontend)
 - Remove "Assign Myself" option from school creation UI for director and principal
