@@ -507,6 +507,8 @@ export const processBulkUploadJob = async (jobId: string) => {
       const studentName = toNullableString(row.name);
       const admissionNo = toNullableString(row.admissionNo);
 
+      const rawData = JSON.parse(JSON.stringify(row)) as object;
+
       const rowRecord = await prisma.bulkUploadRow.upsert({
         where: { jobId_rowNumber: { jobId, rowNumber } },
         create: {
@@ -515,6 +517,7 @@ export const processBulkUploadJob = async (jobId: string) => {
           studentName,
           admissionNo,
           status: BulkUploadRowStatus.PENDING,
+          rawData,
         },
         update: {
           studentName,
@@ -522,6 +525,7 @@ export const processBulkUploadJob = async (jobId: string) => {
           status: BulkUploadRowStatus.PENDING,
           errorMessage: null,
           studentId: null,
+          rawData,
         },
       });
 
@@ -546,6 +550,7 @@ export const processBulkUploadJob = async (jobId: string) => {
             studentName: result.studentName,
             admissionNo: result.admissionNo,
             errorMessage: result.barcodeWarning ?? null,
+            rawData,
           },
         });
         successCount += 1;
@@ -555,6 +560,7 @@ export const processBulkUploadJob = async (jobId: string) => {
           data: {
             status: BulkUploadRowStatus.FAILED,
             errorMessage: err.message ?? "Unknown error",
+            rawData,
           },
         });
         failCount += 1;

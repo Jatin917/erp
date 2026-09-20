@@ -1,1 +1,1 @@
-{"version":3,"file":"studentRouter.d.ts","sourceRoot":"","sources":["../../../../src/routes/version-1.ts/studentRouter/studentRouter.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,MAAM,EAAE,MAAM,SAAS,CAAC;AAgBjC,eAAO,MAAM,aAAa,EAAE,MAAiB,CAAC"}
+{"version":3,"file":"studentRouter.d.ts","sourceRoot":"","sources":["../../../../src/routes/version-1.ts/studentRouter/studentRouter.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,MAAM,EAAE,MAAM,SAAS,CAAC;AAiBjC,eAAO,MAAM,aAAa,EAAE,MAAiB,CAAC"}

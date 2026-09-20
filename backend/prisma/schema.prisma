@@ -103,17 +103,19 @@ model BulkUploadJob {
 }
 
 model BulkUploadRow {
-  id          String               @id @default(uuid())
-  jobId       String
-  rowNumber   Int
-  studentName String?
-  admissionNo String?
-  status      BulkUploadRowStatus  @default(PENDING)
-  studentId   String?
+  id           String              @id @default(uuid())
+  jobId        String
+  rowNumber    Int
+  studentName  String?
+  admissionNo  String?
+  status       BulkUploadRowStatus @default(PENDING)
+  studentId    String?
   errorMessage String?
-  createdAt   DateTime             @default(now())
-  updatedAt   DateTime             @updatedAt
-  job         BulkUploadJob        @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  /** Original spreadsheet row values (keys = header names). */
+  rawData      Json?
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+  job          BulkUploadJob       @relation(fields: [jobId], references: [id], onDelete: Cascade)
 
   @@unique([jobId, rowNumber])
   @@index([jobId, status])

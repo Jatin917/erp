@@ -25,6 +25,7 @@ import {
   getBulkUploadRows,
   markBulkUploadJobFailed,
 } from "@src/services/student/bulk-upload.js";
+import { buildFailedBulkUploadWorkbook } from "@src/services/student/bulk-upload-export.js";
 import { enqueueStudentBulkUpload } from "@src/services/producers-notifications/producers/producer.bulk-upload.js";
 import { BulkUploadRowStatus } from "../../../../generated/prisma/index.js";
 
@@ -641,6 +642,79 @@ export const listBulkUploadJobRows = async (req: any, res: any) => {
 
     const rows = await getBulkUploadRows(String(jobId), rowStatus);
     return sendSuccess(res, "Bulk upload rows fetched", { rows }, HTTP_STATUS.OK);
+  } catch (error: any) {
+    return sendError(res, error.message, HTTP_STATUS.INTERNAL_SERVER_ERROR);
+  }
+};
+
+export const exportBulkUploadJobRows = async (req: any, res: any) => {
+  try {
+    const { jobId } = req.params;
+    const status = String(req.query.status || "").toUpperCase();
+
+    if (status !== BulkUploadRowStatus.SUCCESS && status !== BulkUploadRowStatus.FAILED) {
+      return sendError(
+        res,
+        "status must be SUCCESS or FAILED",
+        HTTP_STATUS.BAD_REQUEST,
+      );
+    }
+
+    const job = await getBulkUploadJobById(String(jobId));
+    if (!job) {
+      return sendError(res, "Bulk upload job not found", HTTP_STATUS.NOT_FOUND);
+    }
+    if (req.branchId && String(req.branchId) !== job.branchId) {
+      return sendError(res, "You do not have access to this branch", HTTP_STATUS.FORBIDDEN);
+    }
+
+    const rows = await getBulkUploadRows(String(jobId), status as BulkUploadRowStatus);
+    if (rows.length === 0) {
+      return sendError(
+        res,
+        status === BulkUploadRowStatus.SUCCESS
+          ? "No succeeded students to export"
+          : "No failed students to export",
+        HTTP_STATUS.NOT_FOUND,
+      );
+    }
+
+    const sheetName = status === BulkUploadRowStatus.SUCCESS ? "Succeeded" : "Failed";
+    const label = status === BulkUploadRowStatus.SUCCESS ? "succeeded" : "failed";
+    const safeBase = String(job.fileName || "bulk-upload")
+      .replace(/\.[^.]+$/, "")
+      .replace(/[^\w.-]+/g, "_")
+      .slice(0, 60);
+
+    let buffer: Buffer;
+    if (status === BulkUploadRowStatus.FAILED) {
+      buffer = await buildFailedBulkUploadWorkbook(rows);
+    } else {
+      const sheetRows = rows.map((row) => ({
+        rowNumber: row.rowNumber,
+        studentName: row.studentName ?? "",
+        admissionNo: row.admissionNo ?? "",
+        status: row.status,
+        studentId: row.studentId ?? "",
+        errorMessage: row.errorMessage ?? "",
+      }));
+      const worksheet = XLSX.utils.json_to_sheet(sheetRows);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+      buffer = Buffer.from(XLSX.write(workbook, { type: "buffer", bookType: "xlsx" }));
+    }
+
+    return sendSuccess(
+      res,
+      `${sheetName} students exported`,
+      {
+        fileName: `${safeBase}-${label}.xlsx`,
+        mimeType:
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        fileContent: buffer.toString("base64"),
+      },
+      HTTP_STATUS.OK,
+    );
   } catch (error: any) {
     return sendError(res, error.message, HTTP_STATUS.INTERNAL_SERVER_ERROR);
   }

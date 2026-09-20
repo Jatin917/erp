@@ -5,6 +5,7 @@ All notable changes documented per [Keep a Changelog](https://keepachangelog.com
 ## [Unreleased]
 
 ### Added
+- Bulk upload status: export succeeded/failed rows to Excel; failed export copies original rows + `errorMessage` for fix-and-reupload (no red styling)
 - Async student bulk upload: sheet import returns 202 + jobId; BullMQ worker processes rows; dedicated Bulk Upload Status page with per-row results
 - Edit existing custom field definitions (`PUT /school/update-customField/:id`) from Custom Fields Management; report registry keys stay in sync on rename
 - Docker Compose stack for `db`, `redis`, `backend`, `worker` (email), and `frontend`, with Dockerfiles and `.env.docker.example`

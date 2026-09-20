@@ -5,6 +5,7 @@ import {
 	bulkUploadStudents,
 	createStudent,
 	downloadSampleSheetForBulkUpload,
+	exportBulkUploadJobRows,
 	fetchStudents,
 	getBulkUploadJob,
 	getStudentDetail,
@@ -44,6 +45,11 @@ studentRouter.get(
 	"/bulk-upload-jobs",
 	requirePermission(Permission.BULK_UPLOAD_STUDENTS),
 	listBulkUploadJobs,
+);
+studentRouter.get(
+	"/bulk-upload-jobs/:jobId/export",
+	requirePermission(Permission.BULK_UPLOAD_STUDENTS),
+	exportBulkUploadJobRows,
 );
 studentRouter.get(
 	"/bulk-upload-jobs/:jobId",

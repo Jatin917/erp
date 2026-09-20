@@ -25,6 +25,28 @@ Returns **202**:
 
 `GET /bulk-upload-jobs/:jobId/rows?status=SUCCESS|FAILED|PENDING`
 
+## Export rows (Excel)
+
+`GET /bulk-upload-jobs/:jobId/export?status=SUCCESS|FAILED`  
+Permission: `BULK_UPLOAD_STUDENTS`
+
+Returns JSON (same pattern as sample sheet):
+```json
+{
+  "success": true,
+  "message": "Succeeded students exported",
+  "data": {
+    "fileName": "import-succeeded.xlsx",
+    "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "fileContent": "<base64>"
+  }
+}
+```
+
+Columns (succeeded): `rowNumber`, `studentName`, `admissionNo`, `status`, `studentId`, `errorMessage`
+
+Failed export: copies each failed student's original uploaded row into a new sheet (same field columns/values), plus a trailing `errorMessage` column. No red styling — users can fix rows and re-upload the file.
+
 ## Sample sheet
 
 `GET /download-bulk-sample` — unchanged
