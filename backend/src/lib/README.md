@@ -24,4 +24,5 @@ Permission model is flat per user; branch context not in permission layer.
 ## Recent changes
 | Date | Change |
 |------|--------|
+| 2026-09-23 | Director roleDefaults no longer include school-level permissions |
 | 2026-07-05 | Co-located README added |

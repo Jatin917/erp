@@ -39,6 +39,7 @@ All notable changes documented per [Keep a Changelog](https://keepachangelog.com
 - Ungated Slash Admin demo pages (components, functions, calendar, kanban, menu levels, permission demo, link, blank, analysis) and stub System Role/User pages from frontend router mode nav and routes
 
 ### Changed
+- Director role no longer includes school-level permissions (`CREATE/VIEW/EDIT/DELETE_SCHOOL`); existing Director users stripped via migration
 - Student detail Fees tab shows real fee docs (same list as Collect Fee) plus outstanding amount; read-only, mock data removed
 - Student list Fees action opens that student’s collect-fee page (`/management/fee/student-fee-detail/:studentId`) instead of fee receipt
 - Enforce role separation: super admin, director, principal, and school admin cannot be combined on one user
