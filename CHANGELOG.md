@@ -19,6 +19,7 @@ All notable changes documented per [Keep a Changelog](https://keepachangelog.com
 - `assign-permission` and `user-permissions/:userId` are tenant-scoped: non-ALL grantors can only view/modify users belonging to their accessible branches
 
 ### Fixed
+- INSTALLMENT fee-template assign: due dates spaced by `monthsInSession / installments` from template due date (`create-feedocs` / `create-students-feedoc`); no longer requires unused `templateDueDate`-only option
 - Frontend `nginx.conf` re-encoded from UTF-16 LE to UTF-8 so nginx can start in Docker
 - Frontend Docker build: disable rollup-plugin-visualizer `open` when `CI=true` so Vite does not spawn Windows PowerShell inside the Linux image
 - Backend Docker build: copy Prisma `generated/` client from deps into build and runner stages (custom output path is outside `node_modules`)

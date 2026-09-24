@@ -131,8 +131,8 @@ export function generateDueDates(
   options: {
     dueDate?: string | Date;           // user-provided (for ONE_TIME or MONTHLY start date)
     installments?: number;      // from template (for INSTALLMENTS)
-    months?: number;            // number of months (for MONTHLY)
-    templateDueDate?: string;   // base dueDate from template (for INSTALLMENTS)
+    months?: number;            // number of months (for MONTHLY / INSTALLMENT spacing)
+    templateDueDate?: string | Date;   // base dueDate from template (for INSTALLMENTS; falls back to dueDate)
   }
 ): Date[] {
   const dates: Date[] = [];
@@ -155,14 +155,22 @@ export function generateDueDates(
   }
 
   if (paymentType === FeePaymentType.INSTALLMENT) {
-    if (!options.templateDueDate || !options.installments) {
+    const startSource = options.templateDueDate ?? options.dueDate;
+    const installments = Math.floor(Number(options.installments) || 0);
+    const monthsInSession = Math.floor(Number(options.months) || 0);
+
+    if (!startSource || installments < 1) {
       throw new Error("templateDueDate and installments required for INSTALLMENTS");
     }
+    if (monthsInSession < 1) {
+      throw new Error("session months required for INSTALLMENTS");
+    }
 
-    const start = new Date(options.templateDueDate);
-    for (let i = 0; i < options.installments; i++) {
+    // Space installments evenly across the session: step ≈ monthsInSession / installments
+    const start = new Date(startSource);
+    for (let i = 0; i < installments; i++) {
       const d = new Date(start);
-      d.setMonth(start.getMonth() + i);
+      d.setMonth(start.getMonth() + Math.floor((i * monthsInSession) / installments));
       dates.push(d);
     }
   }
@@ -925,7 +933,12 @@ export const generateFeeDocs = async (req: any, res: any) => {
             await tx.lateFee.create({data:{amount:lateFee.amount, feeDocId:doc.id, feeTemplateId:lateFee.feeTemplateId}});
           }
           created.push(doc);
-          const dueDates = generateDueDates(template.paymentType, {dueDate:template.dueDate, months:monthsInSession, installments:(template.installements ?? 0)})
+          const dueDates = generateDueDates(template.paymentType, {
+            dueDate: template.dueDate ?? undefined,
+            templateDueDate: template.dueDate ?? undefined,
+            months: monthsInSession,
+            installments: template.installements ?? 0,
+          });
           // payment template main jo amount hain usko deduct krdo discount amount se utne ka payments create krdo
           await createPayment(tx, doc, doc.afterAmount, template.feeHead.name, template.paymentType, dueDates);
           // Optionally generate default feePayments based on paymentType or template defaults
@@ -1067,7 +1080,8 @@ export const generateFeeDocsForStudents = async (req: any, res: any) => {
 
         // Generate due dates for payments
         const dueDates = generateDueDates(template.paymentType, {
-          dueDate: template.dueDate,
+          dueDate: template.dueDate ?? undefined,
+          templateDueDate: template.dueDate ?? undefined,
           months: monthsInSession,
           installments: template.installements ?? 0,
         });
